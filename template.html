@@ -28,6 +28,7 @@
   --ma5:#E3A645; --ma10:#B492EC; --ma20:#86A6E3; --ma60:#5CC0C0;
   color-scheme:dark}
 *{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 [hidden]{display:none!important}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.55}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
@@ -186,14 +187,18 @@ td .cd{color:var(--muted);font-family:var(--f-num);font-size:12px;margin-left:6p
 .ai p{margin:6px 0}
 
 /* chat */
-.chat{display:grid;gap:12px}
-.msgs{display:grid;gap:12px;max-height:60vh;overflow-y:auto;padding-right:4px}
-.msg{padding:10px 14px;border-radius:var(--r);max-width:92%;font-size:13.5px;line-height:1.7}
+.chat{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.msgs{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;max-height:60vh;overflow-y:auto;padding-right:4px}
+.msgs:empty{display:none}
+.msg{padding:10px 14px;border-radius:var(--r);max-width:min(92%,820px);min-width:0;overflow-wrap:anywhere;font-size:13.5px;line-height:1.7}
+.msg h4{margin:10px 0 4px;font-size:14.5px}.msg h4:first-child,.msg p:first-child{margin-top:0}
+.msg ul{margin:4px 0;padding-left:1.3em}.msg p{margin:6px 0}.msg p:last-child{margin-bottom:0}
 .msg.u{justify-self:end;background:var(--accent-soft);border:1px solid var(--accent-soft)}
 .msg.a{justify-self:start;background:var(--bg);border:1px solid var(--line)}
 .msg.tool{font-size:12px;color:var(--muted);background:none;border:0;padding:0 4px}
-.ask{display:flex;gap:8px}
-.ask textarea{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:8px 10px;resize:vertical;min-height:44px}
+.ask{display:flex;gap:8px;align-items:flex-end}
+.ask textarea{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:9px 10px;resize:none;min-height:64px;max-height:40vh;line-height:1.5}
+.ask .btn{min-height:44px}
 .sugg{display:flex;gap:8px;flex-wrap:wrap}
 .dsset>summary{cursor:pointer;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
 .dsset[open]>summary{margin-bottom:10px}
@@ -204,8 +209,42 @@ td .cd{color:var(--muted);font-family:var(--f-num);font-size:12px;margin-left:6p
   .facts{grid-template-columns:repeat(2,1fr)}
   .tarow{grid-template-columns:1fr}
   .brand h1{font-size:19px}
+  .brand .meta{flex:1 1 100%;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .fld.w3{width:100%}
+}
+/* 手机（竖屏宽度 ≤640 或横屏高度 ≤500）：AI 助手页不再套一层滚动，对话随页面滚动，输入栏吸底 */
+@media (max-width:640px),(max-height:500px){
   .ask textarea,.dsset input,.dsset select{font-size:16px}
+  #v-ai{gap:12px}
+  #v-ai .chat{--pad:12px;padding:var(--pad) var(--pad) 0;gap:10px}
+  #v-ai .chat>.phead{order:-2;margin-bottom:0}
+  #v-ai #aiState{order:-1;margin:0}
+  #v-ai #aiSub{display:none}
+  #v-ai .msgs{max-height:none;overflow:visible;padding-right:0}
+  #v-ai .msg{font-size:15px;line-height:1.65;padding:10px 12px}
+  #v-ai .msg.a{max-width:100%}
+  #v-ai .msg.u{max-width:88%}
+  #v-ai .msg.tool{font-size:12.5px}
+  #v-ai .sugg{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-inline:calc(-1*var(--pad));padding-inline:var(--pad);scroll-padding-inline:var(--pad)}
+  #v-ai .sugg::-webkit-scrollbar{display:none}
+  #v-ai .sugg .btn{flex:none;padding:7px 12px}
+  #v-ai .ask{position:sticky;bottom:0;z-index:5;background:var(--surface);border-top:1px solid var(--line);border-radius:0 0 var(--r) var(--r);
+    margin-inline:calc(-1*var(--pad));padding:8px max(var(--pad),env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) max(var(--pad),env(safe-area-inset-left,0px))}
+  #v-ai .ask textarea{min-height:44px}
+  #v-ai .dsset{padding:12px}
+}
+/* 手机横屏：页头压成一行（印章 + 行情状态 + 标签），把高度留给内容 */
+@media (max-height:500px) and (orientation:landscape){
+  header .wrap{display:flex;align-items:center;gap:12px}
+  .hbar{padding-block:0;flex:none;min-width:0;max-width:42%}
+  .brand{flex-wrap:nowrap;gap:8px;min-width:0}
+  .brand h1{display:none}
+  .seal{height:24px;font-size:11px;white-space:nowrap;flex:none}
+  .brand .meta{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  nav.tabs{margin-top:0;flex:1;min-width:0}
+  nav.tabs button{padding:11px 10px 9px}
+  main{padding-block:10px 40px}
+  section.view{gap:12px}
 }
 @media (prefers-reduced-motion:no-preference){.drawer{animation:slide .18s ease-out}@keyframes slide{from{transform:translateX(24px);opacity:.6}}}
 
@@ -725,7 +764,7 @@ tbody tr.greg:hover{background:var(--bg)}
         <button class="btn" data-q="如果我有30万，现在市场大跌，怎么分配防御仓和科技仓？请给出一个分批计划框架。">30 万怎么分配</button>
       </div>
       <div class="msgs" id="msgs"></div>
-      <div class="ask"><textarea id="askBox" rows="2" placeholder="问点什么，比如：存储芯片里哪家现金流最好？"></textarea><button class="btn pri" id="askBtn">发送</button><button class="btn" id="stopBtn" hidden>停止</button></div>
+      <div class="ask"><textarea id="askBox" rows="1" enterkeyhint="send" aria-label="输入你的问题" placeholder="输入你的问题"></textarea><button class="btn pri" id="askBtn">发送</button><button class="btn" id="stopBtn" hidden>停止</button></div>
       <p class="note" id="aiState"></p>
     </div>
   </section>
@@ -873,6 +912,8 @@ function show(v){
   if (!VIEWS.includes(v)) v = "market";
   VIEWS.forEach(x => { document.getElementById("v-" + x).hidden = x !== v; });
   document.querySelectorAll("#tabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.v === v));
+  const nav = $("#tabs"), sel = nav.querySelector(`[data-v="${v}"]`);   // 手机上标签栏横向滚动：把选中的标签移到可见位置
+  if (sel && nav.scrollWidth > nav.clientWidth) { const n = nav.getBoundingClientRect(), s = sel.getBoundingClientRect(); nav.scrollLeft += s.left - n.left - (n.width - s.width) / 2; }
   if (v === "watch") renderWatch();
   if (v === "global") { renderGlobal(); gStockTickSoon(); }
   try { history.replaceState(null, "", "#" + v); } catch(e){}
@@ -2283,7 +2324,18 @@ const RULES = `你是本页内置的A股研究助手。数据范围：沪深京A
 今日背景：${BG}
 用中文回答，简洁，用小标题和列表。不要给确定的买卖指令，可以讨论条件、情景和风控。最后一行注明“仅供研究参考，不构成投资建议”。`;
 let turns = [], chatCtl = null, sampleFn = null, toolsOk = false, aiOff = false;
-function addMsg(role, html){ const d = document.createElement("div"); d.className = "msg " + role; d.innerHTML = html; $("#msgs").append(d); $("#msgs").scrollTop = $("#msgs").scrollHeight; return d; }
+function addMsg(role, html){ const d = document.createElement("div"); d.className = "msg " + role; d.innerHTML = html; $("#msgs").append(d); chatScroll(role === "u"); return d; }
+// 电脑上对话框自己滚动；手机上对话随页面滚动，输入栏吸底。只在读者停在底部附近时跟随新内容，往上翻看时不打扰
+function chatScroll(force){
+  const box = $("#msgs");
+  if (getComputedStyle(box).overflowY !== "visible") { box.scrollTop = box.scrollHeight; return; }
+  if ($("#v-ai").hidden) return;
+  const last = box.lastElementChild; if (!last) return;
+  const gap = last.getBoundingClientRect().bottom - (innerHeight - $(".ask").offsetHeight - 10);   // 吸底输入栏的位置在连续滚动时读数会滞后，用视口高度算
+  if (gap > 0 && (force || gap < 200)) window.scrollBy(0, gap);
+}
+function growAsk(){ const t = $("#askBox"); t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight + 2, innerHeight * .4) + "px"; }
+$("#askBox").addEventListener("input", growAsk);
 use("sample").then(async s => {
   sampleFn = s;
   if (!s) { $("#aiState").textContent = "在 claude.ai 里打开本页才能使用 AI 助手。"; $("#askBtn").disabled = true; return; }
@@ -2325,7 +2377,7 @@ async function ask(q){
   const bubble = addMsg("a", `<span class="note">思考中…</span>`);
   chatCtl = new AbortController(); const my = chatCtl;
   $("#askBtn").disabled = true; $("#stopBtn").hidden = false;
-  const opts = {signal: my.signal, cache: false, onText: ({text}) => { bubble.innerHTML = md(text); $("#msgs").scrollTop = $("#msgs").scrollHeight; }};
+  const opts = {signal: my.signal, cache: false, onText: ({text}) => { bubble.innerHTML = md(text); chatScroll(); }};
   if (toolsOk) { delete opts.cache; opts.tools = TOOLS.map(t => ({...t, execute: (i, c) => { addMsg("tool", `查询数据：${esc(t.name)} ${esc(JSON.stringify(i || {}))}`); return t.execute(i || {}, c); }})); }
   try {
     let r;
@@ -2344,7 +2396,7 @@ async function ask(q){
     if (["no_key", "bad_key"].includes(e.code)) $("#dsSet").open = true;
   } finally { if (my === chatCtl) { $("#stopBtn").hidden = true; $("#askBtn").disabled = aiOff; } }
 }
-$("#askBtn").addEventListener("click", () => { const q = $("#askBox").value; $("#askBox").value = ""; ask(q); });
+$("#askBtn").addEventListener("click", () => { const q = $("#askBox").value; $("#askBox").value = ""; growAsk(); ask(q); });
 $("#askBox").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); $("#askBtn").click(); } });
 $("#stopBtn").addEventListener("click", () => chatCtl?.abort());
 $("#sugg").addEventListener("click", e => { const b = e.target.closest("[data-q]"); if (b) ask(b.dataset.q); });
