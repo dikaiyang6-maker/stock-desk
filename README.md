@@ -22,7 +22,7 @@ GitHub 的定时任务是“尽力而为”，高峰期可能晚几分钟到几�
 
 ## 第一次配置（约 3 分钟）
 
-1. **开启 Pages**：Settings → Pages → Build and deployment → Source 选 **GitHub Actions**。
+1. **开启 Pages**：Settings → Pages → Build and deployment → Source 选 **GitHub Actions**。不要选 Deploy from a branch：那样每次提交时 GitHub 会把 README 发布成网页，盖掉选股台。
 2. **添加 DeepSeek Key（可选）**：Settings → Secrets and variables → Actions → New repository secret，Name 填 `DEEPSEEK_API_KEY`，Value 填你的 key。不填也能运行，研判部分会显示原有的人工文字。
 3. **手动跑第一次**：Actions → 更新数据并发布网页 → Run workflow（`force` 填 `1` 表示全部重新抓取）。第一次约 8 分钟，之后每小时一轮约 1～2 分钟。
 4. 打开 `https://<你的用户名>.github.io/stock-desk/`，在手机上可用 Safari / Chrome 的「添加到主屏幕」。
