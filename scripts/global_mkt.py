@@ -275,10 +275,34 @@ def refresh_jp_kr():
     return True
 
 
+def yahoo_fundamentals(syms):
+    """Yahoo v7 quote 需要 cookie + crumb；被限流（429）时直接放弃，返回空。"""
+    try:
+        sess = requests.Session(); sess.headers["User-Agent"] = UA
+        sess.get("https://fc.yahoo.com", timeout=20)
+        c = sess.get("https://query2.finance.yahoo.com/v1/test/getcrumb", timeout=20)
+        if c.status_code != 200 or not c.text:
+            log("yahoo fundamentals: crumb", c.status_code, "- 跳过市值/市盈率"); return {}
+        out = {}
+        for i in range(0, len(syms), 50):
+            r = sess.get("https://query2.finance.yahoo.com/v7/finance/quote", params={"symbols": ",".join(syms[i:i + 50]), "crumb": c.text}, timeout=30)
+            if r.status_code != 200:
+                break
+            for q in r.json().get("quoteResponse", {}).get("result", []):
+                out[q["symbol"]] = {"mcap": q.get("marketCap"), "pe": r2(q.get("trailingPE"))}
+            time.sleep(2)
+        log("yahoo fundamentals", len(out), "/", len(syms)); return out
+    except (requests.RequestException, ValueError) as e:
+        log("yahoo fundamentals failed:", type(e).__name__); return {}
+
+
 def refresh_others():
     """富时100、DAX、CAC40、斯托克50、Nifty50：Yahoo chart 元数据，每秒约 1 次。"""
     G = load("global.json", {}); st = G.get("st", {}); mk = G.get("mk", {})
     ys = sorted({y for k in ("ftse", "dax", "cac", "sx5e", "nifty") for y in mk.get(k, [])}); n = 0
+    fund = yahoo_fundamentals(ys)                                      # 市值、市盈率（Yahoo 不限流时才有）
+    for y, f in fund.items():
+        st[y].update({k: v for k, v in f.items() if v})
     for y in ys:
         x = yahoo_chart(y, range="1mo", interval="1d")
         if not x:
