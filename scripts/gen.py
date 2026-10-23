@@ -2,7 +2,7 @@
 import json
 
 import screen_data
-from common import DATA, ROOT, SITE, load, log
+from common import DATA, ROOT, SITE, bj_now, load, log
 
 SEC_ZH2 = {"Finance": "金融", "Properties": "地产", "Utilities": "公用事业", "Commerce & Industry": "工商业"}
 
@@ -12,6 +12,7 @@ def build():
     if not a or not hist.get("idxk"):
         raise SystemExit("缺少 A 股数据，无法生成网页")
     data = dict(a)
+    data["built"] = bj_now().strftime("%Y-%m-%d %H:%M")          # 网页生成时间（北京时间），网页据此提示自动更新是否停了
     data["idxk"] = hist["idxk"]
     data["idxm"] = {c: [{"d": x["d"], "prec": x["prec"], "p": [p[:3] for p in x["p"]]} for x in v] for c, v in hist.get("idxm", {}).items()}
     data["sk"] = hist.get("sk", {})

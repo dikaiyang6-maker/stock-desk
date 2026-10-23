@@ -379,6 +379,7 @@ tbody tr.greg:hover{background:var(--bg)}
 </header>
 
 <main class="wrap">
+  <p class="warn" id="staleWarn" role="status" hidden></p>
   <!-- MARKET -->
   <section class="view" id="v-market">
     <p class="note" id="liveHint" style="margin:0"></p>
@@ -1023,8 +1024,9 @@ $("#tabs").addEventListener("click", e => { const b = e.target.closest("button")
 /* ---------- market ---------- */
 const BOARD = {sh: "沪市主板", sz: "深市主板", gem: "创业板", star: "科创板", bj: "北交所"};
 const LIMIT = {sh: 10, sz: 10, gem: 20, star: 20, bj: 30};  // ST 与所在板块相同，主板 ST 为 ±10%
-const isLU = r => r.lu != null ? r.price >= r.lu - 0.0005 : r.chg >= LIMIT[r.board] - 0.2;
-const isLD = r => r.ld != null ? r.price <= r.ld + 0.0005 : r.chg <= -(LIMIT[r.board] - 0.2);
+// 只按交易所给出的涨跌停价判断；没有涨跌停价的是上市初期不设涨跌幅限制的新股（如首日 N 开头），不算涨停或跌停
+const isLU = r => r.lu != null && r.price >= r.lu - 0.0005;
+const isLD = r => r.ld != null && r.price <= r.ld + 0.0005;
 $("#meta").textContent = `数据截至 ${ASOF} · 沪深京 A 股 ${R.length} 只 · 红涨绿跌`;
 $("#breadthNote").textContent = `沪深京 A 股（不含 B 股、港股），${ASOF}`;
 $("#discData").textContent = `东方财富（${(D.reports || []).join("、")} 财报）、腾讯行情（${ASOF} 行情、市盈率 TTM、K 线）`;
@@ -3169,6 +3171,14 @@ function xgInit(){
 }
 xgInit();
 
+// 自动更新是否停了：工作日（北京时间 10 点后）超过 4 小时、或任何时候超过 52 小时没有重新生成网页，就在顶部提醒
+(function staleCheck(){
+  if (!D.built) return;
+  const built = Date.parse(D.built.replace(" ", "T") + ":00+08:00"), gap = (Date.now() - built) / 3600e3, t = new Date(Date.now() + 8 * 3600e3);
+  const weekday = t.getUTCDay() >= 1 && t.getUTCDay() <= 5, stale = gap > 52 || (weekday && t.getUTCHours() >= 10 && gap > 4);
+  const box = $("#staleWarn"); box.hidden = !stale;
+  if (stale) box.textContent = `自动更新可能停了：网页数据生成于 ${D.built}（北京时间），已经 ${gap >= 48 ? Math.floor(gap / 24) + " 天" : Math.floor(gap) + " 小时"}没有更新。实时行情不受影响，但财报、选股和研判数据可能过时。`;
+})();
 show((location.hash || "").slice(1) || "market");
 })();
 </script>

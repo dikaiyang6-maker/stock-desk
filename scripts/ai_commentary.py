@@ -61,9 +61,8 @@ def context():
     ctx["A股指数"] = idx
     # 宽度、涨跌停、行业、题材
     if R:
-        lim = {"sh": 10, "sz": 10, "gem": 20, "star": 20, "bj": 30}
-        lu = sum(1 for r in R if (r["lu"] and r["price"] >= r["lu"] - 0.0005) or (not r["lu"] and r["chg"] >= lim[r["board"]] - 0.2))
-        ld = sum(1 for r in R if (r["ld"] and r["price"] <= r["ld"] + 0.0005) or (not r["ld"] and r["chg"] <= -(lim[r["board"]] - 0.2)))
+        lu = sum(1 for r in R if r["lu"] and r["price"] >= r["lu"] - 0.0005)      # 没有涨跌停价的是不设涨跌幅限制的新股，不计入
+        ld = sum(1 for r in R if r["ld"] and r["price"] <= r["ld"] + 0.0005)
         ctx["市场宽度"] = {"上涨": sum(1 for r in R if r["chg"] > 0), "下跌": sum(1 for r in R if r["chg"] < 0), "涨停": lu, "跌停": ld, "总数": len(R),
                          "中位数涨跌pct": sorted(r["chg"] for r in R)[len(R) // 2], "两市成交额亿": round(sum(r["amt"] for r in R))}
         ind = {}
