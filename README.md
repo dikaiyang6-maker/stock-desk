@@ -15,7 +15,7 @@
 | 日经225、KOSPI200 成分股 | 每小时 | Naver |
 | 富时100、DAX、CAC40、斯托克50、Nifty50 成分股 | 每 6 小时 | Yahoo Finance |
 | 财报（自动选择最新披露期）、两融、北向成交 | 每天 | 东方财富数据中心 |
-| 六维研判、今日市场解读、精选个股点评 | 每个交易日 A 股收盘后（北京 15:30 之后的第一轮） | DeepSeek，依据本页数据和东方财富、新浪财经快讯标题 |
+| 六维研判、今日市场解读、精选个股点评 | 每个交易日 A 股收盘后（北京 15:37 那一轮，节假日休市不生成） | DeepSeek，依据本页数据和东方财富、新浪财经快讯标题 |
 | 成分股名单 | 每周 | 维基百科、Nasdaq、FinanceDataReader |
 
 GitHub 的定时任务是“尽力而为”，高峰期可能晚几分钟到几十分钟，偶尔会跳过一轮。
@@ -26,6 +26,12 @@ GitHub 的定时任务是“尽力而为”，高峰期可能晚几分钟到几�
 2. **添加 DeepSeek Key（可选）**：Settings → Secrets and variables → Actions → New repository secret，Name 填 `DEEPSEEK_API_KEY`，Value 填你的 key。不填也能运行，研判部分会显示原有的人工文字。
 3. **手动跑第一次**：Actions → 更新数据并发布网页 → Run workflow（`force` 填 `1` 表示全部重新抓取）。第一次约 8 分钟，之后每小时一轮约 1～2 分钟。
 4. 打开 `https://<你的用户名>.github.io/stock-desk/`，在手机上可用 Safari / Chrome 的「添加到主屏幕」。
+
+## 网页里的 AI（选股助手、个股和指数分析）
+
+网页是公开的，所以 key 不能写进网页文件。打开网页 → 「AI 助手」→「DeepSeek 设置」，粘贴你的 DeepSeek API Key，点「保存并验证」。Key 只保存在这台设备的这个浏览器里，只发给 `api.deepseek.com`；换手机、换浏览器或从 iPhone 主屏幕图标打开时需要再填一次。建议为网页单独建一个 key，不用时在 DeepSeek 后台删除。
+
+上面第 2 步的仓库 Secret 只给 GitHub Actions 生成每日研判用，网页读不到它。
 
 ## 本地运行
 

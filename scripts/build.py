@@ -33,6 +33,9 @@ def ai_due():
     t = bj_now()
     if t.weekday() >= 5 or t.hour * 60 + t.minute < 15 * 60 + 30:     # 交易日 15:30 之后
         return False
+    asof = load("a.json", {}).get("asof", "")
+    if asof[:10] != t.strftime("%Y-%m-%d") or asof[11:] < "15:00":    # 节假日休市（行情不是今天的收盘数据）时不生成
+        return False
     last = load("ai.json", {}).get("generated", "")
     return not last.startswith(t.strftime("%Y-%m-%d"))
 

@@ -2,8 +2,8 @@ name: 更新数据并发布网页
 
 on:
   schedule:
-    # 周一至周五每小时一次（UTC），覆盖亚洲、欧洲、美洲交易时段；A 股收盘后的那一轮会生成 DeepSeek 研判
-    - cron: "7 * * * 1-5"
+    # 周一至周五每小时第 37 分钟（UTC，避开整点高峰），覆盖亚洲、欧洲、美洲交易时段；北京时间 15:37 那一轮会生成 DeepSeek 研判
+    - cron: "37 * * * 1-5"
   workflow_dispatch:
     inputs:
       force:

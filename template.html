@@ -195,12 +195,17 @@ td .cd{color:var(--muted);font-family:var(--f-num);font-size:12px;margin-left:6p
 .ask{display:flex;gap:8px}
 .ask textarea{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:8px 10px;resize:vertical;min-height:44px}
 .sugg{display:flex;gap:8px;flex-wrap:wrap}
+.dsset>summary{cursor:pointer;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.dsset[open]>summary{margin-bottom:10px}
+.dsset .form{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.dsset #dsMsg:empty{display:none}
 .disc{font-size:12px;color:var(--faint);border-top:1px solid var(--line);padding-top:14px;margin-top:8px}
 @media (max-width:640px){
   .facts{grid-template-columns:repeat(2,1fr)}
   .tarow{grid-template-columns:1fr}
   .brand h1{font-size:19px}
   .fld.w3{width:100%}
+  .ask textarea,.dsset input,.dsset select{font-size:16px}
 }
 @media (prefers-reduced-motion:no-preference){.drawer{animation:slide .18s ease-out}@keyframes slide{from{transform:translateX(24px);opacity:.6}}}
 
@@ -703,8 +708,16 @@ tbody tr.greg:hover{background:var(--bg)}
 
   <!-- AI -->
   <section class="view" id="v-ai" hidden>
+    <details class="panel dsset" id="dsSet" hidden>
+      <summary><b>DeepSeek 设置</b><span class="note" id="dsSum"></span></summary>
+      <p class="note">在 <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">platform.deepseek.com/api_keys</a> 创建一个 API Key，粘贴到下面。Key 只保存在这台设备的这个浏览器里，只发给 api.deepseek.com，不会上传到 GitHub，也不会写进网页文件。建议为本网页单独建一个 Key，不用时可以在 DeepSeek 后台删除。从 iPhone 主屏幕图标打开时，可能需要再填一次。</p>
+      <div class="form"><label class="fld">API Key<input id="dsKey" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="sk-…"></label>
+        <label class="fld">模型<select id="dsModel"><option value="deepseek-flash">deepseek-flash（快、便宜）</option><option value="deepseek-v4-pro">deepseek-v4-pro（更强、较慢）</option></select></label></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn pri" id="dsSave">保存并验证</button><button class="btn" id="dsClear">清除 Key</button></div>
+      <p class="note" id="dsMsg" role="status"></p>
+    </details>
     <div class="panel chat">
-      <div class="phead"><h2>AI 选股助手</h2><span class="note">Claude 读取本页 5500 多只沪深京 A 股数据后回答，使用你自己的 Claude 额度</span></div>
+      <div class="phead"><h2>AI 选股助手</h2><span class="note" id="aiSub">Claude 读取本页 5500 多只沪深京 A 股数据后回答，使用你自己的 Claude 额度</span></div>
       <div class="sugg" id="sugg">
         <button class="btn" data-q="找出PE低于25倍、净利增速超过50%的科技股（全部板块），按评分排序列出前10只，并说明各自的前沿技术。">PE&lt;25 且高增长的科技股</button>
         <button class="btn" data-q="今天大跌中，哪些前沿科技题材股跌幅最小、业绩又好？列出5只并解释为什么抗跌。">今天抗跌的好公司</button>
@@ -755,11 +768,94 @@ function score(r){
   return Math.max(0, Math.round(.35 * g + .25 * q + .15 * v + .25 * val - cashPenalty));
 }
 R.forEach(r => r.sc = score(r));
-const use = n => window.claude && typeof window.claude.use === "function" ? window.claude.use(n).catch(() => null) : Promise.resolve(null);
+const IN_CLAUDE = !!(window.claude && typeof window.claude.use === "function");
+const use = n => IN_CLAUDE ? window.claude.use(n).catch(() => null) : Promise.resolve(n === "sample" ? dsSample : null);
 const store = {
   get(k, d){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(e){ return d; } },
-  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} },
+  del(k){ try { localStorage.removeItem(k); } catch(e){} }
 };
+
+/* ---------- AI：在 claude.ai 里用 Claude；其他浏览器（GitHub Pages）用本机保存的 DeepSeek Key 直接调用 api.deepseek.com ---------- */
+const AI_NAME = IN_CLAUDE ? "Claude" : "DeepSeek";
+const AI_QUOTA = IN_CLAUDE ? "使用你自己的 Claude 额度。" : "使用你在「AI 助手」页填写的 DeepSeek Key。";
+const DS = "https://api.deepseek.com";
+const dsKey = () => store.get("dsKey", "");
+const dsModel = () => store.get("dsModel", "deepseek-flash");
+const aiErr = (code, text = "", detail = "") => Object.assign(new Error(code), {code, text, detail});
+// 与 claude.ai 的 sample 接口一致：sample(提示词或消息数组, {signal, onText, tools}) → {text}；出错时抛出带 code 的错误
+async function dsSample(input, opts = {}){
+  const key = dsKey();
+  if (!key) throw aiErr("no_key");
+  const conv = typeof input === "string" ? [{role: "user", content: input}] : input;
+  // 多轮对话：第一条是规则，最后一条是新问题，中间的历史折叠成文字（DeepSeek 的工具调用要求历史回答带推理内容，折叠后不需要）
+  const hist = conv.slice(1, -1).map(m => (m.role === "user" ? "用户：" : "助手：") + m.content).join("\n\n");
+  const msgs = conv.length === 1 ? [{role: "user", content: String(conv[0].content)}]
+    : [{role: "system", content: String(conv[0].content)}, {role: "user", content: (hist ? `此前的对话：\n${hist}\n\n现在的问题：\n` : "") + conv[conv.length - 1].content}];
+  const tools = opts.tools?.length ? opts.tools : null;
+  const fns = tools && tools.map(t => ({type: "function", function: {name: t.name, description: t.description, parameters: t.inputSchema || {type: "object", properties: {}}}}));
+  let text = "";
+  const emit = s => opts.onText?.({text: s});
+  for (let round = 0; ; round++) {
+    const body = {model: dsModel(), messages: msgs, stream: true, max_tokens: 16384};
+    if (fns) { body.tools = fns; if (round >= 6) body.tool_choice = "none"; }
+    let res;
+    try { res = await fetch(DS + "/chat/completions", {method: "POST", headers: {"Content-Type": "application/json", Authorization: "Bearer " + key}, body: JSON.stringify(body), signal: opts.signal}); }
+    catch (e) { throw aiErr(opts.signal?.aborted ? "cancelled" : "network", text); }
+    if (!res.ok) {
+      let m = ""; try { m = (await res.json()).error?.message || ""; } catch(e){}
+      throw aiErr({400: "bad_request", 401: "bad_key", 402: "no_balance", 422: "bad_request", 429: "rate_limited"}[res.status] || (res.status >= 500 ? "busy" : "unknown"), text, m || "HTTP " + res.status);
+    }
+    const rd = res.body.getReader(), dec = new TextDecoder();
+    let buf = "", content = "", reasoning = "", shown = 0, finish = "";
+    const calls = [];
+    try {
+      for (;;) {
+        const {done, value} = await rd.read(); if (done) break;
+        buf += dec.decode(value, {stream: true});
+        for (let i; (i = buf.indexOf("\n")) >= 0; ) {
+          const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+          if (!line.startsWith("data:") || line === "data: [DONE]") continue;
+          let j; try { j = JSON.parse(line.slice(5)); } catch(e) { continue; }
+          const ch = j.choices?.[0]; if (!ch) continue;
+          const dl = ch.delta || {};
+          if (dl.reasoning_content) { reasoning += dl.reasoning_content; if (!content && reasoning.length - shown >= 80) { shown = reasoning.length; emit((text ? text + "\n\n" : "") + `思考中…（已推理 ${reasoning.length} 字）`); } }
+          if (dl.content) { content += dl.content; emit(text + content); }
+          for (const tc of dl.tool_calls || []) {
+            const c = calls[tc.index ?? calls.length] ||= {id: "", type: "function", function: {name: "", arguments: ""}};
+            if (tc.id) c.id = tc.id; if (tc.function?.name) c.function.name += tc.function.name; if (tc.function?.arguments) c.function.arguments += tc.function.arguments;
+          }
+          if (ch.finish_reason) finish = ch.finish_reason;
+        }
+      }
+    } catch (e) { throw aiErr(opts.signal?.aborted ? "cancelled" : "network", text + content); }
+    const todo = calls.filter(Boolean);
+    if (!tools || !todo.length) {
+      text += content;
+      if (!text.trim()) throw aiErr(finish === "length" ? "too_long" : "empty");
+      if (finish === "length") { text += "\n\n（回答达到长度上限，被截断了）"; emit(text); }
+      return {text};
+    }
+    msgs.push({role: "assistant", content: content || "", reasoning_content: reasoning, tool_calls: todo});
+    for (const c of todo) {
+      const t = tools.find(x => x.name === c.function.name); let out;
+      try { out = t ? await t.execute(c.function.arguments ? JSON.parse(c.function.arguments) : {}) : {error: "没有这个工具：" + c.function.name}; }
+      catch (e) { out = {error: String(e.message || e)}; }
+      msgs.push({role: "tool", tool_call_id: c.id, content: JSON.stringify(out ?? null).slice(0, 30000)});
+    }
+    if (content) text += content + "\n\n";
+  }
+}
+dsSample.limits = async () => ({tools: true});
+async function dsBalance(key){
+  const r = await fetch(DS + "/user/balance", {headers: {Authorization: "Bearer " + key}});
+  if (r.status === 401) throw aiErr("bad_key");
+  if (!r.ok) throw aiErr("busy", "", "HTTP " + r.status);
+  const j = await r.json(), b = (j.balance_infos || [])[0];
+  return {ok: j.is_available !== false, text: b ? `余额 ${b.total_balance} ${b.currency === "CNY" ? "元" : b.currency}` : "余额未知"};
+}
+const aiNoKey = () => `<span class="note">先到「AI 助手」页填写 DeepSeek API Key 才能使用。</span> <button class="btn toAiSet">去填写</button>`;
+document.addEventListener("click", e => { if (e.target.closest(".toAiSet")) { closeStock(); show("ai"); $("#dsSet").open = true; $("#dsSet").scrollIntoView({block: "start"}); $("#dsKey").focus(); } });
 
 // 题材股缓存：日K [日期,开,收,高,低,量(手),额(万元)]；月K 同格式（上市以来）；分时按 242 个分钟槽差分编码
 const SLOTS = (() => { const a = []; for (const [s, e] of [[570, 690], [780, 900]]) for (let t = s; t <= e; t++) a.push(Math.floor(t / 60) * 100 + t % 60); return a; })();
@@ -1065,8 +1161,10 @@ function md(s){
   }
   return out + (inList ? "</ul>" : "");
 }
-const ERR = {not_granted:"你没有允许本页使用 Claude，所以 AI 功能已关闭。", sampling_disabled:"你的账号当前不能在页面里使用 Claude。", rate_limited:"调用太频繁或额度已用完，稍后再试。", session_expired:"登录已过期，请重新登录 claude.ai。", refused:"Claude 拒绝回答这个请求，换个问法试试。", prompt_too_large:"内容太长了，缩小问题范围再试。"};
-const errMsg = e => ERR[e && e.code] || "AI 暂时没有响应，请稍后点一次重试。";
+const ERR = {not_granted:"你没有允许本页使用 Claude，所以 AI 功能已关闭。", sampling_disabled:"你的账号当前不能在页面里使用 Claude。", rate_limited:"调用太频繁或额度已用完，稍后再试。", session_expired:"登录已过期，请重新登录 claude.ai。", refused:"Claude 拒绝回答这个请求，换个问法试试。", prompt_too_large:"内容太长了，缩小问题范围再试。",
+  no_key:"还没有填写 DeepSeek API Key：到「AI 助手」页填写后再试。", bad_key:"DeepSeek 不认这个 Key（填错了或已在后台删除），请到「AI 助手」页重新填写。", no_balance:"DeepSeek 账户余额不足，充值后再试。",
+  busy:"DeepSeek 服务繁忙，稍后再试。", network:"连不上 DeepSeek（api.deepseek.com），检查网络后再试。", bad_request:"DeepSeek 拒绝了这次请求", too_long:"回答太长被截断，缩小问题范围再试。", empty:"DeepSeek 没有返回内容，请再试一次。"};
+const errMsg = e => (ERR[e && e.code] || "AI 暂时没有响应，请稍后点一次重试。") + (e?.detail && !["bad_key", "no_balance"].includes(e.code) ? `（${e.detail}）` : "");
 function openStock(code){
   const r = BY.get(code); if (!r) return;
   const t = TA[code], wl = store.get("wl", []), inWl = wl.includes(code);
@@ -1096,8 +1194,8 @@ function openStock(code){
       <div class="out" id="vOut"></div>
     </div>
     <div class="panel" style="padding:12px 14px;display:grid;gap:10px">
-      <div class="phead" style="margin-bottom:0"><h3>AI 个股分析</h3><span style="display:flex;gap:8px"><button class="btn pri" id="dAi">让 Claude 分析</button><button class="btn" id="dStop" hidden>停止</button></span></div>
-      <div class="ai" id="dOut"><span class="note">Claude 会根据上面的财报、估值、K 线和今天的大盘环境，写出多空逻辑、风险和观察指标。使用你自己的 Claude 额度。</span></div>
+      <div class="phead" style="margin-bottom:0"><h3>AI 个股分析</h3><span style="display:flex;gap:8px"><button class="btn pri" id="dAi">让 ${AI_NAME} 分析</button><button class="btn" id="dStop" hidden>停止</button></span></div>
+      <div class="ai" id="dOut">${!IN_CLAUDE && !dsKey() ? aiNoKey() : `<span class="note">${AI_NAME} 会根据上面的财报、估值、K 线和今天的大盘环境，写出多空逻辑、风险和观察指标。${AI_QUOTA}</span>`}</div>
     </div>`;
   $("#drawer").hidden = false; $("#scrim").hidden = false; $("#drawer").scrollTop = 0;
   openState = {type: "stock", code, rows: srows};
@@ -1703,8 +1801,8 @@ function openIndex(code){
     <div class="panel" style="padding:12px 14px"><h3 style="margin-bottom:6px">这个指数的特点</h3><p class="tline">${esc(IDX_NOTE[code] || "")}</p>
       <p class="note" style="margin:8px 0 0">宏观、政策、资金、板块、情绪五个维度是全市场共性，见「市场研判」页。<button class="btn" id="toResearch" style="margin-left:6px">打开市场研判</button></p></div>
     <div class="panel" style="padding:12px 14px;display:grid;gap:10px">
-      <div class="phead" style="margin-bottom:0"><h3>AI 六维分析</h3><span style="display:flex;gap:8px"><button class="btn pri" id="ixAi">让 Claude 分析这个指数</button><button class="btn" id="ixStop" hidden>停止</button></span></div>
-      <div class="ai" id="ixOut"><span class="note">Claude 会按宏观、政策、资金、技术、板块、情绪六个维度，结合本页数据给出多空逻辑和短中期展望，并标出还缺哪些数据。使用你自己的 Claude 额度。</span></div>
+      <div class="phead" style="margin-bottom:0"><h3>AI 六维分析</h3><span style="display:flex;gap:8px"><button class="btn pri" id="ixAi">让 ${AI_NAME} 分析这个指数</button><button class="btn" id="ixStop" hidden>停止</button></span></div>
+      <div class="ai" id="ixOut">${!IN_CLAUDE && !dsKey() ? aiNoKey() : `<span class="note">${AI_NAME} 会按宏观、政策、资金、技术、板块、情绪六个维度，结合本页数据给出多空逻辑和短中期展望，并标出还缺哪些数据。${AI_QUOTA}</span>`}</div>
     </div>`;
   drawer.hidden = false; $("#scrim").hidden = false; drawer.scrollTop = 0;
   const levels = [...st.sup.map(v => ({v, kind: "s", label: "支撑 " + fmtAxis(v)})), ...st.res.map(v => ({v, kind: "r", label: "压力 " + fmtAxis(v)}))];
@@ -1980,8 +2078,8 @@ function openGIndex(key){
     <div class="panel" style="padding:12px 14px"><h3 style="margin-bottom:6px">技术面</h3>${idxNarrative(st).map(([k, v]) => `<p class="tline"><b>${k}</b>${esc(v)}</p>`).join("")}</div>
     <div class="panel" style="padding:12px 14px"><h3 style="margin-bottom:8px">多周期指标：日线 · 周线 · 月线</h3>${tfTable(rows, gMonthly(ix))}${indNarrative(rows, gMonthly(ix)).map(([k, v]) => `<p class="tline"><b>${k}</b>${esc(v)}</p>`).join("")}</div>` : `<p class="note">这个指数的历史K线不足，暂时只能看报价${LIVE.on && ix.em ? "；正在尝试从东方财富加载" : ""}。</p>`}
     <div class="panel" style="padding:12px 14px;display:grid;gap:10px">
-      <div class="phead" style="margin-bottom:0"><h3>AI 技术面分析</h3><span style="display:flex;gap:8px"><button class="btn pri" id="gxAi">让 Claude 分析这个指数</button><button class="btn" id="gxStop" hidden>停止</button></span></div>
-      <div class="ai" id="gxOut"><span class="note">Claude 会根据日、周、月线的趋势、MACD、RSI、KDJ、布林线和量能，给出多空逻辑和短中期情景。使用你自己的 Claude 额度。</span></div>
+      <div class="phead" style="margin-bottom:0"><h3>AI 技术面分析</h3><span style="display:flex;gap:8px"><button class="btn pri" id="gxAi">让 ${AI_NAME} 分析这个指数</button><button class="btn" id="gxStop" hidden>停止</button></span></div>
+      <div class="ai" id="gxOut">${!IN_CLAUDE && !dsKey() ? aiNoKey() : `<span class="note">${AI_NAME} 会根据日、周、月线的趋势、MACD、RSI、KDJ、布林线和量能，给出多空逻辑和短中期情景。${AI_QUOTA}</span>`}</div>
     </div>`;
   drawer.hidden = false; $("#scrim").hidden = false; drawer.scrollTop = 0;
   openState = {type: "gindex", code: key, rows};
@@ -2037,8 +2135,8 @@ function openGStock(y){
     ${chartable ? `<div id="gsPanel"></div>` : `<p class="note">${s.tx ? "在浏览器里直接打开实时版 HTML，可以查看这只股票上市以来的 K 线、最近五个交易日的分时和技术指标。" : "这个市场没有浏览器可直接访问的免费行情接口，本页只提供快照报价；美股和港股可在实时版里看 K 线和分时。"}</p>`}
     <div class="panel" id="dTech" style="padding:12px 14px" hidden></div>
     <div class="panel" style="padding:12px 14px;display:grid;gap:10px">
-      <div class="phead" style="margin-bottom:0"><h3>AI 个股分析</h3><span style="display:flex;gap:8px"><button class="btn pri" id="gsAi">让 Claude 分析</button><button class="btn" id="gsStop" hidden>停止</button></span></div>
-      <div class="ai" id="gsOut"><span class="note">Claude 会根据报价、估值和（实时版里加载的）K 线指标写出多空逻辑和观察要点。使用你自己的 Claude 额度。</span></div>
+      <div class="phead" style="margin-bottom:0"><h3>AI 个股分析</h3><span style="display:flex;gap:8px"><button class="btn pri" id="gsAi">让 ${AI_NAME} 分析</button><button class="btn" id="gsStop" hidden>停止</button></span></div>
+      <div class="ai" id="gsOut">${!IN_CLAUDE && !dsKey() ? aiNoKey() : `<span class="note">${AI_NAME} 会根据报价、估值和（实时版里加载的）K 线指标写出多空逻辑和观察要点。${AI_QUOTA}</span>`}</div>
     </div>`;
   drawer.hidden = false; $("#scrim").hidden = false; drawer.scrollTop = 0;
   openState = {type: "gstock", key: y, rows: null};
@@ -2190,25 +2288,60 @@ use("sample").then(async s => {
   sampleFn = s;
   if (!s) { $("#aiState").textContent = "在 claude.ai 里打开本页才能使用 AI 助手。"; $("#askBtn").disabled = true; return; }
   const lim = await s.limits().catch(() => null); toolsOk = !!(lim && lim.tools);
-  $("#aiState").textContent = toolsOk ? "AI 会调用本页的筛选工具查询数据。第一次使用需要你确认授权。" : "当前环境不支持页面工具，AI 将基于页面摘要回答。";
+  if (IN_CLAUDE) $("#aiState").textContent = toolsOk ? "AI 会调用本页的筛选工具查询数据。第一次使用需要你确认授权。" : "当前环境不支持页面工具，AI 将基于页面摘要回答。";
+  else dsInit();
 });
+function dsState(){
+  const k = dsKey();
+  $("#aiState").textContent = k ? `DeepSeek（${dsModel()}）会先调用本页的筛选工具查数据，再回答。` : "先在上方「DeepSeek 设置」里填写 API Key。";
+  $("#dsSum").textContent = k ? `已就绪 · ${dsModel()}` : "未填写 API Key";
+  $("#dsKey").placeholder = k ? `已保存（${k.slice(0, 5)}…${k.slice(-4)}），要更换就粘贴新的` : "sk-…";
+}
+function dsInit(){
+  $("#dsSet").hidden = false; $("#dsSet").open = !dsKey();
+  $("#aiSub").textContent = "DeepSeek 读取本页 5500 多只沪深京 A 股数据后回答，使用你在本机填写的 DeepSeek Key";
+  $("#dsModel").value = dsModel();
+  $("#dsModel").onchange = () => { store.set("dsModel", $("#dsModel").value); dsState(); };
+  $("#dsSave").onclick = async () => {
+    const msg = $("#dsMsg"), k = $("#dsKey").value.trim() || dsKey();
+    if (!k) { msg.textContent = "请先粘贴 API Key。"; return; }
+    if (!/^sk-\S+$/.test(k)) { msg.textContent = "这看起来不像 DeepSeek 的 Key（应以 sk- 开头，中间没有空格），没有保存。"; return; }
+    $("#dsSave").disabled = true; msg.textContent = "正在验证…";
+    try {
+      const b = await dsBalance(k); store.set("dsKey", k); $("#dsKey").value = "";
+      msg.textContent = `已保存，验证通过，${b.text}。` + (b.ok ? "现在可以提问了。" : "余额不足，充值后才能使用。");
+    } catch (e) {
+      if (e.code === "bad_key") msg.textContent = "DeepSeek 不认这个 Key，请检查是否复制完整，或在后台重新创建一个。没有保存。";
+      else { store.set("dsKey", k); $("#dsKey").value = ""; msg.textContent = `Key 已保存，但现在连不上 DeepSeek 验证（${e.detail || "网络问题"}），稍后直接提问试试。`; }
+    } finally { $("#dsSave").disabled = false; dsState(); }
+  };
+  $("#dsClear").onclick = () => { store.del("dsKey"); $("#dsKey").value = ""; $("#dsMsg").textContent = "已从这台设备删除 Key。"; dsState(); };
+  dsState();
+}
+const chatCtx = tools => tools ? RULES : RULES + "\n\n页面摘要：" + JSON.stringify(TOOLS[2].execute()) + "\n评分最高的题材股：" + JSON.stringify(R.filter(r => r.tags.length && !r.st).sort((a, b) => b.sc - a.sc).slice(0, 40).map(compact));
 async function ask(q){
   if (!sampleFn || !q.trim()) return;
   turns.push({role: "user", content: q}); addMsg("u", esc(q));
   const bubble = addMsg("a", `<span class="note">思考中…</span>`);
   chatCtl = new AbortController(); const my = chatCtl;
   $("#askBtn").disabled = true; $("#stopBtn").hidden = false;
-  const ctx = toolsOk ? RULES : RULES + "\n\n页面摘要：" + JSON.stringify(TOOLS[2].execute()) + "\n评分最高的题材股：" + JSON.stringify(R.filter(r => r.tags.length && !r.st).sort((a, b) => b.sc - a.sc).slice(0, 40).map(compact));
   const opts = {signal: my.signal, cache: false, onText: ({text}) => { bubble.innerHTML = md(text); $("#msgs").scrollTop = $("#msgs").scrollHeight; }};
   if (toolsOk) { delete opts.cache; opts.tools = TOOLS.map(t => ({...t, execute: (i, c) => { addMsg("tool", `查询数据：${esc(t.name)} ${esc(JSON.stringify(i || {}))}`); return t.execute(i || {}, c); }})); }
   try {
-    const {text} = await sampleFn([{role: "user", content: ctx}, ...turns.slice(-8)], opts);
-    turns.push({role: "assistant", content: text});
+    let r;
+    try { r = await sampleFn([{role: "user", content: chatCtx(toolsOk)}, ...turns.slice(-8)], opts); }
+    catch (e) {   // DeepSeek 不接受工具调用参数时，改用页面摘要再问一次
+      if (IN_CLAUDE || !opts.tools || e.code !== "bad_request") throw e;
+      toolsOk = false; delete opts.tools;
+      r = await sampleFn([{role: "user", content: chatCtx(false)}, ...turns.slice(-8)], opts);
+    }
+    turns.push({role: "assistant", content: r.text});
   } catch (e) {
     turns.pop();
     if (e.code === "cancelled") bubble.innerHTML = e.text ? md(e.text) : `<span class="note">已停止。</span>`;
     else bubble.innerHTML = (e.text && e.code !== "refused" ? md(e.text) : "") + `<p class="note">${esc(errMsg(e))}</p>`;
     if (["not_granted","sampling_disabled"].includes(e.code)) { aiOff = true; $("#aiState").textContent = errMsg(e); }
+    if (["no_key", "bad_key"].includes(e.code)) $("#dsSet").open = true;
   } finally { if (my === chatCtl) { $("#stopBtn").hidden = true; $("#askBtn").disabled = aiOff; } }
 }
 $("#askBtn").addEventListener("click", () => { const q = $("#askBox").value; $("#askBox").value = ""; ask(q); });
