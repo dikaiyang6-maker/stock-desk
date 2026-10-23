@@ -112,13 +112,14 @@ def refresh_market():
                      round((r["PARENT_NETPROFIT"] or 0) / 1e8, 2), None if r["SJLTZ"] is None else round(r["SJLTZ"], 1),
                      None if r["WEIGHTAVG_ROE"] is None else round(r["WEIGHTAVG_ROE"], 2), None if r["XSMLL"] is None else round(r["XSMLL"], 1),
                      round((num(f[37]) or 0) / 1e4, 2), TAG.get(c, []), 1 if "ST" in f[1] else 0,
-                     None if r.get("MGJYXJJE") is None else round(r["MGJYXJJE"], 2), num(f[4]), lu if lu and lu > 0 else None, ld if ld and ld > 0 else None])
+                     None if r.get("MGJYXJJE") is None else round(r["MGJYXJJE"], 2), num(f[4]), lu if lu and lu > 0 else None, ld if ld and ld > 0 else None,
+                     num(f[33]), num(f[38]), num(f[44]), num(f[72]) if len(f) > 72 else None, num(f[49])])   # 最高、换手率%、流通市值亿、流通股本、量比
     if len(rows) < 1000:
         log("market: 行情只拿到", len(rows), "只，沿用缓存"); return False
     hist = load("hist.json", {})
     ik = {c: {"name": n, "k": [[r[0], r[2]] for r in (hist.get("idxk", {}).get(c, {}).get("k") or [])[-260:]]} for c, n in IDX.items()}
     asof = f"{ts[:4]}-{ts[4:6]}-{ts[6:8]} {ts[8:10]}:{ts[10:12]}" if len(ts) >= 12 else bj_now().strftime("%Y-%m-%d %H:%M")
-    cols = ["code", "name", "board", "ind", "price", "chg", "pe", "pb", "mcap", "rpt", "rev", "revY", "np", "npY", "roe", "gm", "amt", "tags", "st", "cfo", "prev", "lu", "ld"]
+    cols = ["code", "name", "board", "ind", "price", "chg", "pe", "pb", "mcap", "rpt", "rev", "revY", "np", "npY", "roe", "gm", "amt", "tags", "st", "cfo", "prev", "lu", "ld", "hi", "tr", "fmc", "fsh", "qr"]
     save("a.json", {"asof": asof, "reports": rep["dates"], "cols": cols, "rows": rows, "themes": list(THEMES), "idx": ik})
     log("market rows", len(rows), "asof", asof)
     return True

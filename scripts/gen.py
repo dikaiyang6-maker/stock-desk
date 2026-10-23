@@ -1,6 +1,7 @@
 """把 data/ 里的最新数据合进 template.html，生成 site/index.html（网页版，浏览器里打开会自动切到腾讯实时行情）。"""
 import json
 
+import screen_data
 from common import DATA, ROOT, SITE, load, log
 
 SEC_ZH2 = {"Finance": "金融", "Properties": "地产", "Utilities": "公用事业", "Commerce & Industry": "工商业"}
@@ -31,6 +32,12 @@ def build():
     ai = load("ai.json")
     if ai:
         data["ai"] = ai
+    sc = load("screen.json", {})
+    if sc.get("ext") or sc.get("tech"):                       # 选股板块：按列压成数组，减小网页体积
+        ext_cols = ["rd", "rdP", "debt", "cash", "eq", "gw", "revT", "lift", "hs", "es"]
+        data["sc"] = {"extCols": ext_cols, "ext": {c: [e.get(k) for k in ext_cols] for c, e in sc.get("ext", {}).items()},
+                      **{k: sc.get(k) for k in ("techCols", "tech", "mo", "emo", "amt20", "extAsof", "extFy", "techAsof", "techDate")},
+                      "tracks": screen_data.TRACKS, "themeTrack": screen_data.THEME_TRACK, "trackKw": screen_data.TRACK_KW}   # 赛道配置直接取代码里的，不依赖当天抓取
     ta = json.loads((ROOT / "static" / "ta.json").read_text(encoding="utf-8")) if (ROOT / "static" / "ta.json").exists() else {}
     t = (ROOT / "template.html").read_text(encoding="utf-8")
     t = t.replace("/*__DATA__*/", json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/"))

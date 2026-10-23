@@ -136,6 +136,26 @@ td .cd{color:var(--muted);font-family:var(--f-num);font-size:12px;margin-left:6p
 .sbar i{display:block;height:100%;background:var(--accent)}
 .more{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px}
 
+/* 选股 */
+.xgpane{display:grid;grid-template-columns:minmax(0,1fr);gap:20px}
+.xgpane>*{min-width:0}
+.xgset{display:grid;gap:10px}
+.xgcg{gap:6px}
+.xgt th{cursor:default}
+td.wrapc{white-space:normal;min-width:170px;max-width:300px;line-height:1.5}
+tr.nohov{cursor:default}tr.nohov:hover{background:none}
+tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+.phbox{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin:12px 0;font-size:13.5px}
+.phase{display:inline-flex;align-items:center;font-weight:700;font-size:15px;padding:3px 12px;border-radius:999px;background:var(--sunk)}
+.ph-冰点,.ph-退潮{background:var(--dn-soft);color:var(--dn)}.ph-修复{background:var(--accent-soft);color:var(--accent)}.ph-发酵{background:var(--up-soft);color:var(--up)}.ph-高潮{background:var(--warn-soft);color:var(--warn)}
+.xgtruth{margin:8px 0;padding-left:1.2em;display:grid;gap:6px;font-size:13.5px;line-height:1.6}
+.xgcopybar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin:10px 0 0}
+.xgout{display:grid;gap:10px;margin-top:10px}
+.xgout:empty{display:none}
+.xgq{margin:0;font-size:13px;color:var(--muted)}
+.xgnextbar{margin-top:10px}
+.ai .tscroll{margin:6px 0}.ai table{font-size:12.5px}.ai td,.ai th{white-space:normal;text-align:left;vertical-align:top;cursor:default}
+
 /* picks */
 .tier{display:grid;gap:10px}
 .tier+.tier{margin-top:22px}
@@ -350,6 +370,7 @@ tbody tr.greg:hover{background:var(--bg)}
       <button role="tab" data-v="research">市场研判</button>
       <button role="tab" data-v="picks">精选名单</button>
       <button role="tab" data-v="screen">全市场筛选</button>
+      <button role="tab" data-v="xg">选股</button>
       <button role="tab" data-v="tools">仓位工具</button>
       <button role="tab" data-v="watch">自选</button>
       <button role="tab" data-v="ai">AI 助手</button>
@@ -694,6 +715,84 @@ tbody tr.greg:hover{background:var(--bg)}
     </div>
   </section>
 
+  <!-- 选股：D 型科技成长、F 型短线波段 -->
+  <section class="view" id="v-xg" hidden>
+    <div class="panel">
+      <div class="phead"><h2>选股</h2><span class="note" id="xgMeta"></span></div>
+      <p class="note" style="margin:0 0 10px">推荐工作流（每个财报季重复一遍）：① 初筛：按下面的条件筛出候选股；② 人工核对：关键数字以巨潮资讯网、交易所官网上的公司公告为准；③ 定期复盘：新财报出来后检查买入逻辑是否还成立，再回到第 ① 步。财报披露截止日：年报和一季报 4 月 30 日，半年报 8 月 31 日，三季报 10 月 31 日。</p>
+      <div class="ctabs" role="tablist" id="xgTabs"><button class="ctab" role="tab" data-t="d">D 型 · 科技成长</button><button class="ctab" role="tab" data-t="f">F 型 · 短线波段</button></div>
+    </div>
+    <div class="xgbody">
+      <div id="xgD" class="xgpane">
+        <div class="panel">
+          <div class="phead"><h3>D 型：硬科技与国产替代</h3><span class="note">适合看好科技产业、能承受较大波动的人</span></div>
+          <div class="xgset">
+            <div class="filters">
+              <label class="fld w1">推荐只数<input type="number" min="1" max="30" step="1" data-o="n" inputmode="numeric"></label>
+              <label class="fld w1">研发投入≥(%)<input type="number" min="0" max="50" step="1" data-o="rd" inputmode="decimal"></label>
+              <label class="chk"><input type="checkbox" data-o="exFake">排除纯蹭概念</label>
+              <label class="chk"><input type="checkbox" data-o="exDouble">排除近一年翻倍但业绩没实质增长</label>
+              <label class="chk"><input type="checkbox" data-o="exSell">排除大股东和高管持续减持</label>
+              <label class="chk"><input type="checkbox" data-o="exSt">排除 ST</label>
+            </div>
+            <div class="cg xgcg"><span class="mut">方向</span><span class="cg" data-multi="tracks" id="xgTrk"></span></div>
+            <div class="cg xgcg"><span class="mut">板块</span><span class="cg" data-multi="boards"><button class="chip2" data-v="main">沪深主板</button><button class="chip2" data-v="gem">创业板</button><button class="chip2" data-v="star">科创板</button><button class="chip2" data-v="bj">北交所</button></span></div>
+          </div>
+          <p class="note xgsum" style="margin:8px 0 0"></p>
+        </div>
+        <div>
+          <div class="tscroll"><table class="tft xgt"><thead><tr><th class="l">名称 / 代码</th><th class="l">细分赛道</th><th class="l">核心技术或产品</th><th>研发投入占比</th><th>相关业务收入占比</th><th>营收增速</th><th>毛利率</th><th>PS或PE</th><th class="l">主要客户</th><th>壁垒评级</th><th class="l">主要风险</th><th>现价</th><th>评分</th></tr></thead><tbody></tbody></table></div>
+          <div class="more"><span class="note">研发投入占比 = 研发费用 ÷ 营业总收入（最新一期利润表）；核心技术或产品取最新半年报或年报的主营构成；相关业务收入占比按主营构成里与赛道相关的产品估算，行业本身就属于该赛道的写“主营即本行业”；PS = 总市值 ÷ TTM 营收，盈利的公司显示 PE（TTM）；主要客户没有批量数据，需看年报“前五名客户”；壁垒评级是量化参考：研发 ≥15% 且毛利率 ≥40% 为强，毛利率 &lt;20% 或研发 &lt;8% 为弱。综合评分 = 研发投入 25% + 营收增速 25% + 毛利率 20% + 经营现金流为正 10% + 估值 20%（盈利用 PEG，亏损用 PS）。持续减持：近 180 天大股东减持 ≥2 次或高管二级市场减持 ≥3 次。</span><button class="btn xgmore" hidden></button></div>
+        </div>
+        <div class="panel"><h3>题材真伪鉴别</h3><ul class="xgtruth"></ul><p class="note" style="margin:0">定期报告的主营构成只能核实“已贡献收入”；“已有订单、送样验证、仅在规划阶段”要看公司公告和调研纪要，这里统一写“待核实”。</p></div>
+        <div class="panel xgai">
+          <div class="phead" style="margin-bottom:6px"><h3>AI 分析（文档 D 型提示词）</h3><span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn pri xgrun" id="xgRunD">AI 分析</button><button class="btn xgstop" hidden>停止</button></span></div>
+          <p class="note" style="margin:0">把上面的候选股数据连同文档里的 D 型提示词一起发给 AI。网站内运行无法联网，AI 只用这些数据，查不到的写“待核实”，凭知识补充的内容标“推测”。<span class="xgaiq"></span></p>
+          <div class="xgcopybar"><button class="btn xgcopy">复制提示词</button><label class="chk" style="padding:0"><input type="checkbox" class="xgwith" checked>附上本站候选股数据</label><span class="note">可以粘贴到开了联网搜索或深度研究的 AI 里使用。</span></div>
+          <div class="xgout"></div>
+          <div class="xgnextbar sugg" hidden><button class="btn xgnext" data-q="逐只做题材真伪鉴别：相关业务处于已贡献收入、已有订单、送样验证还是仅在规划阶段，没有依据的写待核实。再分别给出最有力的不买理由。">题材真伪 + 不买理由</button><button class="btn xgnext" data-q="假设一年后这些股票跌了 50%，最可能的原因分别是什么？哪几只风险最大？">假设一年后跌 50%</button></div>
+        </div>
+      </div>
+      <div id="xgF" class="xgpane" hidden>
+        <div class="panel">
+          <div class="phead"><h3>F 型：情绪 + 主线 + 量价</h3><span class="note">风险最高，只适合有经验、能严格止损的人</span></div>
+          <div class="xgset">
+            <div class="filters">
+              <label class="fld w1">推荐只数<input type="number" min="1" max="10" step="1" data-o="n" inputmode="numeric"></label>
+              <label class="fld w1">换手率下限(%)<input type="number" min="0" max="100" step="1" data-o="trLo" inputmode="decimal"></label>
+              <label class="fld w1">换手率上限(%)<input type="number" min="0" max="100" step="1" data-o="trHi" inputmode="decimal"></label>
+              <label class="fld w1">止损(%)<input type="number" min="1" max="20" step="0.5" data-o="stop" inputmode="decimal"></label>
+              <label class="fld w1">主线取前几个<input type="number" min="1" max="10" step="1" data-o="lines" inputmode="numeric"></label>
+              <label class="chk"><input type="checkbox" data-o="exSt">剔除 ST</label>
+              <label class="chk"><input type="checkbox" data-o="exSell">剔除近 30 天减持</label>
+              <label class="chk"><input type="checkbox" data-o="exLift">剔除未来 30 天解禁</label>
+              <label class="chk"><input type="checkbox" data-o="exBomb">剔除业绩可能暴雷</label>
+            </div>
+            <div class="cg xgcg"><span class="mut">板块</span><span class="cg" data-multi="boards"><button class="chip2" data-v="main">沪深主板</button><button class="chip2" data-v="gem">创业板</button><button class="chip2" data-v="star">科创板</button><button class="chip2" data-v="bj">北交所</button></span></div>
+          </div>
+          <p class="warn" style="margin:10px 0 0">T+1：当天买入不能当天卖出，买点要考虑次日低开的风险。涨跌幅：沪深主板 10%（ST 股自 2026 年 7 月 6 日起也是 10%），创业板、科创板 20%，北交所 30%。短线交易风险高，本页内容不构成投资建议。</p>
+        </div>
+        <div class="panel"><h3 style="margin-bottom:10px">第 1 步 · 市场情绪</h3><div class="xgemo"></div></div>
+        <div class="panel"><h3 style="margin-bottom:10px">第 2 步 · 主线题材</h3>
+          <div class="tscroll xglines"><table class="tft xgt"><thead><tr><th class="l">板块</th><th>近5日涨停</th><th>逐日（前4日→今日）</th><th>5日成交占比</th><th>资金集中</th><th>5日涨幅</th><th>判断</th><th>阶段</th><th class="l">龙头</th><th class="l">中军</th></tr></thead><tbody></tbody></table></div>
+          <p class="note" style="margin:8px 0 0">板块 = 东方财富行业（8 只以上）和本站题材。资金集中 = 近 5 日成交额占全市场的比重 ÷ 近 20 日的比重，大于 1 表示资金在流入。主线：近 5 日涨停 ≥4 家次、分布在 ≥3 天且资金集中 ≥1.05；一日游：涨停 ≥3 家次但 70% 以上集中在一天、只出现在 ≤2 天；其余为观察。龙头取连板最高、近 5 日涨停次数多、换手充分的股票（“最先涨停”需要分时数据，待核实）；中军取市值最大、站上 20 日线、5 日上涨且日均成交 ≥5 亿的股票。驱动逻辑（政策、产业或业绩支撑）由 AI 分析补充。左侧蓝线标记的是用于第 3 步选股的主线板块。</p>
+        </div>
+        <div class="panel"><h3 style="margin-bottom:6px">第 3–4 步 · 个股筛选与交易计划</h3><p class="note xgfsum" style="margin:0 0 10px"></p>
+          <div class="tscroll xgplan"><table class="tft xgt"><thead><tr><th class="l">名称 / 代码</th><th class="l">所属主线</th><th class="l">入选理由</th><th>现价</th><th class="l">买点</th><th class="l">止损位</th><th class="l">止盈思路</th><th class="l">预计持有</th><th class="l">主要风险</th></tr></thead><tbody></tbody></table></div>
+          <div class="more"><span class="note">放量突破 = 现价高于前 20 个交易日最高价且量比 ≥1.5；沿均线上行 = 现价 ≥ MA5 ≥ MA10 且两条均线都在上升；均线、20 日高点和 5 日平均换手截至日K统计日。业绩可能暴雷 = 最新一期净利润同比下降 50% 以上，或亏损且没有改善。</span><button class="btn xgmore" hidden></button></div>
+        </div>
+        <div class="panel"><h3 style="margin-bottom:6px">第 5 步 · 仓位</h3><p class="xgpos" style="margin:0"></p></div>
+        <div class="panel xgai">
+          <div class="phead" style="margin-bottom:6px"><h3>AI 分析（文档 F 型提示词）</h3><span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn pri xgrun" id="xgRunF">AI 分析</button><button class="btn xgstop" hidden>停止</button></span></div>
+          <p class="note" style="margin:0">按文档建议分步进行：先让 AI 完成第 1-2 步（市场情绪、主线题材），确认后再继续第 3-5 步，分析会更扎实。网站内运行无法联网，AI 只用本页数据。<span class="xgaiq"></span></p>
+          <div class="xgcopybar"><button class="btn xgcopy">复制提示词</button><label class="chk" style="padding:0"><input type="checkbox" class="xgwith" checked>附上本站情绪、板块和候选股数据</label><span class="note">可以粘贴到开了联网搜索的 AI 里使用。</span></div>
+          <div class="xgout"></div>
+          <div class="xgnextbar sugg" hidden><button class="btn xgnext" data-q="继续第3-5步：个股筛选、交易计划和仓位。只从「候选个股」里选，按要求的只数推荐；每只给出入选理由、买点、止损位、止盈思路和预计持有天数，最后按情绪阶段给出建议总仓位。">继续第 3-5 步</button><button class="btn xgnext" data-q="针对你推荐的每只股票，给出最有力的不买理由。">最有力的不买理由</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- TOOLS -->
   <section class="view" id="v-tools" hidden>
     <div class="grid2">
@@ -907,7 +1006,7 @@ function stockMinute(code){
 const idxMinute = code => (D.idxm?.[code] || []).map(x => ({d: x.d, prec: x.prec, p: x.p}));
 
 /* ---------- tabs ---------- */
-const VIEWS = ["market","global","research","picks","screen","tools","watch","ai"];
+const VIEWS = ["market","global","research","picks","screen","xg","tools","watch","ai"];
 function show(v){
   if (!VIEWS.includes(v)) v = "market";
   VIEWS.forEach(x => { document.getElementById("v-" + x).hidden = x !== v; });
@@ -915,6 +1014,7 @@ function show(v){
   const nav = $("#tabs"), sel = nav.querySelector(`[data-v="${v}"]`);   // 手机上标签栏横向滚动：把选中的标签移到可见位置
   if (sel && nav.scrollWidth > nav.clientWidth) { const n = nav.getBoundingClientRect(), s = sel.getBoundingClientRect(); nav.scrollLeft += s.left - n.left - (n.width - s.width) / 2; }
   if (v === "watch") renderWatch();
+  if (v === "xg") renderXg();
   if (v === "global") { renderGlobal(); gStockTickSoon(); }
   try { history.replaceState(null, "", "#" + v); } catch(e){}
 }
@@ -1191,15 +1291,25 @@ function marketBrief(){
   return Object.values(D.idx).map(ix => { const k = ix.k, c = k[k.length - 1][1]; return `${ix.name} ${c.toFixed(0)}（今日 ${pct((c / k[k.length - 2][1] - 1) * 100, 2)}，距一年高点 ${pct((c / Math.max(...k.map(x => x[1])) - 1) * 100)}）`; }).join("；");
 }
 function md(s){
-  const lines = esc(s).split(/\n/); let out = "", inList = false;
+  const lines = esc(s).split(/\n/); let out = "", inList = false, tbl = null;
   const inline = t => t.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/`([^`]+)`/g, "<code>$1</code>");
+  const cells = ln => ln.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map(c => c.trim());
+  const flush = () => {           // Markdown 表格：| 列 | 列 |，第二行是 --- 分隔
+    if (!tbl) return; const rows = tbl.map(cells), sep = rows.length > 1 && rows[1].every(c => /^:?-{2,}:?$/.test(c));
+    const head = sep ? rows[0] : null, body = rows.filter((r, i) => !(sep && i <= 1));
+    out += `<div class="tscroll"><table>${head ? `<thead><tr>${head.map(c => `<th>${inline(c)}</th>`).join("")}</tr></thead>` : ""}<tbody>${body.map(r => `<tr class="nohov">${r.map(c => `<td>${inline(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+    tbl = null;
+  };
   for (const ln of lines) {
+    if (/^\s*\|.*\|\s*$/.test(ln)) { if (inList) { out += "</ul>"; inList = false; } (tbl ||= []).push(ln); continue; }
+    flush();
     const m = ln.match(/^\s*(?:[-*•]|\d+[.、)])\s+(.*)/);
     if (m) { if (!inList) { out += "<ul>"; inList = true; } out += `<li>${inline(m[1])}</li>`; continue; }
     if (inList) { out += "</ul>"; inList = false; }
     const h = ln.match(/^#{1,4}\s+(.*)/);
     if (h) out += `<h4>${inline(h[1])}</h4>`; else if (ln.trim()) out += `<p>${inline(ln)}</p>`;
   }
+  flush();
   return out + (inList ? "</ul>" : "");
 }
 const ERR = {not_granted:"你没有允许本页使用 Claude，所以 AI 功能已关闭。", sampling_disabled:"你的账号当前不能在页面里使用 Claude。", rate_limited:"调用太频繁或额度已用完，稍后再试。", session_expired:"登录已过期，请重新登录 claude.ai。", refused:"Claude 拒绝回答这个请求，换个问法试试。", prompt_too_large:"内容太长了，缩小问题范围再试。",
@@ -1300,6 +1410,7 @@ function chartColors(){
 }
 function niceStep(x){ const p = Math.pow(10, Math.floor(Math.log10(x || 1))); for (const m of [1, 2, 2.5, 5, 10]) if (m * p >= x) return m * p; return 10 * p; }
 const fmtAxis = v => v == null || !isFinite(v) ? "—" : Math.abs(v) >= 1000 ? v.toFixed(0) : Math.abs(v) >= 100 ? v.toFixed(1) : v.toFixed(2);
+const fmt2 = v => v == null || !isFinite(v) ? "—" : v.toFixed(2);   // 全球指数：一律保留两位小数
 const fmtAmt = v => v == null ? "—" : v >= 1e8 ? (v / 1e8).toFixed(2) + "万亿" : v >= 1e4 ? (v / 1e4).toFixed(v >= 1e6 ? 0 : 1) + "亿" : v.toFixed(0) + "万";   // 输入单位：万元
 const fmtVol = v => v == null ? "—" : v >= 1e8 ? (v / 1e8).toFixed(2) + "亿手" : v >= 1e4 ? (v / 1e4).toFixed(v >= 1e6 ? 0 : 1) + "万手" : v.toFixed(0) + "手";
 function smaArr(a, p){ const out = new Array(a.length).fill(null); let s = 0; for (let i = 0; i < a.length; i++) { s += a[i]; if (i >= p) s -= a[i - p]; if (i >= p - 1) out[i] = s / p; } return out; }
@@ -1335,7 +1446,7 @@ function watchTheme(redraw){
   return () => { mq.removeEventListener("change", redraw); mo.disconnect(); };
 }
 function makeKChart(host, rows, opt = {}){
-  const vfmt = opt.vfmt || fmtVol;
+  const vfmt = opt.vfmt || fmtVol, fp = opt.pfmt || fmtAxis;   // fp：价格提示（全球指数传入两位小数），坐标轴刻度仍用 fmtAxis
   let n = rows.length, ind = calcInd(rows), main = opt.main || "ma", subs = (opt.subs || ["vol", "macd"]).slice(0, 3);
   const cv = document.createElement("canvas"), tip = document.createElement("div");
   cv.className = "kcv"; tip.className = "ktip"; tip.hidden = true; host.textContent = ""; host.append(cv, tip);
@@ -1402,10 +1513,10 @@ function makeKChart(host, rows, opt = {}){
           ctx.fillStyle = col.surface; ctx.globalAlpha = 0.88; ctx.fillRect(2, ty - 13, w, 14); ctx.globalAlpha = 1; ctx.fillStyle = Lv.c; ctx.fillText(Lv.label, 6, ty); });
         if (hover >= s && hover <= e && hoverY >= P.top && hoverY <= P.top + P.h) {
           const v = hi - (hoverY - P.top) / P.h * (hi - lo); ctx.strokeStyle = col.muted; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(0, hoverY + 0.5); ctx.lineTo(L.plotW, hoverY + 0.5); ctx.stroke(); ctx.setLineDash([]);
-          ctx.restore(); ctx.fillStyle = col.ink; ctx.fillRect(L.plotW + 1, hoverY - 8, 58, 16); ctx.fillStyle = col.surface; ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText(fmtAxis(v), L.plotW + 4, hoverY);
+          ctx.restore(); ctx.fillStyle = col.ink; ctx.fillRect(L.plotW + 1, hoverY - 8, 58, 16); ctx.fillStyle = col.surface; ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText(fp(v), L.plotW + 4, hoverY);
         } else ctx.restore();
-        legend(ctx, main === "boll" ? [["BOLL(20,2)", col.muted], ["中 " + fmtAxis(ind.boll.mid[at]), col.ma[20]], ["上 " + fmtAxis(ind.boll.up[at]), col.ma[10]], ["下 " + fmtAxis(ind.boll.dn[at]), col.ma[60]]]
-          : MA_PERIODS.map(p => ["MA" + p + " " + fmtAxis(ind.ma[p][at]), col.ma[p]]), 4, 9);
+        legend(ctx, main === "boll" ? [["BOLL(20,2)", col.muted], ["中 " + fp(ind.boll.mid[at]), col.ma[20]], ["上 " + fp(ind.boll.up[at]), col.ma[10]], ["下 " + fp(ind.boll.dn[at]), col.ma[60]]]
+          : MA_PERIODS.map(p => ["MA" + p + " " + fp(ind.ma[p][at]), col.ma[p]]), 4, 9);
         continue;
       }
       // sub panes
@@ -1450,7 +1561,7 @@ function makeKChart(host, rows, opt = {}){
       ctx.textAlign = t === 0 ? "left" : t === ticks - 1 ? "right" : "center"; ctx.fillText(rows[i].d, Math.max(0, Math.min(L.plotW, x(i))), H - 5); }
     if (hover >= 0) {
       const r = rows[hover], prev = hover > 0 ? rows[hover - 1].c : r.o, ch = (r.c / prev - 1) * 100, amp = (r.h - r.l) / prev * 100;
-      tip.innerHTML = `<b>${esc(r.d)}</b><span>开 ${fmtAxis(r.o)}</span><span>高 ${fmtAxis(r.h)}</span><span>低 ${fmtAxis(r.l)}</span><span>收 ${fmtAxis(r.c)}</span><span class="${cls(ch)}">${pct(ch, 2)}</span><span>振幅 ${amp.toFixed(2)}%</span>${r.v ? `<span>量 ${vfmt(r.v)}</span>` : ""}${r.a ? `<span>额 ${fmtAmt(r.a)}</span>` : ""}${opt.onPick && opt.hasMinute?.(r.d) ? `<span class="mut">${armed === hover ? "再点一次看当日分时" : "点击看当日分时"}</span>` : ""}`;
+      tip.innerHTML = `<b>${esc(r.d)}</b><span>开 ${fp(r.o)}</span><span>高 ${fp(r.h)}</span><span>低 ${fp(r.l)}</span><span>收 ${fp(r.c)}</span><span class="${cls(ch)}">${pct(ch, 2)}</span><span>振幅 ${amp.toFixed(2)}%</span>${r.v ? `<span>量 ${vfmt(r.v)}</span>` : ""}${r.a ? `<span>额 ${fmtAmt(r.a)}</span>` : ""}${opt.onPick && opt.hasMinute?.(r.d) ? `<span class="mut">${armed === hover ? "再点一次看当日分时" : "点击看当日分时"}</span>` : ""}`;
       tip.hidden = false; tip.style.top = (P0.top + 10) + "px"; tip.style.left = (x(hover) > L.plotW / 2 ? 8 : Math.max(8, L.plotW - tip.offsetWidth - 8)) + "px";
     } else tip.hidden = true;
   }
@@ -1535,6 +1646,7 @@ function sessOf(days){
   return keep.length ? keep : null;
 }
 function makeMinuteChart(host, days, opt = {}){
+  const fp = opt.pfmt || fmtAxis;
   const cv = document.createElement("canvas"), tip = document.createElement("div");
   cv.className = "kcv mincv"; tip.className = "ktip"; tip.hidden = true; host.textContent = ""; host.append(cv, tip);
   cv.setAttribute("role", "img"); cv.setAttribute("aria-label", opt.title || "分时图");
@@ -1578,9 +1690,9 @@ function makeMinuteChart(host, days, opt = {}){
     if (hasVol) { ctx.strokeStyle = col.line; ctx.beginPath(); ctx.moveTo(0, vtop - gap / 2 + 0.5); ctx.lineTo(W, vtop - gap / 2 + 0.5); ctx.stroke(); }
     const lq = hover >= 0 ? pts[hover] : pts[pts.length - 1];
     ctx.textAlign = "left"; ctx.textBaseline = "middle"; let lx = 4;
-    for (const [t, c] of [[(opt.label || "分时") + " ", col.muted], ["价 " + fmtAxis(lq.p), col.accent], [(opt.isIndex ? "均线 " : "均价 ") + fmtAxis(lq.avg), col.ma[5]], [pct((lq.p / lq.prec - 1) * 100, 2), lq.p >= lq.prec ? col.up : col.dn]]) { ctx.fillStyle = c; ctx.fillText(t, lx, 9); lx += ctx.measureText(t).width + 10; }
+    for (const [t, c] of [[(opt.label || "分时") + " ", col.muted], ["价 " + fp(lq.p), col.accent], [(opt.isIndex ? "均线 " : "均价 ") + fp(lq.avg), col.ma[5]], [pct((lq.p / lq.prec - 1) * 100, 2), lq.p >= lq.prec ? col.up : col.dn]]) { ctx.fillStyle = c; ctx.fillText(t, lx, 9); lx += ctx.measureText(t).width + 10; }
     if (hover >= 0) { const q = pts[hover], hh = String(q.hm).padStart(4, "0");
-      tip.innerHTML = `<b>${esc(q.d.slice(5))} ${hh.slice(0, 2)}:${hh.slice(2)}</b><span>价 ${fmtAxis(q.p)}</span><span class="${cls(q.p - q.prec)}">${pct((q.p / q.prec - 1) * 100, 2)}</span><span>${opt.isIndex ? "均线" : "均价"} ${fmtAxis(q.avg)}</span>${hasVol ? `<span>量 ${vfmt(q.v)}</span>` : ""}`;
+      tip.innerHTML = `<b>${esc(q.d.slice(5))} ${hh.slice(0, 2)}:${hh.slice(2)}</b><span>价 ${fp(q.p)}</span><span class="${cls(q.p - q.prec)}">${pct((q.p / q.prec - 1) * 100, 2)}</span><span>${opt.isIndex ? "均线" : "均价"} ${fp(q.avg)}</span>${hasVol ? `<span>量 ${vfmt(q.v)}</span>` : ""}`;
       tip.hidden = false; tip.style.top = (padT + 8) + "px"; tip.style.left = (x(q.x) > plotW / 2 ? 8 : Math.max(8, plotW - tip.offsetWidth - 8)) + "px"; } else tip.hidden = true;
   }
   const redraw = () => { if (!raf) raf = requestAnimationFrame(draw); };
@@ -1633,7 +1745,8 @@ function chartPanel(box, src){
   function pick(row){
     if (hasMinute(row.d)) { pickDate = row.d; mode = "min"; render(); return; }
     const i = src.daily.indexOf(row), prev = i > 0 ? src.daily[i - 1].c : row.o, days = minuteDays();
-    hint.innerHTML = `<b>${esc(row.d)}</b> 开 ${fmtAxis(row.o)} · 高 ${fmtAxis(row.h)} · 低 ${fmtAxis(row.l)} · 收 ${fmtAxis(row.c)} · <span class="${cls(row.c - prev)}">${pct((row.c / prev - 1) * 100, 2)}</span>${row.v ? " · 量 " + fmtVol(row.v) : ""}${row.a ? " · 额 " + fmtAmt(row.a) : ""}。这一天没有分时数据：${days.length ? `本页只有最近 ${days.length} 个交易日（${days[0].d.slice(5)} 起）的分时，` : ""}免费行情接口不提供更早的分钟数据。`;
+    const fp = src.pfmt || fmtAxis;
+    hint.innerHTML = `<b>${esc(row.d)}</b> 开 ${fp(row.o)} · 高 ${fp(row.h)} · 低 ${fp(row.l)} · 收 ${fp(row.c)} · <span class="${cls(row.c - prev)}">${pct((row.c / prev - 1) * 100, 2)}</span>${row.v ? " · 量 " + fmtVol(row.v) : ""}${row.a ? " · 额 " + fmtAmt(row.a) : ""}。这一天没有分时数据：${days.length ? `本页只有最近 ${days.length} 个交易日（${days[0].d.slice(5)} 起）的分时，` : ""}免费行情接口不提供更早的分钟数据。`;
   }
   function render(){
     if (chart?.view && shown) views[shown] = chart.view();
@@ -1642,7 +1755,7 @@ function chartPanel(box, src){
       const days = minuteDays();
       if (!days.length) { host.innerHTML = `<p class="note cempty">${esc(src.minuteNote || "暂无分时数据。")}</p>`; hint.textContent = ""; return; }
       const sel = minuteSel();
-      chart = makeMinuteChart(host, sel, {isIndex: src.isIndex, sess: src.sess === undefined ? A_SESS : src.sess || sessOf(minuteDays()) || A_SESS, vfmt: src.vfmt, lot: src.lot, label: mode === "five" ? `${days.length}日分时` : "分时 " + sel[0].d.slice(5), title: (src.name || "") + " 分时图"});
+      chart = makeMinuteChart(host, sel, {isIndex: src.isIndex, pfmt: src.pfmt, sess: src.sess === undefined ? A_SESS : src.sess || sessOf(minuteDays()) || A_SESS, vfmt: src.vfmt, lot: src.lot, label: mode === "five" ? `${days.length}日分时` : "分时 " + sel[0].d.slice(5), title: (src.name || "") + " 分时图"});
       shown = mode;
       hint.textContent = mode === "five" ? `最近 ${days.length} 个交易日的分钟走势，竖线分隔各日。`
         : `${sel[0].d} 分时：蓝线是价格，橙线是${src.isIndex ? "当日均线" : "均价"}，下方是每分钟成交量。` + (days.length > 1 ? `在日K上点击 ${days[0].d.slice(5)} 及之后的K线可切换日期。` : "");
@@ -1650,7 +1763,7 @@ function chartPanel(box, src){
     }
     curRows = rowsFor(mode);
     if (!curRows.length) { host.innerHTML = `<p class="note cempty">${esc(src.loading || "暂无K线数据。")}</p>`; hint.textContent = ""; return; }
-    chart = makeKChart(host, curRows, {count: rng[mode] || curRows.length, view: views[mode], levels: mode === "day" ? src.levels : null, main, subs, vfmt: src.vfmt,
+    chart = makeKChart(host, curRows, {pfmt: src.pfmt, count: rng[mode] || curRows.length, view: views[mode], levels: mode === "day" ? src.levels : null, main, subs, vfmt: src.vfmt,
       title: (src.name || "") + (mode === "day" ? " 日K" : mode === "week" ? " 周K" : " 月K"), hasMinute: mode === "day" ? hasMinute : null, onPick: mode === "day" ? pick : null});
     shown = mode; hint.textContent = kHint();
   }
@@ -1708,10 +1821,10 @@ function tfVerdict(d, w, m){
   if (!d && w) return "日线有所修复，但周线仍在 MA20 之下，反弹要等周线重新站上 MA20 才算确认。";
   return "日线和周线都在 MA20 上方，趋势偏强。";
 }
-function indNarrative(daily, monthly){
+function indNarrative(daily, monthly, fp = fmtAxis){
   const [[, s], [, w], [, m]] = tfSets(daily, monthly); if (!s) return [];
   const out = [];
-  out.push(["布林线", s.pb == null ? "数据不足。" : `收盘 ${fmtAxis(s.c)}，布林带 ${fmtAxis(s.dn)}–${fmtAxis(s.up)}（中轨 ${fmtAxis(s.mid)}），%B 为 ${s.pb.toFixed(0)}%，${s.pb < 0 ? "已跌破下轨，属超跌，但破轨后常沿下轨运行，重新站回下轨之上才算止跌信号" : s.pb > 100 ? "已突破上轨，短线过热" : s.pb < 20 ? "贴近下轨，偏弱" : s.pb > 80 ? "贴近上轨，偏强" : "在带内中部"}；带宽 ${s.bw.toFixed(1)}%${s.bw > 15 ? "，波动明显放大" : ""}。`]);
+  out.push(["布林线", s.pb == null ? "数据不足。" : `收盘 ${fp(s.c)}，布林带 ${fp(s.dn)}–${fp(s.up)}（中轨 ${fp(s.mid)}），%B 为 ${s.pb.toFixed(0)}%，${s.pb < 0 ? "已跌破下轨，属超跌，但破轨后常沿下轨运行，重新站回下轨之上才算止跌信号" : s.pb > 100 ? "已突破上轨，短线过热" : s.pb < 20 ? "贴近下轨，偏弱" : s.pb > 80 ? "贴近上轨，偏强" : "在带内中部"}；带宽 ${s.bw.toFixed(1)}%${s.bw > 15 ? "，波动明显放大" : ""}。`]);
   out.push(["RSI / KDJ", `RSI6 为 ${fmtAxis(s.rsi6)}、RSI12 为 ${fmtAxis(s.rsi12)}${s.rsi6 < 20 ? "，短线严重超卖" : s.rsi6 < 30 ? "，短线超卖" : s.rsi6 > 80 ? "，短线超买" : ""}；KDJ 为 K ${fmtAxis(s.k)} / D ${fmtAxis(s.dd)} / J ${fmtAxis(s.j)}${s.j < 0 ? "，J 值跌到 0 以下，超卖钝化，反弹信号要看 K 上穿 D" : s.j > 100 ? "，J 值超过 100，短线过热" : ""}。`]);
   out.push(["MACD", `DIF ${fmtAxis(s.dif)}、DEA ${fmtAxis(s.dea)}，${s.macd.replace("·", "，")}${s.dif < s.dea ? "，绿柱代表空头动能，绿柱连续缩短是动能衰减的第一步" : "，红柱代表多头动能"}。`]);
   if (s.vr != null) out.push(["成交量", `最近一根成交量是 5 日均量的 ${s.vr.toFixed(2)} 倍，${s.vr > 1.3 ? "明显放量" : s.vr < 0.7 ? "明显缩量" : "量能平稳"}。`]);
@@ -1790,18 +1903,18 @@ function idxStats(code, rows){
   return {last, chg: ret(1), r5: ret(5), r20: ret(20), r60: ret(60), r250: ret(250), mas, rsi, dif: dif[n - 1], dea: dea[n - 1], difPrev: dif[n - 2], deaPrev: dea[n - 2],
     hi250, lo250, dd: (last / hi250 - 1) * 100, fromLow: (last / lo250 - 1) * 100, amt: A[n - 1], amt5: avg(5), amt20: avg(20), amt60: avg(60), useA, sup, res, date: rows[n - 1].d};
 }
-function idxNarrative(st){
+function idxNarrative(st, fp = fmtAxis){
   const m = st.mas, out = [];
   const bear = st.last < m[5] && m[5] < m[10] && m[10] < m[20] && m[20] < m[60], bull = st.last > m[5] && m[5] > m[10] && m[10] > m[20] && m[20] > m[60];
-  out.push(["趋势", bear ? `均线空头排列（收盘 ${fmtAxis(st.last)} < MA5 ${fmtAxis(m[5])} < MA10 < MA20 ${fmtAxis(m[20])} < MA60 ${fmtAxis(m[60])}），短中期趋势向下。`
-    : bull ? "均线多头排列，短中期趋势向上。" : `均线交织：收盘 ${st.last > m[20] ? "站上" : "低于"} MA20（${fmtAxis(m[20])}），${st.last > m[60] ? "站上" : "低于"} MA60（${fmtAxis(m[60])}）。`]);
+  out.push(["趋势", bear ? `均线空头排列（收盘 ${fp(st.last)} < MA5 ${fp(m[5])} < MA10 < MA20 ${fp(m[20])} < MA60 ${fp(m[60])}），短中期趋势向下。`
+    : bull ? "均线多头排列，短中期趋势向上。" : `均线交织：收盘 ${st.last > m[20] ? "站上" : "低于"} MA20（${fp(m[20])}），${st.last > m[60] ? "站上" : "低于"} MA60（${fp(m[60])}）。`]);
   const momentum = st.rsi < 20 ? "严重超卖" : st.rsi < 30 ? "超卖" : st.rsi > 80 ? "严重超买" : st.rsi > 70 ? "超买" : "中性区间";
   const cross = st.difPrev <= st.deaPrev && st.dif > st.dea ? "，MACD 刚形成金叉" : st.difPrev >= st.deaPrev && st.dif < st.dea ? "，MACD 刚形成死叉" : "";
   out.push(["动量", `RSI14 为 ${st.rsi.toFixed(1)}，处于${momentum}；MACD 的 DIF ${st.dif.toFixed(1)}、DEA ${st.dea.toFixed(1)}，${st.dif < 0 ? "在零轴下方" : "在零轴上方"}${st.dif < st.dea ? "且 DIF 低于 DEA，空头动能仍在" : "且 DIF 高于 DEA，动能在修复"}${cross}。`]);
-  out.push(["位置", `距一年高点 ${fmtAxis(st.hi250)} 回撤 ${st.dd.toFixed(1)}%，${st.fromLow < 0.5 ? "收在一年内最低点附近" : `比一年低点 ${fmtAxis(st.lo250)} 高 ${st.fromLow.toFixed(1)}%`}；近 5 日 ${pct(st.r5)}，近 20 日 ${pct(st.r20)}，近 60 日 ${pct(st.r60)}。`]);
+  out.push(["位置", `距一年高点 ${fp(st.hi250)} 回撤 ${st.dd.toFixed(1)}%，${st.fromLow < 0.5 ? "收在一年内最低点附近" : `比一年低点 ${fp(st.lo250)} 高 ${st.fromLow.toFixed(1)}%`}；近 5 日 ${pct(st.r5)}，近 20 日 ${pct(st.r20)}，近 60 日 ${pct(st.r60)}。`]);
   const vr = st.amt / st.amt20;
   if (st.amt20 > 0 && st.amt > 0) out.push(["量价", `当日${st.useA ? `成交额 ${fmtAmt(st.amt)}` : "成交量"}，是 20 日均量的 ${vr.toFixed(2)} 倍、60 日均量的 ${(st.amt / st.amt60).toFixed(2)} 倍。${st.chg < 0 ? (vr > 1.05 ? "下跌放量，抛压较重。" : "下跌缩量，抛压在减弱，但承接也不足。") : (vr > 1.05 ? "上涨放量，量价配合。" : "上涨缩量，反弹力度待确认。")}`]);
-  out.push(["关键位置", `下方支撑 ${st.sup.length ? st.sup.map(fmtAxis).join(" / ") : "暂无（处于历史低位区间）"}；上方压力 ${st.res.length ? st.res.map(fmtAxis).join(" / ") : "暂无"}。支撑和压力由 640 个交易日内的波段低点、高点、整数关口和均线自动计算，只代表历史成交密集或转折位置。`]);
+  out.push(["关键位置", `下方支撑 ${st.sup.length ? st.sup.map(fp).join(" / ") : "暂无（处于历史低位区间）"}；上方压力 ${st.res.length ? st.res.map(fp).join(" / ") : "暂无"}。支撑和压力由 640 个交易日内的波段低点、高点、整数关口和均线自动计算，只代表历史成交密集或转折位置。`]);
   return out;
 }
 const IDX_ORDER = ["sh000001", "sz399001", "sz399006", "sh000688", "bj899050", "sh000300"];
@@ -1973,10 +2086,10 @@ function flash(key, p){ const o = gPrev.get(key); gPrev.set(key, p); return o ==
 function renderGCards(){
   const keys = gOrder().filter(k => { const s = gSummary(k); return s && (GV.reg === "全部" || s.r === GV.reg); });
   $("#gCards").innerHTML = keys.map(k => { const s = gSummary(k), c = s.pct >= 0 ? "var(--up)" : "var(--dn)";
-    return `<div class="gcard" data-key="${k}" role="button" tabindex="0" aria-label="${esc(s.n)}，${s.p == null ? "无报价" : fmtAxis(s.p) + "，" + pct(s.pct, 2)}，打开K线和分析">
+    return `<div class="gcard" data-key="${k}" role="button" tabindex="0" aria-label="${esc(s.n)}，${s.p == null ? "无报价" : fmt2(s.p) + "，" + pct(s.pct, 2)}，打开K线和分析">
       <span class="gtop"><span class="gn">${esc(s.n)}</span><span class="gst ${s.st.k}" title="${esc(s.st.t)}">${esc(s.st.t)}</span></span>
-      <span class="gv num${flash("c" + k, s.p)}">${s.p == null ? "—" : fmtAxis(s.p)}</span>
-      <span class="gs"><span class="num ${cls(s.pct)}">${pct(s.pct, 2)}</span><span class="num ${cls(s.chg)}">${s.chg == null ? "" : (s.chg > 0 ? "+" : "") + fmtAxis(s.chg)}</span></span>
+      <span class="gv num${flash("c" + k, s.p)}">${s.p == null ? "—" : fmt2(s.p)}</span>
+      <span class="gs"><span class="num ${cls(s.pct)}">${pct(s.pct, 2)}</span><span class="num ${cls(s.chg)}">${s.chg == null ? "" : (s.chg > 0 ? "+" : "") + fmt2(s.chg)}</span></span>
       ${s.spark.length > 2 ? spark(s.spark, c) : `<span class="note" style="height:44px;display:block">暂无K线</span>`}
       <span class="gmv" aria-hidden="${!GV.arrange}"><button type="button" class="gmvb" data-mv="-1" aria-label="${esc(s.n)}前移">◀</button><button type="button" class="gmvb" data-mv="1" aria-label="${esc(s.n)}后移">▶</button></span></div>`; }).join("");
   $("#gCards").classList.toggle("arr", GV.arrange);
@@ -1991,8 +2104,8 @@ function renderGTable(){
   let reg = null;
   for (const s of rows) {
     if (!k && s.r !== reg) { reg = s.r; html += `<tr class="greg"><td colspan="${GCOLS.length}" class="l">${esc(reg)}</td></tr>`; }
-    html += `<tr data-key="${s.key}" tabindex="0"><td class="l"><b>${esc(s.n)}</b></td><td class="l mut">${esc(s.r)}</td><td class="num${flash("t" + s.key, s.p)}">${s.p == null ? "—" : fmtAxis(s.p)}</td><td class="num">${s.h == null ? "—" : fmtAxis(s.h)}</td><td class="num">${s.l == null ? "—" : fmtAxis(s.l)}</td>
-      <td class="num ${cls(s.chg)}">${s.chg == null ? "—" : (s.chg > 0 ? "+" : "") + fmtAxis(s.chg)}</td><td class="num ${cls(s.pct)}">${pct(s.pct, 2)}</td><td class="num ${cls(s.ytd)}">${pct(s.ytd, 1)}</td><td class="num">${s.tstr || bjTime(s.ts)}</td><td class="l"><span class="gst ${s.st.k}">${esc(s.st.t)}</span></td></tr>`;
+    html += `<tr data-key="${s.key}" tabindex="0"><td class="l"><b>${esc(s.n)}</b></td><td class="l mut">${esc(s.r)}</td><td class="num${flash("t" + s.key, s.p)}">${s.p == null ? "—" : fmt2(s.p)}</td><td class="num">${s.h == null ? "—" : fmt2(s.h)}</td><td class="num">${s.l == null ? "—" : fmt2(s.l)}</td>
+      <td class="num ${cls(s.chg)}">${s.chg == null ? "—" : (s.chg > 0 ? "+" : "") + fmt2(s.chg)}</td><td class="num ${cls(s.pct)}">${pct(s.pct, 2)}</td><td class="num ${cls(s.ytd)}">${pct(s.ytd, 1)}</td><td class="num">${s.tstr || bjTime(s.ts)}</td><td class="l"><span class="gst ${s.st.k}">${esc(s.st.t)}</span></td></tr>`;
   }
   $("#gTbl").innerHTML = html + "</tbody>";
 }
@@ -2090,7 +2203,7 @@ function gInitDrag(){
 const openGAny = key => GIX.has(key) ? openGIndex(key) : openIndex(key);
 
 // ----- 指数详情 -----
-function gPanelSrc(ix){ return {daily: gRows(ix), monthly: gMonthly(ix), minute: gMinuteLive(ix), isIndex: true, name: ix.n, sess: gSess(ix) || null, vfmt: fmtShares,
+function gPanelSrc(ix){ return {daily: gRows(ix), monthly: gMonthly(ix), minute: gMinuteLive(ix), isIndex: true, pfmt: fmt2, name: ix.n, sess: gSess(ix) || null, vfmt: fmtShares,
   minuteNote: LIVE.on ? "正在加载分时…" : "这个指数没有分时快照。", loading: LIVE.on && ix.em ? "正在从东方财富加载K线…" : "数据源不提供这个指数的历史K线，只有实时报价。"}; }
 // 分时：实时版里先用实时数据（腾讯/东方财富），没有就用快照，并把每 5 秒的报价追加成当天的走势
 function gMinuteLive(ix){
@@ -2108,23 +2221,23 @@ function openGIndex(key){
   const drawer = $("#drawer"); drawer.classList.add("wide");
   drawer.innerHTML = `
     <div class="dh"><div><span class="eyebrow">${esc(ix.r)} · ${esc(TZ_CITY[ix.tz] || ix.tz)} · <span id="gxTime">${(LIVE.on ? s.st.t : "快照") + " " + (s.tstr || bjTime(s.ts))}</span></span><h2>${esc(ix.n)}</h2></div><button class="close" id="dClose" aria-label="关闭">×</button></div>
-    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span class="big num" id="gxPrice">${s.p == null ? "—" : fmtAxis(s.p)}</span><span class="num ${cls(s.pct)}" id="gxChg" style="font-size:16px">${pct(s.pct, 2)}</span>
-      <span class="note">${st ? `一年高点 ${fmtAxis(st.hi250)} · 回撤 ${st.dd.toFixed(1)}% · ` : ""}年初至今 ${pct(s.ytd, 1)} · 计价 ${esc(s.cur || "—")}</span></div>
+    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span class="big num" id="gxPrice">${s.p == null ? "—" : fmt2(s.p)}</span><span class="num ${cls(s.pct)}" id="gxChg" style="font-size:16px">${pct(s.pct, 2)}</span>
+      <span class="note">${st ? `一年高点 ${fmt2(st.hi250)} · 回撤 ${st.dd.toFixed(1)}% · ` : ""}年初至今 ${pct(s.ytd, 1)} · 计价 ${esc(s.cur || "—")}</span></div>
     <div id="gxPanel"></div>
     ${st ? `<div class="facts">
       <div><small>近 5 日</small><b class="${cls(st.r5)}">${pct(st.r5)}</b></div><div><small>近 20 日</small><b class="${cls(st.r20)}">${pct(st.r20)}</b></div><div><small>近 60 日</small><b class="${cls(st.r60)}">${pct(st.r60)}</b></div>
-      <div><small>RSI14</small><b>${st.rsi.toFixed(1)}</b></div><div><small>MA20 / MA60</small><b>${fmtAxis(st.mas[20])} / ${fmtAxis(st.mas[60])}</b></div><div><small>近一年区间</small><b>${fmtAxis(st.lo250)} – ${fmtAxis(st.hi250)}</b></div>
-      ${at ? `<div><small>数据起点</small><b>${esc(at.first)}</b></div><div><small>历史最高</small><b>${fmtAxis(at.hi)} <span class="mut" style="font-size:12px">${esc(at.hiD)}</span></b></div><div><small>历史最低</small><b>${fmtAxis(at.lo)} <span class="mut" style="font-size:12px">${esc(at.loD)}</span></b></div>` : ""}
+      <div><small>RSI14</small><b>${st.rsi.toFixed(1)}</b></div><div><small>MA20 / MA60</small><b>${fmt2(st.mas[20])} / ${fmt2(st.mas[60])}</b></div><div><small>近一年区间</small><b>${fmt2(st.lo250)} – ${fmt2(st.hi250)}</b></div>
+      ${at ? `<div><small>数据起点</small><b>${esc(at.first)}</b></div><div><small>历史最高</small><b>${fmt2(at.hi)} <span class="mut" style="font-size:12px">${esc(at.hiD)}</span></b></div><div><small>历史最低</small><b>${fmt2(at.lo)} <span class="mut" style="font-size:12px">${esc(at.loD)}</span></b></div>` : ""}
     </div>
-    <div class="panel" style="padding:12px 14px"><h3 style="margin-bottom:6px">技术面</h3>${idxNarrative(st).map(([k, v]) => `<p class="tline"><b>${k}</b>${esc(v)}</p>`).join("")}</div>
-    <div class="panel" style="padding:12px 14px"><h3 style="margin-bottom:8px">多周期指标：日线 · 周线 · 月线</h3>${tfTable(rows, gMonthly(ix))}${indNarrative(rows, gMonthly(ix)).map(([k, v]) => `<p class="tline"><b>${k}</b>${esc(v)}</p>`).join("")}</div>` : `<p class="note">这个指数的历史K线不足，暂时只能看报价${LIVE.on && ix.em ? "；正在尝试从东方财富加载" : ""}。</p>`}
+    <div class="panel" style="padding:12px 14px"><h3 style="margin-bottom:6px">技术面</h3>${idxNarrative(st, fmt2).map(([k, v]) => `<p class="tline"><b>${k}</b>${esc(v)}</p>`).join("")}</div>
+    <div class="panel" style="padding:12px 14px"><h3 style="margin-bottom:8px">多周期指标：日线 · 周线 · 月线</h3>${tfTable(rows, gMonthly(ix))}${indNarrative(rows, gMonthly(ix), fmt2).map(([k, v]) => `<p class="tline"><b>${k}</b>${esc(v)}</p>`).join("")}</div>` : `<p class="note">这个指数的历史K线不足，暂时只能看报价${LIVE.on && ix.em ? "；正在尝试从东方财富加载" : ""}。</p>`}
     <div class="panel" style="padding:12px 14px;display:grid;gap:10px">
       <div class="phead" style="margin-bottom:0"><h3>AI 技术面分析</h3><span style="display:flex;gap:8px"><button class="btn pri" id="gxAi">让 ${AI_NAME} 分析这个指数</button><button class="btn" id="gxStop" hidden>停止</button></span></div>
       <div class="ai" id="gxOut">${!IN_CLAUDE && !dsKey() ? aiNoKey() : `<span class="note">${AI_NAME} 会根据日、周、月线的趋势、MACD、RSI、KDJ、布林线和量能，给出多空逻辑和短中期情景。${AI_QUOTA}</span>`}</div>
     </div>`;
   drawer.hidden = false; $("#scrim").hidden = false; drawer.scrollTop = 0;
   openState = {type: "gindex", code: key, rows};
-  const levels = st ? [...st.sup.map(v => ({v, kind: "s", label: "支撑 " + fmtAxis(v)})), ...st.res.map(v => ({v, kind: "r", label: "压力 " + fmtAxis(v)}))] : [];
+  const levels = st ? [...st.sup.map(v => ({v, kind: "s", label: "支撑 " + fmt2(v)})), ...st.res.map(v => ({v, kind: "r", label: "压力 " + fmt2(v)}))] : [];
   const panel = mountPanel($("#gxPanel"), {...gPanelSrc(ix), levels});
   if (LIVE.on) gLoadIndexLive(ix, panel);
   $("#dClose").onclick = closeStock; $("#dClose").focus();
@@ -2444,7 +2557,8 @@ function applyStock(r, q){
   r.price = price; r.prev = qnum(q[4]) ?? r.prev; r.chg = qnum(q[32]) ?? 0; r.pe = qnum(q[39]); r.pb = qnum(q[46]);
   r.mcap = qnum(q[45]) ?? r.mcap; r.amt = (qnum(q[37]) || 0) / 1e4;
   const lu = qnum(q[47]), ld = qnum(q[48]); r.lu = lu > 0 ? lu : null; r.ld = ld > 0 ? ld : null;
-  r.o = qnum(q[5]) || price; r.h = qnum(q[33]) || price; r.l = qnum(q[34]) || price; r.vol = qnum(q[36]) || 0; r.amtW = qnum(q[37]) || 0; r.qd = qDate(q[30]); r.sc = score(r);
+  r.tr = qnum(q[38]) ?? r.tr; r.qr = qnum(q[49]) ?? r.qr; r.fmc = qnum(q[44]) ?? r.fmc;
+  r.o = qnum(q[5]) || price; r.h = qnum(q[33]) || price; r.hi = r.h; r.l = qnum(q[34]) || price; r.vol = qnum(q[36]) || 0; r.amtW = qnum(q[37]) || 0; r.qd = qDate(q[30]); r.sc = score(r);
 }
 function applyIndex(code, q){
   const c = qnum(q[3]), d = qDate(q[30]); if (!c || !d) return;
@@ -2502,6 +2616,7 @@ function liveRender(stocks){
     renderPicks();
     if (!$("#v-screen").hidden) renderTable();
     if (!$("#v-watch").hidden && !document.activeElement?.closest?.("#watch")) renderWatch();
+    if (!$("#v-xg").hidden && !document.activeElement?.closest?.(".xgset")) renderXg();
   }
   updateDrawer();
 }
@@ -2635,7 +2750,7 @@ function gUpdateDrawer(){
   if (openState.type === "gindex") {
     const ix = GIX.get(openState.code), s = gSummary(openState.code); if (!ix || !s) return;
     const p = $("#gxPrice"), c = $("#gxChg"), t = $("#gxTime");
-    if (p) p.textContent = s.p == null ? "—" : fmtAxis(s.p); if (c) { c.textContent = pct(s.pct, 2); c.className = "num " + cls(s.pct); } if (t) t.textContent = s.st.t + " " + (s.tstr || bjTime(s.ts));
+    if (p) p.textContent = s.p == null ? "—" : fmt2(s.p); if (c) { c.textContent = pct(s.pct, 2); c.className = "num " + cls(s.pct); } if (t) t.textContent = s.st.t + " " + (s.tstr || bjTime(s.ts));
     if (activeChart) { if (activeChart.mode === "min" || activeChart.mode === "five") activeChart.setMinute(gMinuteLive(ix)); else activeChart.refresh(); }
   } else if (openState.type === "gstock") {
     const s = G.st[openState.key]; if (!s) return;
@@ -2713,6 +2828,346 @@ const gStockTickSoon = () => { if (LIVE.on) gStockTick(true); };
   liveTick(); liveFull();
   if (G.idx.length) { gTick(); gStockTick(); }
 })();
+
+/* ---------- 选股：D 型科技成长、F 型短线波段（依据《A股选股提示词大全》第二部分 D、F） ---------- */
+const SC = D.sc || null;
+const XE = new Map(), XT = new Map();
+const xExt = c => { if (!XE.has(c)) { const a = SC?.ext?.[c], o = {}; if (a) SC.extCols.forEach((k, i) => o[k] = a[i]); XE.set(c, o); } return XE.get(c); };
+const xTech = c => { if (!XT.has(c)) { const a = SC?.tech?.[c]; let o = null; if (a) { o = {}; SC.techCols.forEach((k, i) => o[k] = a[i]); } XT.set(c, o); } return XT.get(c); };
+const bjDate = () => new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+const addDays = (d, n) => new Date(Date.parse(d + "T00:00:00Z") + n * 864e5).toISOString().slice(0, 10);
+const luX = r => r.lu != null && r.price >= r.lu - 0.0005, ldX = r => r.ld != null && r.price <= r.ld + 0.0005;   // 只按交易所涨跌停价判断（新股上市初期没有涨跌幅限制）
+const lin = (v, a, b) => v == null || isNaN(v) ? 0 : clamp((v - a) / (b - a), 0, 1);
+const BGRP = {sh: "main", sz: "main", gem: "gem", star: "star", bj: "bj"}, BGRP_NAME = {main: "沪深主板", gem: "创业板", star: "科创板", bj: "北交所"};
+const ANN = {Q1: 4, H1: 2, Q3: 4 / 3, FY: 1};
+const XG = {tab: store.get("xgTab", "d"), d: store.get("xgD", null), f: store.get("xgF", null), showAll: {d: false, f: false}};
+const D_DEF = {n: 10, rd: 10, tracks: Object.keys(SC?.tracks || {}), boards: ["main", "gem", "star", "bj"], exFake: true, exDouble: true, exSell: true, exSt: true};
+const F_DEF = {n: 5, trLo: 5, trHi: 20, stop: 5, lines: 5, boards: ["main", "gem", "star", "bj"], exSt: true, exSell: true, exLift: true, exBomb: true};
+XG.d = {...D_DEF, ...(XG.d || {})}; XG.f = {...F_DEF, ...(XG.f || {})};
+
+function trackInfo(r){
+  const byInd = Object.entries(SC.tracks).filter(([, inds]) => inds.includes(r.ind)).map(([t]) => t);
+  const byTag = (r.tags || []).map(g => SC.themeTrack[g]).filter(t => t && !byInd.includes(t));
+  return {all: [...byInd, ...new Set(byTag)], byInd};
+}
+
+// ===== D 型 =====
+function dCompute(o){
+  const st = {uni: 0, rd: 0, fake: 0, double: 0, sell: 0, noRd: 0}, out = [];
+  for (const r of R) {
+    const ti = trackInfo(r); if (!ti.all.length || !ti.all.some(t => o.tracks.includes(t))) continue;
+    if (!o.boards.includes(BGRP[r.board]) || (o.exSt && r.st)) continue;
+    st.uni++;
+    const e = xExt(r.code), t = xTech(r.code), mo = SC.mo?.[r.code];
+    if (e.rd == null) { st.noRd++; continue; }
+    if (e.rd < o.rd) continue;
+    st.rd++;
+    const kw = new RegExp(ti.all.map(x => SC.trackKw[x]).join("|"), "i");
+    const rel = mo ? mo.it.filter(([n]) => kw.test(n)) : null, relPct = rel ? +rel.reduce((s, [, p]) => s + p, 0).toFixed(1) : null;
+    const viaTagOnly = !ti.byInd.length;
+    const fake = viaTagOnly && (relPct == null || relPct < 10);
+    const double = t?.r250 != null && t.r250 > 100 && (!(r.np > 0) || r.npY == null || r.npY < 20);
+    const sell = (e.hs?.[0] || 0) >= 2 || (e.es?.[0] || 0) >= 3;
+    if (o.exFake && fake) { st.fake++; continue; }
+    if (o.exDouble && double) { st.double++; continue; }
+    if (o.exSell && sell) { st.sell++; continue; }
+    const ps = e.revT > 0 ? r.mcap / e.revT : null, profit = r.pe > 0 && r.np > 0, peg = profit && r.npY > 0 ? r.pe / r.npY : null;
+    const val = peg != null ? 1 - lin(peg, 0.5, 3) : ps != null ? 1 - lin(ps, 3, 30) : 0;
+    const score = Math.round(100 * (0.25 * lin(e.rd, 5, 30) + 0.25 * lin(r.revY, -10, 60) + 0.2 * lin(r.gm, 15, 70) + 0.1 * (r.cfo > 0 ? 1 : 0) + 0.2 * val));
+    const barrier = e.rd >= 15 && r.gm >= 40 ? "强" : r.gm == null || r.gm < 20 || e.rd < 8 ? "弱" : "中";
+    const loss = r.np < 0 ? -r.np * (ANN[r.rpt] || 1) : 0, runway = loss > 0 && e.cash != null ? e.cash / loss : null;
+    const risks = [];
+    if (r.np < 0) risks.push(runway != null ? `亏损，货币资金约够 ${runway.toFixed(1)} 年` : "亏损");
+    if (r.cfo != null && r.cfo < 0) risks.push("经营现金流为负");
+    if ((ps != null && ps > 20) || r.pe > 100) risks.push(`估值偏高（${ps != null ? "PS " + ps.toFixed(1) : "PE " + f(r.pe, 0)}）`);
+    if (e.lift) risks.push(`${e.lift[0].slice(5)} 解禁 ${e.lift[1]}%`);
+    if (e.hs) risks.push(`大股东减持 ${e.hs[0]} 次`);
+    if (e.es) risks.push(`高管减持 ${e.es[0]} 次（${e.es[2]} 亿元）`);
+    if (t?.r250 > 100) risks.push(`一年涨 ${t.r250.toFixed(0)}%`);
+    if (e.gw && e.eq > 0 && e.gw / e.eq > 0.3) risks.push(`商誉占净资产 ${(e.gw / e.eq * 100).toFixed(0)}%`);
+    if (viaTagOnly && !fake && relPct != null && relPct < 30) risks.push("相关业务占比偏低");
+    out.push({r, e, t, mo, tracks: ti.all, rel, relPct, viaTagOnly, ps, peg, profit, score, barrier, runway, risks});
+  }
+  out.sort((a, b) => b.score - a.score);
+  return {st, out};
+}
+function dRow(x){
+  const {r, e, mo} = x, prod = mo ? mo.it.slice(0, 2).map(([n, p]) => `${esc(n)} ${p}%`).join("<br>") : "待核实";
+  return `<tr data-code="${r.code}"><td class="l"><span class="nm">${esc(r.name)}</span><span class="cd">${r.code}</span></td><td class="l">${esc(x.tracks.join("、"))}</td>
+    <td class="l wrapc" title="${mo ? esc(`主营构成（按${mo.t}，${mo.d}）`) : ""}">${prod}</td><td class="num">${f(e.rd, 1)}%</td>
+    <td class="num" title="${x.rel ? esc(x.rel.map(([n, p]) => n + " " + p + "%").join("；")) : ""}">${x.viaTagOnly ? (x.relPct == null ? "待核实" : x.relPct + "%") : x.relPct != null && x.relPct > 0 ? x.relPct + "%" : "主营即本行业"}</td>
+    <td class="num ${cls(r.revY)}">${pct(r.revY)}</td><td class="num">${r.gm == null ? "—" : f(r.gm, 1) + "%"}</td>
+    <td class="num">${x.profit ? "PE " + f(r.pe, 1) : x.ps != null ? "PS " + f(x.ps, 1) : "—"}</td><td class="l mut">待核实</td>
+    <td><span class="pill ${x.barrier === "强" ? "yes" : x.barrier === "弱" ? "no" : "na"}">${x.barrier}</span></td>
+    <td class="l wrapc">${x.risks.length ? x.risks.slice(0, 4).map(esc).join("；") : "—"}</td><td class="num">${f(r.price)}</td><td class="num">${x.score}</td></tr>`;
+}
+function dTruth(x){
+  const m = x.mo;
+  if (x.rel?.length) return `<b>${esc(x.r.name)}</b>：已贡献收入——${x.rel.slice(0, 3).map(([n, p]) => `「${esc(n)}」占 ${p}%`).join("、")}（主营构成按${m.t}，${m.d}，东方财富）。订单、送样和规划情况：待核实。`;
+  if (!x.viaTagOnly) return `<b>${esc(x.r.name)}</b>：所属行业「${esc(x.r.ind)}」即主营业务${m ? `，主营 ${m.it.slice(0, 2).map(([n, p]) => `「${esc(n)}」${p}%`).join("、")}（${m.d}）` : ""}；与「${esc(x.tracks.join("、"))}」相关的具体产品是否已贡献收入：待核实。`;
+  return `<b>${esc(x.r.name)}</b>：主营构成里没有找到与「${esc(x.tracks.join("、"))}」直接相关的产品，处于已有订单、送样验证还是仅在规划阶段：待核实。`;
+}
+function renderD(){
+  const o = XG.d, {st, out} = dCompute(o), top = out.slice(0, o.n), rows = XG.showAll.d ? out : top;
+  const box = $("#xgD");
+  box.querySelector(".xgsum").innerHTML = `科技赛道内 <b>${st.uni}</b> 只 → 研发投入占营收 ≥${o.rd}% 的 <b>${st.rd}</b> 只（${st.noRd} 只没有研发数据）→ 排除纯蹭概念 ${st.fake}、一年翻倍但业绩没实质增长 ${st.double}、大股东或高管持续减持 ${st.sell} → 剩 <b>${out.length}</b> 只，按综合评分取前 ${Math.min(o.n, out.length)} 只。`;
+  box.querySelector("tbody").innerHTML = rows.map(dRow).join("") || `<tr><td colspan="13" class="l note">没有符合条件的股票，放宽研发门槛或排除条件再试。</td></tr>`;
+  box.querySelector(".xgmore").textContent = XG.showAll.d ? `只看前 ${o.n} 只` : `显示全部 ${out.length} 只`;
+  box.querySelector(".xgmore").hidden = out.length <= o.n;
+  box.querySelector(".xgtruth").innerHTML = top.map(x => `<li>${dTruth(x)}</li>`).join("") || "<li>没有入选股票。</li>";
+  XG.dTop = top;
+}
+
+// ===== F 型 =====
+function ztDays(r){            // 最近 5 个交易日是否涨停，[今天, 前 1 天, …]；盘中数据比日K新时，今天用实时行情
+  const t = xTech(r.code); if (!t) return [luX(r), false, false, false, false];
+  const bits = [0, 1, 2, 3, 4].map(k => !!(t.zt5 & (1 << k)));
+  return fBehind() ? [luX(r), ...bits.slice(0, 4)] : bits;
+}
+const fBehind = () => !!SC?.techDate && (LIVE.on ? (R.find(r => r.qd)?.qd || ASOF.slice(0, 10)) : ASOF.slice(0, 10)) > SC.techDate;
+function fToday(){
+  const day = LIVE.on ? (R.find(r => r.qd)?.qd || ASOF.slice(0, 10)) : ASOF.slice(0, 10);
+  let up = 0, dn = 0, zt = 0, dt = 0, zb = 0, dn5 = 0, amt = 0, lb = 0; const nx = [];
+  const behind = fBehind();
+  for (const r of R) {
+    if (r.chg > 0) up++; else if (r.chg < 0) dn++;
+    if (r.chg <= -5) dn5++;
+    amt += r.amt || 0;
+    const hi = r.h ?? r.hi, lu = luX(r);
+    if (lu) zt++; else if (r.lu && hi != null && hi >= r.lu - 0.0005) zb++;
+    if (ldX(r)) dt++;
+    const t = xTech(r.code);
+    if (behind) { if (t && (t.zt5 & 1)) nx.push(r.chg); if (lu) lb = Math.max(lb, t && (t.zt5 & 1) ? t.lb + 1 : 1); }
+    else if (lu && t) lb = Math.max(lb, t.lb);
+  }
+  const last = SC?.emo?.at(-1);
+  return {d: day, up, dn, zt, dt, zb, dn5, amt: Math.round(amt), lb, nx: behind ? (nx.length ? nx.reduce((a, b) => a + b, 0) / nx.length : null) : last?.nx ?? null, live: behind};
+}
+function emoScore(e){ const zbr = e.zt + e.zb ? e.zb / (e.zt + e.zb) * 100 : 0, upR = e.up + e.dn ? e.up / (e.up + e.dn) * 100 : 50;
+  return Math.round(30 * lin(e.zt, 0, 150) + 25 * upR / 100 + 20 * lin(e.nx ?? 0, -5, 5) + 15 * (100 - zbr) / 100 + 10 * lin(e.lb, 0, 10)); }
+const PHASE = {冰点: ["0–20%", "冰点期轻仓试错龙头"], 修复: ["30–50%", "修复期积极参与主线"], 发酵: ["50–80%", "发酵期积极参与主线"], 高潮: ["降到 30–50%", "高潮期不追高、准备兑现"], 退潮: ["0–10%", "退潮期空仓或极轻仓"]};
+function fPhase(series){
+  const L = series.map(emoScore), now = L.at(-1), prev = L.slice(-4, -1), base = prev.length ? prev.reduce((a, b) => a + b, 0) / prev.length : now, d = now - base;
+  const ph = now < 25 ? "冰点" : now >= 75 ? "高潮" : d >= 5 ? (Math.min(...prev, 100) < 35 ? "修复" : "发酵") : d <= -5 ? "退潮" : now >= 50 ? "发酵" : "修复";
+  return {ph, now, base: Math.round(base), d: Math.round(d), L};
+}
+function fLines(o){
+  const groups = new Map(), add = (k, type, r) => { if (!groups.has(k)) groups.set(k, {k, type, m: []}); groups.get(k).m.push(r); };
+  for (const r of R) { if (r.ind) add(r.ind, "行业", r); (r.tags || []).forEach(g => { if (g !== "防御/高股息") add(g, "题材", r); }); }
+  let a5 = 0, a20 = 0; for (const r of R) { const t = xTech(r.code); if (t) { a5 += t.amt5 || 0; a20 += t.amt20 || 0; } }
+  const out = [];
+  for (const g of groups.values()) {
+    if (g.type === "行业" && g.m.length < 8) continue;
+    const days = [0, 0, 0, 0, 0]; let s5 = 0, s20 = 0, wr = 0, wm = 0, zbT = 0;
+    const zm = g.m.map(r => { const z = ztDays(r); z.forEach((v, i) => { if (v) days[i]++; }); return [r, z]; });
+    for (const r of g.m) { const t = xTech(r.code); if (t) { s5 += t.amt5 || 0; s20 += t.amt20 || 0; if (t.r5 != null) { wr += t.r5 * r.mcap; wm += r.mcap; } }
+      if (!luX(r) && r.lu && (r.h ?? r.hi) >= r.lu - 0.0005) zbT++; }
+    const zt5 = days.reduce((x, y) => x + y, 0); if (!zt5) continue;
+    const spread = days.filter(Boolean).length, share = a5 ? s5 / a5 * 100 : 0, ratio = s20 && a20 && a5 ? (s5 / a5) / (s20 / a20) : null, r5 = wm ? wr / wm : null;
+    const kind = zt5 >= 4 && spread >= 3 && (ratio ?? 1) >= 1.05 ? "主线" : zt5 >= 3 && Math.max(...days) / zt5 >= 0.7 && spread <= 2 ? "一日游" : "观察";
+    const before = Math.max(...days.slice(1)), stage = days[0] && !days.slice(2).some(Boolean) ? "启动" : days[0] >= before && days[0] > days[1] ? "加速"
+      : zbT >= Math.max(1, days[0]) ? "分歧" : days[0] < before / 2 ? "退潮" : "分歧";
+    const lead = zm.filter(([, z]) => z.some(Boolean)).map(([r, z]) => ({r, n: z.filter(Boolean).length, lb: (xTech(r.code)?.lb || 0) + (fBehind() && luX(r) && (xTech(r.code)?.zt5 & 1) ? 1 : 0)}))
+      .sort((p, q) => q.lb - p.lb || q.n - p.n || (q.r.tr || 0) - (p.r.tr || 0))[0];
+    const mid = g.m.filter(r => { const t = xTech(r.code); return t && r.price > t.ma20 && (t.r5 ?? 0) > 0 && (t.amt20 ?? 0) >= 5; }).sort((p, q) => q.mcap - p.mcap)[0];
+    out.push({...g, days, zt5, spread, share, ratio, r5, kind, stage, lead, mid, score: zt5 * 3 + spread * 2 + ((ratio ?? 1) - 1) * 20 + (r5 ?? 0) / 2 + (kind === "主线" ? 5 : kind === "一日游" ? -5 : 0)});
+  }
+  return out.sort((p, q) => q.score - p.score);
+}
+const fSel = (o, lines) => lines.filter(g => g.kind === "主线").slice(0, o.lines);   // 文档：个股要属于主线题材（不选一日游和观察类板块）
+function fPicks(o, lines){
+  const sel = fSel(o, lines), today = bjDate(), cand = [], seen = new Set();
+  sel.forEach((g, gi) => g.m.forEach(r => {
+    if (seen.has(r.code)) return; const t = xTech(r.code); if (!t || t.ma10 == null) return;
+    const e = xExt(r.code), why = [], fail = [];
+    if (!o.boards.includes(BGRP[r.board])) return;
+    if (o.exSt && r.st) return;
+    const vr = r.qr ?? t.vr5, brk = t.h20 != null && r.price > t.h20 && vr >= 1.5, along = r.price >= t.ma5 && t.ma5 >= t.ma10 && t.ma5 > t.ma5p && t.ma10 > t.ma10p;
+    if (!brk && !along) return;
+    const trOk = r.tr != null && r.tr >= o.trLo && r.tr <= o.trHi, tr5Ok = t.tr5 != null && t.tr5 >= o.trLo && t.tr5 <= o.trHi;
+    if (!trOk || !tr5Ok) return;
+    const sell = [e.hs?.[1], e.es?.[1]].some(d => d && d >= addDays(today, -30)), lift = e.lift && e.lift[0] <= addDays(today, 30);
+    const bomb = (r.npY != null && r.npY <= -50) || (r.np < 0 && !(r.npY > 0));
+    if ((o.exSell && sell) || (o.exLift && lift) || (o.exBomb && bomb)) return;
+    seen.add(r.code);
+    const z = ztDays(r), lbNow = luX(r) ? (fBehind() ? ((t.zt5 & 1) ? t.lb + 1 : 1) : t.lb) : 0;
+    why.push(`属于主线「${g.k}」（近5日涨停 ${g.zt5} 家次）`);
+    if (brk) why.push(`放量突破 20 日高点 ${f(t.h20)}（量比 ${f(vr, 1)}）`); if (along) why.push(`沿 5 日、10 日均线上行（MA5 ${f(t.ma5)} > MA10 ${f(t.ma10)}，均线向上）`);
+    why.push(`换手 ${f(r.tr, 1)}%，5 日均 ${f(t.tr5, 1)}%`); if (lbNow) why.push(`${lbNow} 连板`);
+    const buy = brk ? t.h20 : t.ma5, stop = buy * (1 - o.stop / 100);
+    const risks = ["T+1：当天买入不能当天卖出，次日可能低开"];
+    if ((t.r20 ?? 0) > 50) risks.push(`近 20 日已涨 ${t.r20.toFixed(0)}%，高位分歧风险`);
+    if (sell) risks.push("近 30 天有减持"); if (lift) risks.push(`${e.lift[0].slice(5)} 解禁 ${e.lift[1]}%`); if (bomb) risks.push("业绩下滑明显");
+    const score = (o.lines - gi) * 2 + (brk ? 3 : 0) + (along ? 2 : 0) + Math.min(lbNow, 3) + z.filter(Boolean).length - Math.max(0, ((t.r20 ?? 0) - 40) / 10) + (g.kind === "主线" ? 2 : 0);
+    cand.push({r, t, e, g, brk, along, vr, lbNow, why, buy, stop, risks, score,
+      buyTxt: brk ? `回踩突破位 ${f(t.h20)} 附近不破再买，或盘中分时承接确认` : `回踩 5 日线 ${f(t.ma5)} 附近低吸，或盘中分时承接确认`,
+      stopTxt: `${f(stop)}（买入价下方 ${o.stop}%）或收盘跌破 10 日线 ${f(t.ma10)}，以先到者为准，必须执行`});
+  }));
+  return cand.sort((p, q) => q.score - p.score);
+}
+function renderF(){
+  const box = $("#xgF"), o = XG.f;
+  if (!SC?.emo?.length) { box.querySelector(".xgemo").innerHTML = `<p class="note">还没有全市场日K统计，等下一次收盘后更新。</p>`; return; }
+  const now = fToday(), series = now.live ? [...SC.emo, now] : SC.emo.map((x, i, a) => i === a.length - 1 ? {...x, ...now, live: false, nx: x.nx, lb: x.lb} : x);
+  const e = series.at(-1), P = fPhase(series), zbr = e.zt + e.zb ? e.zb / (e.zt + e.zb) * 100 : 0, amtR = SC.amt20 ? e.amt / SC.amt20 : null;
+  box.querySelector(".xgemo").innerHTML = `
+    <div class="kpis"><div><small>全市场成交额</small><b>${yi(e.amt)}</b><span class="${cls((amtR ?? 1) - 1)}">${amtR ? `较 20 日均值 ${pct((amtR - 1) * 100)}` : ""}</span></div>
+      <div><small>上涨 / 下跌</small><b><span class="up">${e.up}</span> / <span class="dn">${e.dn}</span></b><span>跌超 5%：${e.dn5} 只</span></div>
+      <div><small>涨停 / 跌停</small><b><span class="up">${e.zt}</span> / <span class="dn">${e.dt}</span></b><span>沪深主板 10%（含 ST），创业板、科创板 20%，北交所 30%</span></div>
+      <div><small>连板高度</small><b>${e.lb} 板</b></div><div><small>炸板率</small><b>${zbr.toFixed(0)}%</b><span>炸板 ${e.zb} 只</span></div>
+      <div><small>昨日涨停股今日平均</small><b class="${cls(e.nx)}">${pct(e.nx, 2)}</b></div></div>
+    <div class="phbox"><span class="phase ph-${P.ph}">${P.ph}</span><span>情绪分 <b>${P.now}</b>（前 3 日平均 ${P.base}，${P.d >= 0 ? "+" : ""}${P.d}）</span>
+      <span>对应打法：${PHASE[P.ph][1]}；建议总仓位 <b>${PHASE[P.ph][0]}</b>${P.ph === "退潮" ? "（退潮期建议空仓或轻仓）" : ""}</span></div>
+    <div class="tscroll"><table class="tft"><thead><tr><th class="l">日期</th><th>成交额</th><th>上涨</th><th>下跌</th><th>涨停</th><th>跌停</th><th>炸板率</th><th>连板</th><th>昨涨停今均</th><th>情绪分</th></tr></thead><tbody>
+      ${series.slice().reverse().map((x, i) => `<tr class="nohov"><td class="l">${esc(x.d)}${x.live ? " 盘中" : ""}</td><td class="num">${yi(x.amt)}</td><td class="num up">${x.up}</td><td class="num dn">${x.dn}</td><td class="num">${x.zt}</td><td class="num">${x.dt}</td>
+        <td class="num">${x.zt + x.zb ? (x.zb / (x.zt + x.zb) * 100).toFixed(0) + "%" : "—"}</td><td class="num">${x.lb}</td><td class="num ${cls(x.nx)}">${pct(x.nx, 2)}</td><td class="num">${P.L[P.L.length - 1 - i]}</td></tr>`).join("")}</tbody></table></div>
+    <p class="note">日K统计截至 ${esc(SC.techDate)} 收盘（腾讯，前复权），${now.live ? `最后一行是 ${esc(now.d)} 的${LIVE.on ? "实时" : "快照"}行情；` : ""}涨跌停按交易所规则（前收盘 ×（1±涨跌幅）四舍五入到分）判断。情绪分 = 涨停家数 30% + 上涨家数占比 25% + 昨日涨停股今日表现 20% + 封板率 15% + 连板高度 10%；低于 25 为冰点、75 以上为高潮，其余看较前 3 日的变化：明显回升为修复（前期低迷）或发酵，明显回落为退潮。这是规则判断，仅供参考。</p>`;
+  const lines = fLines(o); XG.fLines = lines; XG.fPhase = P; XG.fEmo = e;
+  const chosen = new Set(fSel(o, lines));
+  box.querySelector(".xglines tbody").innerHTML = lines.slice(0, 10).map(g => `<tr class="nohov${chosen.has(g) ? " sel" : ""}"><td class="l"><b>${esc(g.k)}</b> <span class="mut">${g.type}</span></td>
+    <td class="num">${g.zt5}</td><td class="num mut">${g.days.slice().reverse().join(" · ")}</td><td class="num">${g.share.toFixed(1)}%</td><td class="num ${cls((g.ratio ?? 1) - 1)}">${g.ratio ? "×" + g.ratio.toFixed(2) : "—"}</td>
+    <td class="num ${cls(g.r5)}">${pct(g.r5)}</td><td><span class="pill ${g.kind === "主线" ? "yes" : g.kind === "一日游" ? "no" : "na"}">${g.kind}</span></td><td>${g.stage}</td>
+    <td class="l">${g.lead ? `<a href="#" data-code="${g.lead.r.code}">${esc(g.lead.r.name)}</a>${g.lead.lb ? ` ${g.lead.lb}板` : ""}` : "—"}</td><td class="l">${g.mid ? `<a href="#" data-code="${g.mid.code}">${esc(g.mid.name)}</a>` : "—"}</td></tr>`).join("") || `<tr><td colspan="10" class="l note">最近 5 个交易日没有涨停股。</td></tr>`;
+  const cand = fPicks(o, lines), top = cand.slice(0, o.n); XG.fTop = top;
+  box.querySelector(".xgfsum").innerHTML = `从判断为主线的前 ${o.lines} 个板块（不含一日游和观察类）里，按“放量突破 20 日高点或沿 5 日、10 日均线上行 + 当日和 5 日平均换手都在 ${o.trLo}%–${o.trHi}%”筛出 <b>${cand.length}</b> 只${o.exSt || o.exSell || o.exLift || o.exBomb ? "（已剔除" + [o.exSt && "ST", o.exSell && "近 30 天减持", o.exLift && "未来 30 天解禁", o.exBomb && "业绩可能暴雷"].filter(Boolean).join("、") + "）" : ""}，按主线强度、形态、连板和位置打分，取前 ${Math.min(o.n, cand.length)} 只。${P.ph === "退潮" || P.ph === "冰点" ? `<b>当前情绪为${P.ph}，${PHASE[P.ph][1]}，宁缺毋滥。</b>` : ""}`;
+  const rows = XG.showAll.f ? cand : top;
+  box.querySelector(".xgplan tbody").innerHTML = rows.map(x => `<tr data-code="${x.r.code}"><td class="l"><span class="nm">${esc(x.r.name)}</span><span class="cd">${x.r.code}</span></td><td class="l">${esc(x.g.k)}</td>
+    <td class="l wrapc">${x.why.map(esc).join("；")}</td><td class="num">${f(x.r.price)}</td><td class="l wrapc">${esc(x.buyTxt)}</td><td class="l wrapc">${esc(x.stopTxt)}</td>
+    <td class="l wrapc">涨 10% 左右先卖一半，余下收盘跌破 5 日线离场</td><td class="l">3–10 个交易日；5 日内没走强就离场</td><td class="l wrapc">${x.risks.map(esc).join("；")}</td></tr>`).join("")
+    || `<tr><td colspan="9" class="l note">没有同时满足条件的股票，建议空仓等待，宁缺毋滥。</td></tr>`;
+  box.querySelector(".xgmore").textContent = XG.showAll.f ? `只看前 ${o.n} 只` : `显示全部 ${cand.length} 只`;
+  box.querySelector(".xgmore").hidden = cand.length <= o.n;
+  box.querySelector(".xgpos").innerHTML = `情绪阶段：<b>${P.ph}</b>。${PHASE[P.ph][1]}，建议总仓位 <b>${PHASE[P.ph][0]}</b>。单只股票按“买入价下方 ${o.stop}% 止损”计算仓位，亏损时不补仓摊薄成本；大盘转弱或情绪进入退潮期时整体降仓。`;
+}
+
+// ===== 设置、提示词与 AI 分析 =====
+function xgReadForm(kind){
+  const box = $(kind === "d" ? "#xgD" : "#xgF"), o = XG[kind];
+  box.querySelectorAll("[data-o]").forEach(el => { const k = el.dataset.o; o[k] = el.type === "checkbox" ? el.checked : +el.value; });
+  box.querySelectorAll("[data-multi]").forEach(g => { o[g.dataset.multi] = [...g.querySelectorAll("[aria-pressed=true]")].map(b => b.dataset.v); });
+  if (kind === "d") o.n = clamp(Math.round(o.n) || 10, 1, 30); else { o.n = clamp(Math.round(o.n) || 5, 1, 10); o.lines = clamp(Math.round(o.lines) || 5, 1, 10); if (o.trLo > o.trHi) [o.trLo, o.trHi] = [o.trHi, o.trLo]; }
+  store.set(kind === "d" ? "xgD" : "xgF", o);
+}
+function xgFillForm(kind){
+  const box = $(kind === "d" ? "#xgD" : "#xgF"), o = XG[kind];
+  box.querySelectorAll("[data-o]").forEach(el => { const v = o[el.dataset.o]; if (el.type === "checkbox") el.checked = !!v; else el.value = v; });
+  box.querySelectorAll("[data-multi]").forEach(g => g.querySelectorAll("[data-v]").forEach(b => b.setAttribute("aria-pressed", (o[g.dataset.multi] || []).includes(b.dataset.v))));
+}
+const OFFLINE = "本次在网站内运行，无法联网：只使用下面「本站数据」里的数字（已注明来源和日期），数据里没有的一律写“待核实”；凭你自己的知识补充的内容（如核心技术、主要客户、政策）必须标注“推测”，不要编造数字、股票代码或新闻。";
+function dPrompt(withData, offline){
+  const o = XG.d, today = bjDate();
+  let p = `# 角色
+你是一位专注中国硬科技的行业研究员，覆盖半导体、AI算力、软件、通信、机器人、创新药、高端装备、新材料。${offline ? OFFLINE : "请联网获取最新数据，"}帮我筛选${o.n}只有真实技术壁垒和成长空间的科技股（可包括科创板、创业板）。今天是${today}。
+
+# 筛选与分析要点
+1. 技术壁垒：核心技术是否自主可控，研发投入占营收比例（≥${o.rd}%）、研发人员占比、核心专利，与国内外对手的差距。
+2. 商业化进展：产品是否已量产、获得头部客户认证或订单；成熟产品与新产品的收入占比。严格区分"有订单"和"讲故事"。
+3. 国产替代空间：所在环节的国产化率和替代进度，政策支持（含"十五五"重点方向），出口管制、实体清单等外部限制。
+4. 行业景气：下游资本开支（如云厂商AI资本开支）、产业链库存、产品价格趋势。
+5. 财务：营收增速、毛利率（体现技术溢价）、研发费用资本化比例（过高要警惕）、经营现金流；亏损企业算一算现金加融资能力能支撑几年。
+6. 估值：用PS、PEG或分部估值，并与全球同类公司对比，判断当前股价隐含了多高的增长预期。
+7. 风险：技术路线变化、客户集中、估值泡沫、解禁和减持（科创板重点看）、题材退潮。
+
+# 排除
+纯蹭概念（公告中相关收入为零或占比极低）、近一年股价翻倍但业绩没有实质增长、大股东和高管持续减持的公司。
+
+# 输出
+表格列：代码｜名称｜细分赛道｜核心技术或产品｜研发投入占比｜相关业务收入占比｜营收增速｜毛利率｜PS或PE｜主要客户｜壁垒评级（强/中/弱）｜主要风险。
+另附"题材真伪鉴别"：逐一说明相关业务处于已贡献收入、已有订单、送样验证还是仅在规划阶段。数据注明来源和日期，不确定的写"待核实"。`;
+  if (withData) {
+    const pool = dCompute(o).out.slice(0, Math.max(o.n + 5, 15));
+    p += `\n\n# 本站数据（初筛候选，${pool.length} 只；行情截至 ${ASOF}，财务来自东方财富数据中心 ${SC.extAsof} 更新，日K截至 ${SC.techDate}）
+字段：研发占比=研发费用/营业总收入（rdP 期）；营收增速、净利增速为最新一期同比；PS=总市值/TTM营收；主营=最新半年报或年报的主营构成；解禁=未来90天，占总股本%；减持=近180天次数。
+${pool.map(x => JSON.stringify({代码: x.r.code, 名称: x.r.name, 板块: BOARD[x.r.board], 行业: x.r.ind, 赛道: x.tracks.join("/"), 现价: x.r.price, 总市值亿: x.r.mcap, 研发占比: x.e.rd, 研发期: x.e.rdP, 营收增速: x.r.revY, 净利增速: x.r.npY,
+  毛利率: x.r.gm, 每股经营现金流: x.r.cfo, PE_TTM: x.r.pe, PS: x.ps == null ? null : +x.ps.toFixed(2), PEG: x.peg == null ? null : +x.peg.toFixed(2), 资产负债率: x.e.debt, 货币资金亿: x.e.cash, 亏损时现金可撑年数: x.runway == null ? null : +x.runway.toFixed(1),
+  一年涨幅: x.t?.r250 ?? null, 主营: x.mo ? `${x.mo.d} 按${x.mo.t}：` + x.mo.it.map(([n, v]) => `${n}${v}%`).join("、") : null, 相关业务估算: x.relPct, 解禁: x.e.lift ? `${x.e.lift[0]} ${x.e.lift[1]}%` : null,
+  大股东减持: x.e.hs ? `${x.e.hs[0]}次，最近${x.e.hs[1]}` : null, 高管减持: x.e.es ? `${x.e.es[0]}次${x.e.es[2]}亿元，最近${x.e.es[1]}` : null})).join("\n")}`;
+  }
+  return p;
+}
+function fPrompt(withData, offline, step){
+  const o = XG.f, today = bjDate();
+  let p = `# 角色
+你是一位风控严格的A股短线交易员，熟悉T+1和涨跌幅制度（沪深主板10%，含ST股；创业板、科创板20%；北交所30%），擅长从市场情绪、主线题材和量价关系中找机会。${offline ? OFFLINE : "请联网获取最近一个交易日的数据。"}今天是${today}。
+
+# 分析步骤
+1. 市场情绪：全市场成交额及变化、上涨与下跌家数、涨停与跌停家数、连板高度、炸板率、昨日涨停股今日平均表现；判断情绪周期处于冰点、修复、发酵、高潮还是退潮。
+2. 主线题材：近5个交易日涨停家数最多、资金最集中的板块；区分有基本面或政策支撑的主线与一日游题材；指出各主线的龙头（最先涨停、连板最高、换手充分）和中军（大市值趋势股）。
+3. 个股筛选：属于主线题材；放量突破关键压力位，或沿5日、10日均线上行；换手率在${o.trLo}%-${o.trHi}%之间且有持续性；剔除ST股、近期有减持或解禁、业绩可能暴雷的个股。
+4. 交易计划：每只给出入选理由、买点（如回踩5日线、分时承接）、止损位（买入价下方${o.stop}%或跌破关键均线，必须执行）、止盈思路、预计持有天数。
+5. 仓位：按情绪阶段给出建议总仓位；退潮期建议空仓或轻仓。
+
+# 要求
+每次只推荐${o.n}只；数据必须是最新交易日的并注明日期，不确定的写"待核实"；明确提示短线交易风险高，T+1下当天买入不能当天卖出。`;
+  if (withData && XG.fEmo) {
+    const e = XG.fEmo, emo = SC.emo.map(x => `${x.d} 成交${x.amt}亿 涨${x.up}/跌${x.dn} 涨停${x.zt} 跌停${x.dt} 炸板${x.zb} 连板${x.lb} 昨涨停今均${x.nx ?? "—"}%`);
+    if (e.live) emo.push(`${e.d}（${LIVE.on ? "实时" : "快照"}） 成交${e.amt}亿 涨${e.up}/跌${e.dn} 涨停${e.zt} 跌停${e.dt} 炸板${e.zb} 连板${e.lb} 昨涨停今均${e.nx == null ? "—" : e.nx.toFixed(2)}%`);
+    p += `\n\n# 本站数据（腾讯行情 ${ASOF}，全市场日K统计截至 ${SC.techDate} 收盘，东方财富解禁、减持数据 ${SC.extAsof}）
+## 市场情绪（最近 ${emo.length} 个交易日，全市场 ${R.length} 只沪深京 A 股，涨跌停按交易所规则计算）
+${emo.join("\n")}
+全市场成交额 20 日均值：${SC.amt20} 亿；本站规则判断的情绪阶段：${XG.fPhase.ph}（情绪分 ${XG.fPhase.now}，前 3 日均 ${XG.fPhase.base}）
+## 板块（近 5 日涨停家数从前到后：前4日…今日；资金集中=5日成交额占比相对20日的倍数）
+${XG.fLines.slice(0, 8).map(g => `${g.k}（${g.type}）：近5日涨停 ${g.days.slice().reverse().join("/")} 共${g.zt5}；5日成交占比 ${g.share.toFixed(1)}%，相对20日 ×${g.ratio ? g.ratio.toFixed(2) : "—"}；市值加权5日涨幅 ${g.r5 == null ? "—" : g.r5.toFixed(1)}%；本站判断 ${g.kind}、${g.stage}；龙头 ${g.lead ? g.lead.r.name + g.lead.r.code + (g.lead.lb ? " " + g.lead.lb + "板" : "") : "—"}；中军 ${g.mid ? g.mid.name + g.mid.code : "—"}`).join("\n")}
+## 候选个股（已按第 3 步条件筛过，${XG.fTop.length} 只）
+${fPicks(o, XG.fLines).slice(0, 10).map(x => JSON.stringify({代码: x.r.code, 名称: x.r.name, 板块: BOARD[x.r.board], 所属: x.g.k, 现价: x.r.price, 今日涨跌: x.r.chg, 换手: x.r.tr, 五日均换手: x.t.tr5, 量比: x.vr, MA5: x.t.ma5, MA10: x.t.ma10, MA20: x.t.ma20,
+  二十日高点: x.t.h20, 近5日涨幅: x.t.r5, 近20日涨幅: x.t.r20, 连板: x.lbNow, 形态: [x.brk && "放量突破", x.along && "沿均线上行"].filter(Boolean).join("+"), 净利增速: x.r.npY, PE_TTM: x.r.pe})).join("\n")}`;
+  }
+  if (step === 1) p += `\n\n先完成第1-2步（市场情绪、主线题材），第3步以后等我说“继续”再做。`;
+  return p;
+}
+function xgCopy(btn, text){
+  const ok = () => { const t = btn.textContent; btn.textContent = "已复制"; setTimeout(() => { btn.textContent = t; }, 1600); };
+  const fallback = () => { const ta = document.createElement("textarea"); ta.value = text; ta.setAttribute("readonly", ""); ta.style.cssText = "position:fixed;top:0;left:0;opacity:0"; document.body.append(ta); ta.select();
+    try { document.execCommand("copy") ? ok() : alert("复制失败，请手动选择复制"); } catch(e) { alert("复制失败，请手动选择复制"); } ta.remove(); };
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(ok, fallback); else fallback();
+}
+const XAI = {d: {turns: [], ctl: null}, f: {turns: [], ctl: null}};
+async function xgAsk(kind, q, label){
+  const box = $(kind === "d" ? "#xgD" : "#xgF"), out = box.querySelector(".xgout"), st = XAI[kind], sample = await use("sample");
+  if (!sample) { out.innerHTML = `<p class="note">在 claude.ai 里打开本页才能使用 AI 分析。</p>`; return; }
+  if (!IN_CLAUDE && !dsKey()) { out.innerHTML = aiNoKey(); return; }
+  st.ctl?.abort(); st.ctl = new AbortController(); const my = st.ctl;
+  const sys = `你是严谨的A股研究员。严格按用户给的提示词执行，只用提供的数据，数据里没有的写“待核实”，推测要注明“推测”。用中文；对比类信息用 Markdown 表格（| 列 | 列 |），结论用要点，语言简洁。结尾原样写：以上内容仅为基于公开信息的分析参考，不构成投资建议，市场有风险，决策需独立判断。`;
+  st.turns.push({role: "user", content: q});
+  const bubble = document.createElement("div"); bubble.className = "ai";
+  out.insertAdjacentHTML("beforeend", `<p class="xgq"><b>你：</b>${esc(label)}</p>`); out.append(bubble); bubble.innerHTML = `<span class="note">思考中…</span>`;
+  box.querySelectorAll(".xgrun,.xgnext").forEach(b => b.disabled = true); box.querySelector(".xgstop").hidden = false; box.querySelector(".xgstop").onclick = () => my.abort();
+  try {
+    const {text} = await sample([{role: "user", content: sys}, ...st.turns], {signal: my.signal, onText: ({text}) => { if (my === st.ctl) bubble.innerHTML = md(text); }});
+    st.turns.push({role: "assistant", content: text});
+    box.querySelector(".xgnextbar").hidden = false;
+  } catch (e) {
+    st.turns.pop();
+    bubble.innerHTML = e.code === "cancelled" ? (e.text ? md(e.text) : `<span class="note">已停止。</span>`) : (e.text && e.code !== "refused" ? md(e.text) : "") + `<p class="note">${esc(errMsg(e))}</p>`;
+  } finally { if (my === st.ctl) { box.querySelectorAll(".xgrun,.xgnext").forEach(b => b.disabled = false); box.querySelector(".xgstop").hidden = true; } }
+}
+function renderXg(){
+  if (!SC) { $("#v-xg").querySelector(".xgbody").innerHTML = `<p class="note">选股数据还没生成，等下一次自动更新。</p>`; return; }
+  $("#xgMeta").textContent = `行情 ${LIVE.on ? "实时 " + liveTime() : ASOF} · 日K统计 ${SC.techDate || "—"} · 财务、解禁、减持 ${SC.extAsof || "—"}`;
+  if (XG.tab === "d") renderD(); else renderF();
+}
+function xgInit(){
+  if (!SC) { renderXg(); return; }
+  $("#xgTrk").innerHTML = Object.keys(SC.tracks).map(t => `<button class="chip2" data-v="${esc(t)}">${esc(t)}</button>`).join("");
+  ["d", "f"].forEach(k => { xgFillForm(k);
+    const box = $(k === "d" ? "#xgD" : "#xgF");
+    box.querySelector(".xgset").addEventListener("change", () => { xgReadForm(k); renderXg(); });
+    box.querySelector(".xgset").addEventListener("click", e => { const b = e.target.closest("[data-multi] [data-v]"); if (!b) return; b.setAttribute("aria-pressed", b.getAttribute("aria-pressed") !== "true"); xgReadForm(k); renderXg(); });
+    box.querySelector(".xgmore").onclick = () => { XG.showAll[k] = !XG.showAll[k]; renderXg(); };
+    box.addEventListener("click", e => { const t = e.target.closest("[data-code]"); if (t && !e.target.closest(".xgset")) { e.preventDefault(); openStock(t.dataset.code); } });
+    box.querySelector(".xgcopy").onclick = e => xgCopy(e.currentTarget, k === "d" ? dPrompt(box.querySelector(".xgwith").checked, false) : fPrompt(box.querySelector(".xgwith").checked, false, 0));
+    box.querySelector(".xgrun").onclick = () => { XAI[k].turns = []; box.querySelector(".xgout").innerHTML = ""; box.querySelector(".xgnextbar").hidden = true;
+      if (k === "d") xgAsk("d", dPrompt(true, true), `D 型科技成长选股（${XG.d.n} 只，研发投入 ≥${XG.d.rd}%）`);
+      else xgAsk("f", fPrompt(true, true, 1), "F 型短线波段：先完成第 1-2 步（市场情绪、主线题材）"); };
+    box.querySelector(".xgnextbar").addEventListener("click", e => { const b = e.target.closest("[data-q]"); if (b) xgAsk(k, b.dataset.q, b.textContent); });
+  });
+  $("#xgTabs").addEventListener("click", e => { const b = e.target.closest("[data-t]"); if (!b) return; XG.tab = b.dataset.t; store.set("xgTab", XG.tab);
+    document.querySelectorAll("#xgTabs [data-t]").forEach(x => x.setAttribute("aria-selected", x.dataset.t === XG.tab)); $("#xgD").hidden = XG.tab !== "d"; $("#xgF").hidden = XG.tab !== "f"; renderXg(); });
+  document.querySelectorAll("#xgTabs [data-t]").forEach(x => x.setAttribute("aria-selected", x.dataset.t === XG.tab)); $("#xgD").hidden = XG.tab !== "d"; $("#xgF").hidden = XG.tab !== "f";
+  const aiLabel = `让 ${AI_NAME} 分析`; document.querySelectorAll(".xgrun").forEach(b => { if (!b.dataset.l) b.textContent = b.id === "xgRunF" ? aiLabel + "（先做第 1-2 步）" : aiLabel; });
+  document.querySelectorAll(".xgaiq").forEach(n => n.textContent = AI_QUOTA);
+}
+xgInit();
 
 show((location.hash || "").slice(1) || "market");
 })();
