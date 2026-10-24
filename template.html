@@ -400,6 +400,16 @@ tbody tr.greg:hover{background:var(--bg)}
 .fltbl td.msg2{white-space:normal;min-width:200px;max-width:340px;font-size:12.5px;color:var(--muted);text-align:left;line-height:1.5}
 .fltbl td.msg2.hot{color:var(--warn);font-weight:500}
 .fbars{display:block}
+.kd-fill{background:var(--sunk);color:var(--muted)}
+.ftab th,.ftab td{font-size:12.5px;padding:5px 8px;cursor:default}
+.ftab th{position:static}
+.ftab td.l{white-space:normal;min-width:120px}
+.seatg{display:grid;gap:8px;grid-template-columns:minmax(0,1fr)}
+.tagb.nb{background:var(--accent-soft);color:var(--accent)}
+.kpis.fk{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+.kpis.fk b{font-size:15px}
+.flfill{display:flex;flex-wrap:wrap;gap:6px;align-items:center;grid-column:1/-1;margin-top:4px}
+.fltbl th[data-k]{cursor:pointer}
 .livev{font-size:11px;color:var(--accent);margin-left:4px}
 .flmoves{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:6px}
 .flmoves div{background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:6px 8px;display:grid;gap:1px;font-size:12px}
@@ -409,7 +419,8 @@ tbody tr.greg:hover{background:var(--bg)}
 .fcard .why{display:grid;gap:3px;margin:0;padding-left:1.1em;font-size:12.5px;color:var(--muted)}
 .fcard .why li::marker{color:var(--faint)}
 .fcard .aic{font-size:13px;border-top:1px dashed var(--line);padding-top:6px;margin-top:2px}
-.dflow{display:grid;gap:12px}
+.dflow{display:grid;gap:12px;grid-template-columns:minmax(0,1fr)}
+.dflow>*{min-width:0}
 .dfgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
 .dfgrid>div{min-width:0}
 .dfgrid h4,.dflow h4{margin:0 0 6px;font-size:13.5px}
@@ -895,19 +906,33 @@ tbody tr.greg:hover{background:var(--bg)}
     </div>
     <div class="panel"><div class="phead"><h3>今日资金概况</h3><span class="note" id="flKpiNote"></span></div><div class="kpis" id="flKpi"></div></div>
     <div class="grid2">
-      <div class="panel"><div class="phead"><h3>今日主力净流入前 15</h3><span class="note" id="flTopNote"></span></div><div class="tscroll"><table class="fltop" id="flTop"></table></div></div>
-      <div class="panel"><div class="phead"><h3>今日主力净流出前 15</h3></div><div class="tscroll"><table class="fltop" id="flBottom"></table></div></div>
+      <div class="panel"><div class="phead"><h3>今日主力净流入前 30</h3><span class="note" id="flTopNote"></span></div><div class="tscroll"><table class="fltop" id="flTop"></table></div></div>
+      <div class="panel"><div class="phead"><h3>今日主力净流出前 30</h3></div><div class="tscroll"><table class="fltop" id="flBottom"></table></div></div>
     </div>
     <div class="grid2">
       <div class="panel"><div class="phead"><h3>行业主力资金</h3><span class="note">当日合计，亿元</span></div><div class="dbars" id="flInd"></div></div>
       <div class="panel"><div class="phead"><h3>今日盘口异动</h3><span class="note">全市场次数（东方财富）</span></div><div id="flMoves" class="flmoves"></div></div>
+    </div>
+    <div class="panel" id="flSeatBox" hidden>
+      <div class="phead"><h3>今日龙虎榜席位：哪个席位买了哪只股票</h3><span class="note" id="flSeatNote"></span></div>
+      <div class="kpis" id="flSeatKpi" style="margin-bottom:10px"></div>
+      <div class="ctabs" role="tablist" id="flSeatTabs"><button class="ctab" role="tab" data-s="buy">净买入前 40</button><button class="ctab" role="tab" data-s="sell">净卖出前 20</button><button class="ctab" role="tab" data-s="multi">同一营业部买多只</button></div>
+      <div class="tscroll" style="margin-top:10px"><table id="flSeatTbl" class="fltop"></table></div>
+      <p class="note" style="margin:8px 0 0">只有上了龙虎榜的股票才公布买卖席位（每只每天买入、卖出各前 5 名）。“机构专用”是很多家机构共用的名称，不合并统计；沪股通、深股通专用席位是北向资金。</p>
     </div>
     <details class="archive panel" id="flOutBox"><summary>已移出监控（最近 40 只）</summary><div class="tscroll" style="margin-top:10px"><table id="flOut" class="fltbl"></table></div></details>
     <details class="archive panel"><summary>选股与监控规则</summary>
       <ol class="rules" style="margin-top:10px">
         <li><b>数据</b>：主力资金用新浪财经（主力 = 特大单，“主力净流入占成交额”= 主力净流入 ÷ 当日成交额），盘口异动用东方财富（火箭发射、大笔买入、封涨停、高台跳水、大笔卖出等 22 类），龙虎榜、公告和新闻用东方财富。不同网站对“主力”的划分不同，数字会有差别。</li>
         <li><b>粗筛</b>：剔除 ST、上市不满 20 个交易日、成交额不足 3 亿元（北交所 1 亿元）、近 20 日涨幅超过 50%、未来 30 天解禁、近 30 天有股东或高管减持、业绩亏损或大幅下滑的股票；要求当天主力净流入 ≥0.3 亿元且占成交额 ≥5%。</li>
-        <li><b>强势异动</b>（涨停或涨幅 ≥7%）：按当天主力净流入占比和金额、连续流入天数、5 日主力累计占流通市值、盘口异动、龙虎榜和量比打分。<b>资金吸筹</b>（涨幅 &lt;7%）：要求主力连续 ≥3 日净流入，按连续天数、5 日累计占流通市值和占成交额打分。两类都要求收盘在 20 日线上方、5 日主力累计为正，满 45 分才入选；各取最多 4 只，同一行业最多 2 只，每天最多 8 只。</li>
+        <li><b>监控池规模</b>：保持 30–50 只。每天先选核心入选（满 45 分，强势异动和资金吸筹各最多 4 只，同一行业最多 2 只），监控池不足 30 只时，再从 35 分以上的股票里两类轮流补充到 30 只（同一行业当天最多 3 只）；超过 50 只时资金最弱的进入观察期。</li>
+        <li><b>评分标准</b>（满分 100，龙虎榜净买入 +10、净卖出 −10）：
+          <br>强势异动：当日主力占成交额 25 分（20% 满分）+ 当日主力净流入 20 分（3 亿满分）+ 连续流入天数 15 分（5 天满分）+ 5 日主力占流通市值 15 分（3% 满分）+ 盘口异动 15 分 + 量比 5 分（3 倍满分）。
+          <br>资金吸筹：连续流入天数 30 分（5 天满分）+ 5 日主力占流通市值 25 分（2% 满分）+ 5 日主力占成交额 20 分（10% 满分）+ 当日主力占成交额 15 分（15% 满分）+ 盘口异动 10 分。
+          <br>盘口异动分：火箭发射 +2、封涨停 +3、60 日新高 +2、有大买盘 +1、高台跳水 −2、打开涨停 −2、封跌停 −3 等（每类最多算 3 次），加上大笔买入减大笔卖出的净额（每 0.25 亿 1 分，最多 ±3），折算到满分。
+          <br>入选时的评分固定不变；“今日评分”每天收盘后用同一套公式按最新数据重算，能看出资金热度是在增强还是减弱。评分只决定能否入选和排序，观察期由下面的“主力放弃”规则决定。</li>
+        <li><b>详细信息的口径</b>：资金流入流出明细按单笔成交额分为特大单、大单、小单、散单（新浪）；机构参与度、主力成本、主力买入占成交来自东方财富千股千评；十大流通股东、机构持股、股东户数来自季度报告（东方财富 F10）；散户占比给两种口径：当天小单和散单的成交占比、十大流通股东以外的持股占比；筹码分布按近 250 个交易日的日K和换手率估算。</li>
+        <li><b>强势异动</b>（涨停或涨幅 ≥7%）：按当天主力净流入占比和金额、连续流入天数、5 日主力累计占流通市值、盘口异动、龙虎榜和量比打分。<b>资金吸筹</b>（涨幅 &lt;7%）：要求主力连续 ≥3 日净流入，按连续天数、5 日累计占流通市值和占成交额打分。两类都要求收盘在 20 日线上方、5 日主力累计为正。</li>
         <li><b>主力放弃 → 观察期</b>：① 连续 3 日主力净流出，且 3 日流出超过入选以来流入的一半（或入选以来累计已转为净流出）；② 放量大跌：跌幅 ≥5%（创业板、科创板、北交所 ≥7%）且主力净流出占成交额 ≥10%；③ 连续 2 日收在 20 日线下方且主力净流出；④ 龙虎榜机构净卖出；⑤ 盘中多次高台跳水、加速下跌或大笔卖出明显多于买入，且主力净流出。</li>
         <li><b>其他因素 → 观察期</b>：利空公告（减持、立案调查、处罚、问询函、业绩预亏或预减等，例行回复和更正不算）、较入选价下跌 12%（止损线）、入选满 10 个交易日但近 5 日主力累计转负（资金热度消退）、被 ST、监控池超过 50 只时资金最弱的一只。</li>
         <li><b>观察期</b>：再观察 5 个交易日（约一周），期间新出现的原因会单独提醒；主力回流（连续 2 日净流入、收盘站上 10 日线、没有新的利空公告）就恢复跟踪，满 5 天仍没回来就移出，并记下入选以来的涨跌和主力累计。</li>
@@ -3539,7 +3564,7 @@ function renderFlowKpi(){
   const nOut = FL.removed.filter(p => p.out === FL.date).length;
   const k = (t, v, s, c = "") => `<div><small>${t}</small><b class="${c}">${v}</b><span class="mut">${s}</span></div>`;
   $("#flKpi").innerHTML = k("全市场主力净流入", yiS(m.m, 0), `流入 ${m.inN ?? "—"} 家 · 流出 ${m.outN ?? "—"} 家`, cls(m.m))
-    + k("监控池", `${nT + nW} 只`, `跟踪中 ${nT} · 观察期 ${nW}`) + k("今日新入选", `${(FL.new || []).length} 只`, `移出 ${nOut} 只`)
+    + k("监控池", `${nT + nW} 只`, `跟踪中 ${nT} · 观察期 ${nW}`) + k("今日新入选", `${(FL.new || []).length} 只`, `核心 ${FL.pool.filter(p => FL.new.includes(p.code) && p.tier !== "补充").length} · 补充 ${FL.pool.filter(p => FL.new.includes(p.code) && p.tier === "补充").length} · 移出 ${nOut}`)
     + k("龙虎榜", `${m.lhbN ?? "—"} 只`, "当日上榜") + k("火箭发射 / 大笔买入", `${mv["火箭发射"] ?? 0} / ${mv["大笔买入"] ?? 0}`, "全市场次数", "up")
     + k("高台跳水 / 大笔卖出", `${mv["高台跳水"] ?? 0} / ${mv["大笔卖出"] ?? 0}`, "全市场次数", "dn") + k("封涨停 / 打开涨停", `${mv["封涨停板"] ?? 0} / ${mv["打开涨停板"] ?? 0}`, "全市场次数");
   $("#flKpiNote").textContent = `${FL.date} 收盘`;
@@ -3564,38 +3589,46 @@ function flCard(p){
   const r = BY.get(p.code), t = flToday(p), a = p.ai;
   return `<button type="button" class="pcard fcard" data-code="${p.code}">
     <div class="top"><b>${esc(p.name)} <span class="cd num mut" style="font-size:12px">${p.code}</span>${flKind(p)}</b><span class="pr num">${f(r?.price)} <span class="${cls(r?.chg)}" style="font-size:13px">${pct(r?.chg, 2)}</span></span></div>
-    <div class="fs"><span>主力 <b class="${cls(t.m)}">${yiS(t.m)}</b>${t.live ? `<span class="livev">实时</span>` : ""}</span><span>占成交 <b>${f(t.mr, 1)}%</b></span><span>评分 <b>${f(p.score, 0)}</b></span>${a?.level ? `<span class="lvp lvp-${esc(a.level)}">${esc(a.level)}</span>` : ""}</div>
+    <div class="fs"><span>主力 <b class="${cls(t.m)}">${yiS(t.m)}</b>${t.live ? `<span class="livev">实时</span>` : ""}</span><span>占成交 <b>${f(t.mr, 1)}%</b></span><span>评分 <b>${f(flScore(p).s, 0)}</b></span>${p.qg?.org != null ? `<span>机构参与 <b>${f(p.qg.org, 0)}%</b></span>` : ""}${p.chip ? `<span>获利盘 <b>${f(p.chip.profit, 0)}%</b></span>` : ""}${a?.level ? `<span class="lvp lvp-${esc(a.level)}">${esc(a.level)}</span>` : ""}</div>
     <ul class="why">${(p.why || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul>
     ${a?.conclusion ? `<div class="aic"><span class="aibadge">DeepSeek 调查</span> ${esc(a.conclusion)}</div>` : ""}
   </button>`;
 }
-const FL_COLS = [["name", "股票", "l"], ["st", "状态", "l"], ["in", "入选"], ["price", "现价"], ["ret", "入选以来"], ["m", "今日主力"], ["m5", "5日主力"], ["run", "连续"], ["mcum", "入选以来主力"], ["bars", "近 20 日主力", "l"], ["msg", "最新提醒", "l"]];
+const FL_COLS = [["name", "股票", "l"], ["st", "状态", "l"], ["sc", "评分"], ["price", "现价"], ["ret", "入选以来"], ["m", "今日主力"], ["m5", "5日主力"], ["run", "连续"],
+  ["org", "机构参与度"], ["retail", "散户成交占比"], ["profit", "获利盘"], ["bars", "近 20 日主力", "l"], ["msg", "最新提醒", "l"]];
+const FL_SORT = {sc: p => flScore(p).s, price: p => BY.get(p.code)?.chg, ret: p => { const c = BY.get(p.code)?.price; return c && p.inP ? c / p.inP : null; }, m: p => flToday(p).m, m5: p => p.k?.m5,
+  run: p => (p.k?.in || 0) - (p.k?.out || 0), org: p => p.qg?.org, retail: p => p.f?.[p.f.length - 1]?.[11], profit: p => p.chip?.profit};
 function renderFlowPool(){
-  const fl = FLV.filter, news = new Set(FL.new || []);
+  const fl = FLV.filter, news = new Set(FL.new || []), so = FLV.sort;
   let rows = FL.pool.filter(p => !fl || (fl === "new" ? news.has(p.code) : p.st === fl));
-  rows = rows.slice().sort((a, b) => (b.st === "watch") - (a.st === "watch") || b.in.localeCompare(a.in) || (b.score || 0) - (a.score || 0));   // 观察期排在前面
+  rows = so?.k && FL_SORT[so.k] ? rows.slice().sort((a, b) => { const x = FL_SORT[so.k](a), y = FL_SORT[so.k](b); return x == null ? 1 : y == null ? -1 : (x - y) * so.dir; })
+    : rows.slice().sort((a, b) => (b.st === "watch") - (a.st === "watch") || b.in.localeCompare(a.in) || flScore(b).s - flScore(a).s);   // 默认：观察期在前，再按入选日期和今日评分
   document.querySelectorAll("#flFilter [data-f]").forEach(b => b.setAttribute("aria-pressed", b.dataset.f === fl));
   const nT = FL.pool.filter(p => p.st === "track").length, nW = FL.pool.length - nT;
-  $("#flPoolNote").textContent = `${FL.pool.length} 只（跟踪中 ${nT}，观察期 ${nW}）· 资金数据 ${FL.date}${trading() && FLV.live.size ? " · 今日主力为盘中实时" : ""}`;
-  $("#flTbl thead").innerHTML = `<tr>${FL_COLS.map(([k, t, a]) => `<th class="${a || ""}" style="cursor:default">${t}</th>`).join("")}</tr>`;
+  $("#flPoolNote").textContent = `${FL.pool.length} 只（跟踪中 ${nT}，观察期 ${nW}）· 资金数据 ${FL.date}${trading() && FLV.live.size ? " · 今日主力为盘中实时" : ""} · 点表头排序`;
+  $("#flTbl thead").innerHTML = `<tr>${FL_COLS.map(([k, t, a]) => FL_SORT[k] ? `<th data-k="${k}" class="${a || ""} ${so?.k === k ? "sorted" : ""}">${t}${so?.k === k ? (so.dir < 0 ? " ↓" : " ↑") : ""}</th>` : `<th class="${a || ""}" style="cursor:default">${t}</th>`).join("")}</tr>`;
   $("#flTbl tbody").innerHTML = rows.length ? rows.map(p => {
-    const r = BY.get(p.code), t = flToday(p), s = flSince(p), k = p.k || {}, price = r?.price ?? p.f?.[p.f.length - 1]?.[1], ret = price && p.inP ? (price / p.inP - 1) * 100 : null;
-    const last = (p.log || [])[p.log.length - 1], hot = last && last[0] === FL.date && ["warn", "bad"].includes(last[1]);
+    const r = BY.get(p.code), t = flToday(p), k = p.k || {}, price = r?.price ?? p.f?.[p.f.length - 1]?.[1], ret = price && p.inP ? (price / p.inP - 1) * 100 : null, sc = flScore(p);
+    const last = (p.log || [])[p.log.length - 1], hot = last && last[0] === FL.date && ["warn", "bad"].includes(last[1]), rt = p.f?.[p.f.length - 1]?.[11];
     const run = k.in > 0 ? `<span class="up">流入 ${k.in} 日</span>` : k.out > 0 ? `<span class="dn">流出 ${k.out} 日</span>` : "—";
     return `<tr data-code="${p.code}" class="${p.st === "watch" ? "w" : news.has(p.code) ? "n" : ""}">
-      <td class="l"><span class="nm">${esc(p.name)}</span><span class="cd">${p.code}</span>${flKind(p)}${p.halt === FL.date ? ` <span class="pill na">停牌</span>` : ""}</td>
-      <td class="l">${flStatus(p)}</td><td class="num">${mmdd(p.in)} · ${f(p.inP)}</td>
+      <td class="l"><span class="nm">${esc(p.name)}</span><span class="cd">${p.code}</span>${flKind(p)}${flTier(p)}${p.halt === FL.date ? ` <span class="pill na">停牌</span>` : ""}</td>
+      <td class="l">${flStatus(p)} <span class="mut" style="font-size:11.5px">${mmdd(p.in)} 入选</span></td>
+      <td class="num" title="今日评分 / 入选时评分">${f(sc.s, 0)}<span class="mut"> / ${f(sc.in, 0)}</span></td>
       <td class="num">${f(price)} <span class="${cls(r?.chg)}">${pct(r?.chg, 2)}</span></td><td class="num ${cls(ret)}">${pct(ret, 1)}</td>
       <td class="num ${cls(t.m)}">${yiS(t.m)}${t.mr != null ? ` <span class="mut">${f(t.mr, 0)}%</span>` : ""}${t.live ? `<span class="livev">实时</span>` : ""}</td>
-      <td class="num ${cls(k.m5)}">${yiS(k.m5)}</td><td>${run}</td><td class="num ${cls(s.m)}">${yiS(s.m)} <span class="mut">${s.days} 天</span></td>
+      <td class="num ${cls(k.m5)}">${yiS(k.m5)}</td><td>${run}</td>
+      <td class="num">${p.qg?.org != null ? f(p.qg.org, 0) + "%" : "—"}</td><td class="num">${rt != null ? f(rt, 0) + "%" : "—"}</td>
+      <td class="num ${p.chip ? (p.chip.profit >= 90 ? "up" : p.chip.profit <= 10 ? "dn" : "") : ""}">${p.chip ? f(p.chip.profit, 0) + "%" : "—"}</td>
       <td class="l">${flBars(p.f, p.in)}</td><td class="msg2${hot ? " hot" : ""}">${last ? `${mmdd(last[0])} ${esc(last[2])}` : ""}</td></tr>`;
   }).join("") : `<tr class="nohov"><td colspan="${FL_COLS.length}" class="l note">没有符合条件的股票。</td></tr>`;
 }
 function renderFlowMarket(){
   const m = FL.market || {}, row = x => `<tr data-code="${x[0]}"><td class="l"><span class="nm">${esc(x[1])}</span><span class="cd">${x[0]}</span></td><td class="num ${cls(x[2])}">${yiS(x[2])}</td><td class="num">${f(x[3], 1)}%</td><td class="num ${cls(x[4])}">${pct(x[4], 2)}</td></tr>`;
   const head = `<thead><tr><th class="l" style="cursor:default">股票</th><th style="cursor:default">主力净流入</th><th style="cursor:default">占成交额</th><th style="cursor:default">涨跌</th></tr></thead>`;
-  $("#flTop").innerHTML = head + `<tbody>${(m.top || []).map(row).join("")}</tbody>`; $("#flBottom").innerHTML = head + `<tbody>${(m.bottom || []).map(row).join("")}</tbody>`;
-  $("#flTopNote").textContent = `${FL.date} 收盘 · 新浪口径`;
+  const lv = FLV.top && trading() ? FLV.top : null;
+  $("#flTop").innerHTML = head + `<tbody>${((lv || m).top || []).map(row).join("")}</tbody>`; $("#flBottom").innerHTML = head + `<tbody>${((lv || m).bottom || []).map(row).join("")}</tbody>`;
+  $("#flTopNote").textContent = lv ? `盘中实时 ${lv.t} · 新浪口径（主力 = 特大单）` : `${FL.date} 收盘 · 新浪口径（主力 = 特大单）`;
   const ind = [...(m.indIn || []), ...(m.indOut || []).slice().reverse()], mx = Math.max(...ind.map(x => Math.abs(x[1])), 1e-6);
   $("#flInd").innerHTML = ind.map(([n, v]) => `<div class="dbar"><span class="l" title="${esc(n)}">${esc(n)}</span><span class="t"><i style="${v >= 0 ? `left:50%;width:${Math.abs(v) / mx * 50}%` : `right:50%;width:${Math.abs(v) / mx * 50}%`};background:var(--${v >= 0 ? "up" : "dn"})"></i></span><span class="r num ${cls(v)}">${yiS(v, 1)}</span></div>`).join("");
   const mv = m.moves || {}, order = [...FL_GOOD, ...FL_BAD, "60日大幅上涨"];
@@ -3611,14 +3644,18 @@ function renderFlow(){
   if (!FL) { $("#flMeta").textContent = ""; $("#flKpi").innerHTML = ""; $("#flAlerts").innerHTML = `<p class="note" style="margin:0">资金监控数据还没生成，等下一个交易日收盘后自动更新。</p>`; return; }
   $("#flMeta").textContent = `资金数据 ${FL.date} 收盘 · 生成于 ${FL.generated}${LIVE.on ? " · 行情实时 " + liveTime() : ""}`;
   renderFlowKpi(); renderFlowAlerts();
-  const news = (FL.new || []).map(c => FL.pool.find(p => p.code === c)).filter(Boolean);
-  $("#flNewNote").textContent = news.length ? `${FL.date} 收盘后选出 ${news.length} 只 · 点卡片看资金走势和 DeepSeek 调查报告` : "";
-  $("#flNew").innerHTML = news.length ? news.map(flCard).join("") : `<p class="note" style="margin:0">今天没有满足条件的新股票（满 45 分才入选）。</p>`;
-  renderFlowPool(); renderFlowMarket(); renderFlowOut();
+  const news = (FL.new || []).map(c => FL.pool.find(p => p.code === c)).filter(Boolean), core = news.filter(p => p.tier !== "补充"), fill = news.filter(p => p.tier === "补充");
+  $("#flNewNote").textContent = news.length ? `${FL.date} 收盘后选出 ${news.length} 只（核心 ${core.length}、补充 ${fill.length}）· 点卡片看详细信息和 DeepSeek 调查报告` : "";
+  $("#flNew").innerHTML = (core.length ? core.map(flCard).join("") : `<p class="note" style="margin:0">今天没有满 45 分的核心入选股票。</p>`)
+    + (fill.length ? `<div class="flfill"><b>补充入选 ${fill.length} 只</b><span class="note">监控池不足 30 只时，从核心名单以外 35 分以上的股票里两类轮流补充：</span>${fill.map(p => `<button type="button" class="chip2" data-code="${p.code}">${esc(p.name)} <span class="num mut">${f(p.score, 0)}</span></button>`).join("")}</div>` : "");
+  renderFlowPool(); renderFlowMarket(); renderFlowSeats(); renderFlowOut();
 }
 function flowInit(){
   $("#flFilter").addEventListener("click", e => { const b = e.target.closest("[data-f]"); if (!b) return; FLV.filter = b.dataset.f; store.set("flF", FLV.filter); renderFlowPool(); });
-  $("#v-flow").addEventListener("click", e => { const t = e.target.closest("[data-code]"); if (!t || e.target.closest("a")) return;
+  $("#flTbl").addEventListener("click", e => { const th = e.target.closest("th[data-k]"); if (!th) return; e.stopPropagation(); const k = th.dataset.k;
+    FLV.sort = FLV.sort?.k === k ? (FLV.sort.dir < 0 ? {k, dir: 1} : null) : {k, dir: -1}; renderFlowPool(); });
+  $("#flSeatTabs").addEventListener("click", e => { const b = e.target.closest("[data-s]"); if (b) { FLV.seatTab = b.dataset.s; renderFlowSeats(); } });
+  $("#v-flow").addEventListener("click", e => { const t = e.target.closest("[data-code]"), a = e.target.closest("a"); if (!t || (a && !a.dataset.code)) return;
     e.preventDefault(); openStock(t.dataset.code);
     const box = $("#dFlow"), at = $("#drawer .facts"); if (box && at) at.after(box); });     // 从资金监控打开：资金与近期信息放在最前面
 }
@@ -3635,12 +3672,15 @@ async function flNow(code){      // 当天实时资金：主力 = 特大单
   const d = await sinaJsonp("ssi_ssfx_flzjtj", "daima=" + txSym(code)); if (!d || d.r0_in == null) return null;
   const n = k => parseFloat(d[k]) || 0;
   return {m: (n("r0_in") - n("r0_out")) / 1e8, big: (n("r1_in") - n("r1_out")) / 1e8, small: (n("r2_in") - n("r2_out")) / 1e8, retail: (n("r3_in") - n("r3_out")) / 1e8,
-    net: n("netamount") / 1e8, amt: (n("r0") + n("r1") + n("r2") + n("r3")) / 1e8, price: n("trade"), chg: n("changeratio") * 100};
+    net: n("netamount") / 1e8, amt: (n("r0") + n("r1") + n("r2") + n("r3")) / 1e8, price: n("trade"), chg: n("changeratio") * 100,
+    fx: Object.fromEntries(["r0", "r1", "r2", "r3"].map(k => [k, [n(k + "_in") / 1e8, n(k + "_out") / 1e8, n(k) / 1e8]]))};
 }
 async function flHist(code, num = 40){   // 每日资金（旧到新），格式同监控池
   const d = await sinaJsonp("ssl_qsfx_lscjfb", `page=1&num=${num}&sort=opendate&asc=0&daima=${txSym(code)}`); if (!Array.isArray(d)) return null;
   const n = x => parseFloat(x) || 0;
-  return d.map(r => [r.opendate, n(r.trade), n(r.changeratio) * 100, n(r.turnover) / 100, (n(r.r0) + n(r.r1) + n(r.r2) + n(r.r3)) / 1e8, n(r.netamount) / 1e8, n(r.r0_net) / 1e8, n(r.r1_net) / 1e8]).reverse();
+  return d.map(r => { const amt = n(r.r0) + n(r.r1) + n(r.r2) + n(r.r3);
+    return [r.opendate, n(r.trade), n(r.changeratio) * 100, n(r.turnover) / 100, amt / 1e8, n(r.netamount) / 1e8, n(r.r0_net) / 1e8, n(r.r1_net) / 1e8, n(r.r2_net) / 1e8, n(r.r3_net) / 1e8,
+      amt ? n(r.r0) / amt * 100 : null, amt ? (n(r.r2) + n(r.r3)) / amt * 100 : null]; }).reverse();
 }
 async function getJson(url, ms = 8000){
   const c = new AbortController(), t = setTimeout(() => c.abort(), ms);
@@ -3672,6 +3712,149 @@ async function flNewsLive(code){
   const xs = d?.data?.data; if (!Array.isArray(xs)) return null;
   return xs.map(x => [(x.time || "").slice(0, 16), x.title || "", x.url || "", x.src || ""]);
 }
+// ---- 评分、资金明细、主力控盘与持股、散户占比、筹码分布、龙虎榜席位 ----
+const flScore = p => ({s: p.sc?.[1] ?? p.score, parts: p.sc?.[2] || p.scIn || [], d: p.sc?.[0] || p.in, in: p.score});
+const flTier = p => p.tier === "补充" ? `<span class="kd kd-fill" title="35–45 分，监控池不足 30 只时补充入选">补充</span>` : "";
+function flScoreHtml(p){
+  const t = flScore(p), pin = new Map((p.scIn || []).map(x => [x[0], x[1]]));
+  return `<div><h4>评分 <span class="note">今日 <b class="num">${f(t.s, 0)}</b> 分 · 入选时 ${f(t.in, 0)} 分 · ${esc(p.kind || "")}公式，满分 100，龙虎榜 ±10</span></h4>
+    <div class="tscroll"><table class="ftab"><thead><tr><th class="l">项目</th><th>今日得分</th><th>入选时</th><th>满分</th></tr></thead><tbody>${t.parts.map(x => `<tr class="nohov"><td class="l">${esc(x[0])}</td><td class="num">${f(x[1], 1)}</td><td class="num mut">${pin.has(x[0]) ? f(pin.get(x[0]), 1) : "—"}</td><td class="num mut">${x[2]}</td></tr>`).join("")}</tbody></table></div></div>`;
+}
+const FX_N = [["r0", "特大单（新浪口径的主力）"], ["r1", "大单"], ["r2", "小单"], ["r3", "散单"]];
+function flFxHtml(fx){             // fx：{r0..r3: [流入亿, 流出亿, 成交额亿]}
+  if (!fx) return `<p class="note" style="margin:0">暂时取不到。</p>`;
+  const tot = FX_N.reduce((s, [k]) => s + (fx[k]?.[2] || 0), 0) || 1;
+  const sum = ks => ks.reduce((a, k) => [a[0] + (fx[k]?.[0] || 0), a[1] + (fx[k]?.[1] || 0), a[2] + (fx[k]?.[2] || 0)], [0, 0, 0]);
+  const row = (n, [i, o, a]) => `<tr class="nohov"><td class="l">${n}</td><td class="num up">${f(i, 2)}</td><td class="num dn">${f(o, 2)}</td><td class="num ${cls(i - o)}">${yiS(i - o)}</td><td class="num">${f(a / tot * 100, 1)}%</td></tr>`;
+  return `<div class="tscroll"><table class="ftab"><thead><tr><th class="l">按单笔成交额分类</th><th>流入（亿）</th><th>流出（亿）</th><th>净额</th><th>成交占比</th></tr></thead><tbody>
+    ${FX_N.map(([k, n]) => row(n, fx[k] || [0, 0, 0])).join("")}${row("<b>特大单 + 大单（机构和大户）</b>", sum(["r0", "r1"]))}${row("<b>小单 + 散单（散户）</b>", sum(["r2", "r3"]))}</tbody></table></div>`;
+}
+function flHoldHtml(qg, hold, f0){
+  const k = (t, v, s) => `<div><small>${t}</small><b>${v}</b><span class="mut">${s}</span></div>`, out = [];
+  out.push(qg ? `<div class="kpis fk">${k("机构参与度", f(qg.org, 1) + "%", esc(qg.lvl || ""))}${k("主力买入占成交", f(qg.ratio, 1) + "%", `3 日 ${f(qg.ratio3, 1)}% · 50 日 ${f(qg.ratio50, 1)}%`)}${k("主力成本（估算）", f(qg.cost), `20 日 ${f(qg.cost20)} · 60 日 ${f(qg.cost60)}`)}${k("综合得分", f(qg.score, 0), `排名 ${qg.rank ?? "—"} · 关注指数 ${f(qg.focus, 0)}`)}</div>
+    <p class="note" style="margin:4px 0 0">东方财富千股千评（${esc(qg.d || "")}）：主力买入占成交 = 超大单和大单买入金额 ÷ 成交额；机构参与度分档：10% 以下未控盘，10%–25% 轻度，25%–40% 中度，40% 以上高度控盘。</p>` : `<p class="note" style="margin:0">千股千评暂时取不到。</p>`);
+  if (hold) {
+    const hn = hold.hn || [], h0 = hn[0];
+    out.push(`<div class="kpis fk" style="margin-top:10px">${k("十大流通股东合计", f(hold.topSum, 1) + "%", "占流通股（含控股股东）")}${k("十大以外的流通股", hold.other != null ? f(hold.other, 1) + "%" : "—", "中小股东、散户和未进前十的机构")}
+      ${hold.org?.pct != null ? k("机构持股合计", f(hold.org.pct, 1) + "%", `${hold.org.n ?? "—"} 家 · ${esc(hold.org.d || "")}`) : ""}${h0 ? k("股东户数", h0[1] != null ? Number(h0[1]).toLocaleString() : "—", `较上期 ${pct(h0[2], 1)}${h0[5] ? " · " + esc(h0[5]) : ""}`) : ""}
+      ${h0 ? k("户均持股", h0[3] != null ? Number(h0[3]).toLocaleString() + " 股" : "—", h0[4] != null ? `约 ${f(h0[4], 1)} 万元` : "") : ""}${hold.ctrl ? k("实际控制人", esc(hold.ctrl[0] || "—"), hold.ctrl[1] != null ? `持股 ${f(hold.ctrl[1], 2)}%` : "") : ""}</div>
+      ${hold.org?.by?.length ? `<p class="note" style="margin:6px 0 0">机构持股构成：${hold.org.by.map(x => `${esc(x[0])} ${f(x[2], 2)}%（${x[1]} 家）`).join("，")}</p>` : ""}
+      ${hn.length > 1 ? `<p class="note" style="margin:4px 0 0">股东户数变化：${hn.slice(0, 5).map(x => `${mmdd(x[0])} ${x[1] != null ? Number(x[1]).toLocaleString() : "—"}（${pct(x[2], 1)}）`).join(" → ")}。户数减少说明筹码向少数人集中，增加说明散户增多。</p>` : ""}
+      ${hold.top?.length ? `<details style="margin-top:6px"><summary class="note" style="cursor:pointer">十大流通股东（${esc(hold.end || "")}）</summary><div class="tscroll" style="margin-top:6px"><table class="ftab"><thead><tr><th class="l">股东</th><th class="l">类型</th><th>占流通股</th><th class="l">变动</th></tr></thead><tbody>${hold.top.map(x => `<tr class="nohov"><td class="l">${esc(x[0])}</td><td class="l mut">${esc(x[1] || "")}</td><td class="num">${f(x[2], 2)}%</td><td class="l mut">${esc(x[3] ?? "")}</td></tr>`).join("")}</tbody></table></div></details>` : ""}`);
+  }
+  const rt = (f0 || []).filter(x => x[11] != null), r1 = rt[rt.length - 1], r5 = rt.slice(-5);
+  const retail = r1 ? `今日小单和散单成交占 <b>${f(r1[11], 1)}%</b>（近 5 日平均 ${f(r5.reduce((s, x) => s + x[11], 0) / r5.length, 1)}%）` : "";
+  const hs = hold?.other != null ? `十大流通股东以外的流通股占 <b>${f(hold.other, 1)}%</b>` : "";
+  const hc = hold?.hn?.[0]?.[2] != null ? `股东户数较上期 ${pct(hold.hn[0][2], 1)}` : "";
+  if (retail || hs || hc) out.push(`<div class="dstat" style="margin-top:10px"><div><b>散户占比：</b>${[retail, hs, hc].filter(Boolean).join("；")}。</div><div class="note">成交口径看当天谁在买卖（新浪按单笔成交额分类），持股口径看季度报告里谁持有股票，两者不是同一个数。</div></div>`);
+  return out.join("");
+}
+function chipCalc(rows, fsh, bins = 80){     // 筹码分布：按换手率衰减旧筹码，当天成交按三角形分布在最低价和最高价之间（峰值在均价），用近 250 个交易日
+  const k = (rows || []).filter(r => r.h && r.l && r.v).slice(-250); if (k.length < 60 || !fsh) return null;
+  const lo = Math.min(...k.map(r => r.l)), hi = Math.max(...k.map(r => r.h)), step = (hi - lo) / bins || 0.01;
+  let dist = new Array(bins + 1).fill(0);
+  for (const r of k) {
+    const tr = Math.min(1, r.v * 100 / fsh); dist = dist.map(x => x * (1 - tr));
+    const avg = (r.o + r.c + r.h + r.l) / 4, span = Math.max(avg - r.l, r.h - avg) || step, i0 = Math.floor((r.l - lo) / step), i1 = Math.floor((r.h - lo) / step);
+    const w = []; for (let i = i0; i <= i1; i++) w.push(Math.max(0, 1 - Math.abs(lo + i * step - avg) / span) + 1e-6);
+    const sw = w.reduce((a, b) => a + b, 0); w.forEach((x, j) => { dist[i0 + j] += tr * x / sw; });
+  }
+  const tot = dist.reduce((a, b) => a + b, 0) || 1, px = i => lo + i * step, close = k[k.length - 1].c;
+  const q = p => { let acc = 0; for (let i = 0; i < dist.length; i++) { acc += dist[i]; if (acc >= p * tot) return px(i); } return hi; };
+  const rng = (a, b) => [+q(a).toFixed(2), +q(b).toFixed(2), +((q(b) - q(a)) / (q(b) + q(a)) * 100).toFixed(1)], mx = Math.max(...dist) || 1;
+  return {d: k[k.length - 1].d, lo, step, v: dist.map(x => Math.round(x / mx * 1000)), close, profit: +(dist.reduce((s, x, i) => s + (px(i) <= close ? x : 0), 0) / tot * 100).toFixed(1),
+    avg: +(dist.reduce((s, x, i) => s + px(i) * x, 0) / tot).toFixed(2), r90: rng(.05, .95), r70: rng(.15, .85), peak: +px(dist.indexOf(Math.max(...dist))).toFixed(2)};
+}
+function chipText(ch, cost){
+  const {profit: pr, close: c, avg, peak: pk} = ch, [a, b, cc] = ch.r90;
+  const t = [`获利盘 ${f(pr, 0)}%、套牢盘 ${f(100 - pr, 0)}%：` + (pr >= 90 ? "几乎全部获利，短线获利回吐压力大" : pr >= 70 ? "多数筹码获利，注意获利了结" : pr >= 30 ? "获利和套牢筹码相当，多空分歧" : pr >= 10 ? "多数筹码被套，上方抛压较重" : "几乎全部被套，反弹会遇到解套盘"),
+    `现价 ${f(c)}，${c >= avg ? "高于" : "低于"}平均成本 ${f(avg)}（${pct((c / avg - 1) * 100, 1)}）`,
+    `90% 筹码在 ${f(a)}–${f(b)} 元，集中度 ${f(cc, 1)}%（${cc < 10 ? "高度集中" : cc < 20 ? "较集中" : "较分散"}，越小越集中）`,
+    `筹码主峰 ${f(pk)} 元，` + (pk < c * .98 ? `在现价下方 ${f((1 - pk / c) * 100, 1)}%，是主要支撑` : pk > c * 1.02 ? `在现价上方 ${f((pk / c - 1) * 100, 1)}%，是主要压力` : "和现价接近，筹码在这里密集换手")];
+  if (cost) t.push(`东方财富估算的主力成本 ${f(cost)} 元，现价${c >= cost ? "高于" : "低于"}主力成本 ${pct((c / cost - 1) * 100, 1)}`);
+  return t;
+}
+function chipHtml(ch, cost){
+  if (!ch) return `<p class="note" style="margin:0">日K数据不足，无法估算筹码分布。</p>`;
+  const n = ch.v.length, W = 560, H = 230, L = 50, top = 6, bh = (H - top * 2) / n, y = p => top + (1 - (p - ch.lo) / (ch.step * (n - 1) || 1)) * (H - top * 2);
+  let s = `<rect x="${L}" y="${y(ch.r90[1]).toFixed(1)}" width="${W - L}" height="${(y(ch.r90[0]) - y(ch.r90[1])).toFixed(1)}" fill="var(--accent-soft)"/>`;
+  ch.v.forEach((v, i) => { const p = ch.lo + i * ch.step; if (v > 0) s += `<rect x="${L}" y="${(y(p) - bh / 2).toFixed(1)}" width="${(v / 1000 * (W - L - 6)).toFixed(1)}" height="${Math.max(1, bh - .6).toFixed(1)}" fill="var(--${p <= ch.close ? "up" : "dn"})" opacity=".78"/>`; });
+  const line = (p, col, dash) => `<line x1="${L}" x2="${W}" y1="${y(p).toFixed(1)}" y2="${y(p).toFixed(1)}" stroke="${col}" stroke-width="1.2"${dash ? ` stroke-dasharray="4 3"` : ""}/>`;
+  s += line(ch.close, "var(--ink)") + line(ch.avg, "var(--warn)", true) + (cost ? line(cost, "var(--accent)", true) : "");
+  s += `<text x="${L - 4}" y="${(y(ch.close) + 3.5).toFixed(1)}" font-size="10" text-anchor="end" fill="var(--ink)">${f(ch.close)}</text>`;
+  const labs = [[y(ch.avg), "平均成本 " + f(ch.avg), "var(--warn)"], ...(cost ? [[y(cost), "主力成本 " + f(cost), "var(--accent)"]] : [])].sort((a, b) => a[0] - b[0]);
+  labs.forEach((x, i) => { if (i && x[0] - labs[i - 1][0] < 12) x[0] = labs[i - 1][0] + 12; s += `<text x="${W - 2}" y="${(x[0] - 3).toFixed(1)}" font-size="10" text-anchor="end" fill="${x[2]}">${x[1]}</text>`; });   // 右侧标注，靠得太近时错开
+  s += `<text x="${L - 4}" y="${top + 8}" font-size="10" text-anchor="end" fill="var(--muted)">${f(ch.lo + ch.step * (n - 1))}</text><text x="${L - 4}" y="${H - 2}" font-size="10" text-anchor="end" fill="var(--muted)">${f(ch.lo)}</text>`;
+  return `<div class="flc"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="筹码分布：红色为获利筹码，绿色为套牢筹码">${s}</svg></div>
+    <div class="legend"><span><i style="background:var(--up);height:8px;width:8px"></i>获利筹码</span><span><i style="background:var(--dn);height:8px;width:8px"></i>套牢筹码</span><span><i style="background:var(--ink)"></i>现价</span><span><i style="background:var(--warn)"></i>平均成本</span>${cost ? `<span><i style="background:var(--accent)"></i>主力成本</span>` : ""}<span><i style="background:var(--accent-soft);height:8px;width:8px"></i>90% 筹码区间</span></div>
+    <ul class="why" style="margin:6px 0 0;padding-left:1.1em;font-size:13px">${(ch.text || chipText(ch, cost)).map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+    <p class="note" style="margin:4px 0 0">按 ${esc(ch.d || "")} 前 250 个交易日的日K和换手率估算，和交易软件的筹码分布算法可能有差别，仅供参考。</p>`;
+}
+const seatTag = nm => /机构专用/.test(nm) ? `<span class="tagb good">机构</span>` : /股通/.test(nm) ? `<span class="tagb nb">北向</span>` : "";
+function flSeatsHtml(seats){
+  if (seats == null) return `<p class="note" style="margin:0">暂时取不到。</p>`;
+  if (!seats.length) return `<p class="note" style="margin:0">近 45 天没有上龙虎榜，没有席位数据。</p>`;
+  const tb = (xs, title) => `<div class="tscroll"><table class="ftab"><thead><tr><th class="l">${title}</th><th>买入（亿）</th><th>卖出（亿）</th><th>净额</th></tr></thead><tbody>${xs.map(x => `<tr class="nohov"><td class="l">${seatTag(x[0])}${esc(x[0])}</td><td class="num up">${f(x[1], 3)}</td><td class="num dn">${f(x[2], 3)}</td><td class="num ${cls(x[1] - x[2])}">${yiS(x[1] - x[2], 3)}</td></tr>`).join("")}</tbody></table></div>`;
+  return seats.map(([d, reason, buy, sell]) => `<div style="margin-bottom:10px"><p class="note" style="margin:0 0 4px"><b>${esc(d)}</b> ${esc(reason || "")}</p><div class="seatg">${tb(buy, "买入前 5 名")}${tb(sell, "卖出前 5 名")}</div></div>`).join("");
+}
+// 不在监控池的股票：浏览器里实时获取（东方财富数据中心允许跨域）
+const dcUrl = (rep, cols, flt, n, sort) => `https://datacenter-web.eastmoney.com/api/data/v1/get?reportName=${rep}&columns=${cols}&pageSize=${n}&pageNumber=1${sort ? `&sortColumns=${sort}&sortTypes=-1` : ""}&filter=${encodeURIComponent(flt)}`;
+async function flQgLive(code){
+  const d = await getJson(dcUrl("RPT_DMSK_TS_STOCKNEW", "TRADE_DATE,PRIME_COST,PRIME_COST_20DAYS,PRIME_COST_60DAYS,ORG_PARTICIPATE,PARTICIPATE_TYPE,RATIO,RATIO_3DAYS,RATIO_50DAYS,TOTALSCORE,RANK,FOCUS", `(SECURITY_CODE="${code}")`, 1, "TRADE_DATE"));
+  const r = d?.result?.data?.[0]; if (!r) return null;
+  const pc = k => r[k] == null ? null : r[k] * 100, lv = {0: "未控盘（<10%）", 1: "轻度控盘（10%–25%）", 2: "中度控盘（25%–40%）", 3: "高度控盘（≥40%）"};
+  return {d: (r.TRADE_DATE || "").slice(0, 10), cost: r.PRIME_COST, cost20: r.PRIME_COST_20DAYS, cost60: r.PRIME_COST_60DAYS, org: pc("ORG_PARTICIPATE"), lvl: lv[r.PARTICIPATE_TYPE] || "",
+    ratio: pc("RATIO"), ratio3: pc("RATIO_3DAYS"), ratio50: pc("RATIO_50DAYS"), score: r.TOTALSCORE, rank: r.RANK, focus: r.FOCUS};
+}
+async function flHoldLive(code){
+  const [a, b] = await Promise.all([getJson(dcUrl("RPT_F10_EH_FREEHOLDERS", "END_DATE,HOLDER_NAME,HOLDER_TYPE,FREE_HOLDNUM_RATIO,HOLDNUM_CHANGE_NAME,HOLDER_RANK", `(SECURITY_CODE="${code}")`, 20, "END_DATE")),
+    getJson(dcUrl("RPT_HOLDERNUM_DET", "END_DATE,HOLDER_NUM,HOLDER_NUM_RATIO,AVG_HOLD_NUM,AVG_MARKET_CAP", `(SECURITY_CODE="${code}")`, 5, "END_DATE"))]);
+  const ta = a?.result?.data || [], end = ta[0]?.END_DATE, top = ta.filter(x => x.END_DATE === end).sort((x, y) => x.HOLDER_RANK - y.HOLDER_RANK).slice(0, 10);
+  const hn = (b?.result?.data || []).map(x => [(x.END_DATE || "").slice(0, 10), x.HOLDER_NUM, x.HOLDER_NUM_RATIO, x.AVG_HOLD_NUM == null ? null : Math.round(x.AVG_HOLD_NUM), x.AVG_MARKET_CAP == null ? null : x.AVG_MARKET_CAP / 1e4, null]);
+  if (!top.length && !hn.length) return a || b ? {top: [], hn: []} : null;
+  const sum = top.reduce((s, x) => s + (x.FREE_HOLDNUM_RATIO || 0), 0);
+  return {end: (end || "").slice(0, 10), top: top.map(x => [x.HOLDER_NAME, x.HOLDER_TYPE, x.FREE_HOLDNUM_RATIO, x.HOLDNUM_CHANGE_NAME]), topSum: top.length ? sum : null, other: top.length ? Math.max(0, 100 - sum) : null, hn};
+}
+async function flSeatsLive(code){
+  const since = new Date(Date.now() - 45 * 864e5).toISOString().slice(0, 10), flt = `(SECURITY_CODE="${code}")(TRADE_DATE>='${since}')`, cols = "TRADE_DATE,OPERATEDEPT_NAME,BUY,SELL,EXPLANATION";
+  const [b, s] = await Promise.all([getJson(dcUrl("RPT_BILLBOARD_DAILYDETAILSBUY", cols, flt, 100, "TRADE_DATE")), getJson(dcUrl("RPT_BILLBOARD_DAILYDETAILSSELL", cols, flt, 100, "TRADE_DATE"))]);
+  if (!b && !s) return null;
+  const all = [...(b?.result?.data || []), ...(s?.result?.data || [])], pick = {};
+  for (const r of all) { const day = r.TRADE_DATE.slice(0, 10), e = r.EXPLANATION || "", cur = pick[day];   // 同一天有多个上榜原因时（当日、连续三日统计金额不同），只取一个，优先当日
+    if (cur == null || (/连续/.test(cur) && !/连续/.test(e))) pick[day] = e; }
+  const by = {};
+  for (const [d, side] of [[b, "buy"], [s, "sell"]]) for (const r of d?.result?.data || []) {
+    const day = r.TRADE_DATE.slice(0, 10); if ((r.EXPLANATION || "") !== pick[day]) continue;
+    const o = by[day] ||= {reason: pick[day], buy: new Map(), sell: new Map()}, x = [(r.OPERATEDEPT_NAME || "").trim(), (r.BUY || 0) / 1e8, (r.SELL || 0) / 1e8];
+    o[side].set(x.join("|"), x);
+  }
+  return Object.entries(by).sort((x, y) => y[0].localeCompare(x[0])).slice(0, 4).map(([d, o]) => [d, o.reason, [...o.buy.values()].sort((x, y) => y[1] - x[1]).slice(0, 5), [...o.sell.values()].sort((x, y) => y[2] - x[2]).slice(0, 5)]);
+}
+async function flKline(code){      // 筹码分布用的日K（近 260 个交易日）
+  const sym = txSym(code), v = "ck_" + code + "_" + (Date.now() % 1e6);
+  try { await loadScript(`https://web.ifzq.gtimg.cn/appstock/app/newfqkline/get?_var=${v}&param=${sym},day,,,260,qfq`, 10000); } catch (e) { return null; }
+  const d = window[v]; try { delete window[v]; } catch (e) { window[v] = undefined; }
+  const k = ((d?.data || {})[sym] || {}).qfqday || ((d?.data || {})[sym] || {}).day || [];
+  return k.map(r => ({d: r[0], o: +r[1], c: +r[2], h: +r[3], l: +r[4], v: +r[5] || 0}));
+}
+function renderFlowSeats(){
+  const S = FL.seats, box = $("#flSeatBox"); if (!box) return;
+  box.hidden = !S?.n; if (!S?.n) return;
+  const ag = S.agg || {}, k = (t, x) => x ? `<div><small>${t}</small><b class="${cls(x[1] - x[2])}">${yiS(x[1] - x[2])}</b><span class="mut">${x[0]} 席次 · 买 ${f(x[1], 2)} / 卖 ${f(x[2], 2)} 亿</span></div>` : "";
+  $("#flSeatKpi").innerHTML = k("机构专用", ag["机构"]) + k("沪股通 / 深股通", ag["北向"]) + k("营业部（游资、散户大户等）", ag["营业部"]);
+  $("#flSeatNote").textContent = `${FL.date} · ${S.stocks} 只股票、${S.n} 个席次 · 东方财富`;
+  const tab = FLV.seatTab || "buy";
+  document.querySelectorAll("#flSeatTabs [data-s]").forEach(b => b.setAttribute("aria-selected", b.dataset.s === tab));
+  if (tab === "multi") {
+    $("#flSeatTbl").innerHTML = `<thead><tr><th class="l" style="cursor:default">席位</th><th style="cursor:default">合计净买入</th><th class="l" style="cursor:default">买入的股票（净额）</th></tr></thead><tbody>`
+      + ((S.multi || []).map(x => `<tr class="nohov"><td class="l">${seatTag(x[0])}${esc(x[0])}</td><td class="num ${cls(x[2])}">${yiS(x[2], 3)}</td><td class="l msg2" style="color:var(--ink)">${x[3].map(y => `<a href="#" data-code="${y[0]}">${esc(y[1])}</a> <span class="num ${cls(y[2])}">${yiS(y[2], 3)}</span>`).join("，")}</td></tr>`).join("")
+      || `<tr class="nohov"><td colspan="3" class="l note">今天没有同时出现在多只股票上的营业部。</td></tr>`) + `</tbody>`;
+    return;
+  }
+  const rows = tab === "sell" ? S.sell : S.buy;
+  $("#flSeatTbl").innerHTML = `<thead><tr><th class="l" style="cursor:default">席位</th><th class="l" style="cursor:default">股票</th><th style="cursor:default">买入（亿）</th><th style="cursor:default">卖出（亿）</th><th style="cursor:default">净额</th></tr></thead><tbody>`
+    + rows.map(x => `<tr data-code="${x[2]}"><td class="l">${seatTag(x[0])}${esc(x[0])}</td><td class="l"><span class="nm">${esc(x[3])}</span><span class="cd">${x[2]}</span></td><td class="num up">${f(x[4], 3)}</td><td class="num dn">${f(x[5], 3)}</td><td class="num ${cls(x[6])}">${yiS(x[6], 3)}</td></tr>`).join("") + `</tbody>`;
+}
 // ---- 个股详情里的「资金与近期信息」 ----
 let flCtl = null;
 function flMvSummary(evs){ const c = {}; (evs || []).forEach(([, n]) => { c[n] = (c[n] || 0) + 1; }); return c; }
@@ -3699,35 +3882,51 @@ function flReport(a){
 function flBrief(code){          // 给 AI 用的监控状态
   const p = flAll().get(code); if (!p) return null;
   return {状态: p.st === "track" ? "跟踪中" : p.st === "watch" ? `观察期第 ${p.watch?.n}/5 天` : "已移出", 入选日: p.in, 入选价: p.inP, 类型: p.kind, 入选理由: p.why, 观察原因: p.watch?.why || (p.st === "out" ? p.watch : null),
-    最近提醒: (p.log || []).slice(-5), 主力资金近10日: (p.f || []).slice(-10).map(x => ({日期: x[0], 涨跌pct: x[2], 主力净流入亿: x[6]})), 收盘后DeepSeek调查: p.ai?.conclusion || null};
+    最近提醒: (p.log || []).slice(-5), 主力资金近10日: (p.f || []).slice(-10).map(x => ({日期: x[0], 涨跌pct: x[2], 主力净流入亿: x[6]})), 今日评分: flScore(p).s, 入选评分: p.score,
+    机构参与度pct: p.qg?.org ?? null, 主力成本: p.qg?.cost ?? null, 获利盘pct: p.chip?.profit ?? null, 筹码主峰: p.chip?.peak ?? null, 十大流通股东合计pct: p.hold?.topSum ?? null,
+    股东户数较上期pct: p.hold?.hn?.[0]?.[2] ?? null, 收盘后DeepSeek调查: p.ai?.conclusion || null};
 }
 function flowDrawer(code){
   const box = $("#dFlow"); if (!box) return;
-  const p = flAll().get(code), r = BY.get(code), wy = Array.isArray(p?.watch) ? p.watch : p?.watch?.why, info = {f: p?.f || null, mv: p?.mv?.[0] || null, lhb: p?.lhb || null, ann: p?.ann || null, news: p?.news || null, now: null};
-  const status = p ? `<div class="dstat ${p.st === "watch" ? "w" : ""}"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${flStatus(p)}${flKind(p)}<span class="note">${mmdd(p.in)} 以 ${f(p.inP)} 入选${p.out ? `，${mmdd(p.out)} 移出（区间 ${pct(p.ret, 1)}）` : ""}</span></div>
+  const p = flAll().get(code), r = BY.get(code), wy = Array.isArray(p?.watch) ? p.watch : p?.watch?.why;
+  const info = {f: p?.f || null, mv: p?.mv?.[0] || null, lhb: p?.lhb || null, ann: p?.ann || null, news: p?.news || null, now: null, fx: p?.fx || null, qg: p?.qg || null, hold: p?.hold || null, chip: p?.chip || null, seats: p?.seats || null};
+  const status = p ? `<div class="dstat ${p.st === "watch" ? "w" : ""}"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${flStatus(p)}${flKind(p)}${flTier(p)}<span class="note">${mmdd(p.in)} 以 ${f(p.inP)} 入选${p.out ? `，${mmdd(p.out)} 移出（区间 ${pct(p.ret, 1)}）` : ""}</span></div>
       <div><b>入选理由：</b>${esc((p.why || []).join("；"))}</div>${wy?.length ? `<div><b>${p.st ? "观察原因" : "移出原因"}：</b>${esc(wy.join("；"))}</div>` : ""}
       ${(p.log || []).length ? `<details><summary class="note" style="cursor:pointer">提醒记录（${p.log.length} 条）</summary><ul class="dlist" style="margin-top:6px">${p.log.slice().reverse().map(([d, lv, t]) => `<li><span class="t">${mmdd(d)}</span><span><span class="tagb ${["warn", "bad"].includes(lv) ? "bad" : lv === "good" ? "good" : ""}">${FL_LV[lv] || ""}</span>${esc(t)}</span></li>`).join("")}</ul></details>` : ""}
-      ${(p.notes || []).map(([d, t]) => `<div class="note"><span class="aibadge">DeepSeek · ${mmdd(d)}</span> ${esc(t)}</div>`).join("")}</div>` : `<p class="note" style="margin:0">这只股票不在资金监控池里。下面的资金和近期信息是从新浪、东方财富、腾讯实时获取的。</p>`;
+      ${(p.notes || []).map(([d, t]) => `<div class="note"><span class="aibadge">DeepSeek · ${mmdd(d)}</span> ${esc(t)}</div>`).join("")}</div>` : `<p class="note" style="margin:0">这只股票不在资金监控池里。下面的资金、持股、筹码和近期信息是从新浪、东方财富、腾讯实时获取的。</p>`;
+  const loading = `<p class="note" style="margin:0">正在加载…</p>`;
   box.innerHTML = `<div class="phead" style="margin-bottom:8px"><h3>资金与近期信息</h3><span style="display:flex;gap:8px;align-items:center"><span class="note" id="dfNote"></span><button class="btn" id="dfLoad">刷新</button></span></div>
-    <div class="dflow">${status}${p?.ai ? flReport(p.ai) : ""}
-      <div><h4>主力资金（新浪口径，近 40 个交易日）</h4><div id="dfChart">${info.f ? flChart(info.f, p) : `<p class="note">正在加载…</p>`}</div><div id="dfNow"></div></div>
-      <div class="dfgrid"><div><h4>盘口异动 <span class="note" id="dfMvD">${info.mv ? mmdd(info.mv[0]) : ""}</span></h4><div id="dfMv">${info.mv ? flMvHtml(info.mv[2], info.mv[1]) : `<p class="note" style="margin:0">正在加载…</p>`}</div></div>
-        <div><h4>龙虎榜</h4><div id="dfLhb">${info.lhb ? flListHtml(info.lhb, "lhb") : `<p class="note" style="margin:0">正在加载…</p>`}</div></div>
-        <div><h4>最新公告</h4><div id="dfAnn">${info.ann ? flListHtml(info.ann, "ann") : `<p class="note" style="margin:0">正在加载…</p>`}</div></div>
-        <div><h4>最新新闻</h4><div id="dfNews">${info.news ? flListHtml(info.news.map(x => [...x, ""]), "news") : `<p class="note" style="margin:0">正在加载…</p>`}</div></div></div>
+    <div class="dflow">${status}${p?.sc || p?.scIn ? flScoreHtml(p) : ""}${p?.ai ? flReport(p.ai) : ""}
+      <div><h4>主力资金（新浪口径，近 40 个交易日）</h4><div id="dfChart">${info.f ? flChart(info.f, p) : `<p class="note">正在加载…</p>`}</div></div>
+      <div><h4>资金流入流出明细 <span class="note" id="dfFxD">${info.fx ? esc(info.fx.d || "") : ""}</span></h4><div id="dfFx">${info.fx ? flFxHtml(info.fx) : loading}</div></div>
+      <div><h4>主力控盘、持股结构和散户占比</h4><div id="dfHold">${info.qg || info.hold ? flHoldHtml(info.qg, info.hold, info.f) : loading}</div></div>
+      <div><h4>筹码分布</h4><div id="dfChip">${info.chip ? chipHtml(info.chip, info.qg?.cost) : loading}</div></div>
+      <div><h4>龙虎榜买卖席位（近 45 天）</h4><div id="dfSeats">${info.seats ? flSeatsHtml(info.seats) : loading}</div></div>
+      <div class="dfgrid"><div><h4>盘口异动 <span class="note" id="dfMvD">${info.mv ? mmdd(info.mv[0]) : ""}</span></h4><div id="dfMv">${info.mv ? flMvHtml(info.mv[2], info.mv[1]) : loading}</div></div>
+        <div><h4>龙虎榜</h4><div id="dfLhb">${info.lhb ? flListHtml(info.lhb, "lhb") : loading}</div></div>
+        <div><h4>最新公告</h4><div id="dfAnn">${info.ann ? flListHtml(info.ann, "ann") : loading}</div></div>
+        <div><h4>最新新闻</h4><div id="dfNews">${info.news ? flListHtml(info.news.map(x => [...x, ""]), "news") : loading}</div></div></div>
       <div class="phead" style="margin:4px 0 0"><h4 style="margin:0">${AI_NAME} 全面调查</h4><span style="display:flex;gap:8px"><button class="btn pri" id="dfAi">让 ${AI_NAME} 全面调查</button><button class="btn" id="dfStop" hidden>停止</button></span></div>
-      <div class="ai" id="dfOut">${!IN_CLAUDE && !dsKey() ? aiNoKey() : `<span class="note">${AI_NAME} 会结合上面的资金、异动、龙虎榜、公告、新闻和这只股票的财报、K 线，判断主力在吸筹、拉升、出货还是撤退，并列出风险和跟踪信号。${AI_QUOTA}</span>`}</div></div>`;
+      <div class="ai" id="dfOut">${!IN_CLAUDE && !dsKey() ? aiNoKey() : `<span class="note">${AI_NAME} 会结合上面的资金明细、主力控盘和持股、筹码分布、龙虎榜席位、异动、公告、新闻和这只股票的财报、K 线，判断主力在吸筹、拉升、出货还是撤退，并列出风险和跟踪信号。${AI_QUOTA}</span>`}</div></div>`;
   const my = {code};
   box._fl = my;
   const load = async () => {
-    if (!LIVE.on) { $("#dfNote").textContent = "离线版：只显示收盘后数据"; if (!info.f) $("#dfChart").innerHTML = `<p class="note">在线打开网页才能获取这只股票的资金数据。</p>`; ["#dfMv", "#dfLhb", "#dfAnn", "#dfNews"].forEach(s => { if ($(s)?.textContent.includes("正在加载")) $(s).innerHTML = `<p class="note" style="margin:0">在线打开网页才能获取。</p>`; }); return; }
+    if (!LIVE.on) { $("#dfNote").textContent = "离线版：只显示收盘后数据"; if (!info.f) $("#dfChart").innerHTML = `<p class="note">在线打开网页才能获取这只股票的资金数据。</p>`;
+      ["#dfFx", "#dfHold", "#dfChip", "#dfSeats", "#dfMv", "#dfLhb", "#dfAnn", "#dfNews"].forEach(s => { if ($(s)?.textContent.includes("正在加载")) $(s).innerHTML = `<p class="note" style="margin:0">在线打开网页才能获取。</p>`; }); return; }
     $("#dfNote").textContent = "正在获取…"; $("#dfLoad").disabled = true;
     const date = (r?.qd || FL?.date || ASOF.slice(0, 10));
-    const [h, now, mvs, lhb, ann, news] = await Promise.all([flHist(code), trading() ? flNow(code) : null, flMovesLive(code, date), flLhbLive(code), flAnnLive(code), flNewsLive(code)]);
+    const [h, now, mvs, lhb, ann, news, qg, hold, seats, kl] = await Promise.all([flHist(code), flNow(code), flMovesLive(code, date), flLhbLive(code), flAnnLive(code), flNewsLive(code),
+      info.qg ? null : flQgLive(code), info.hold ? null : flHoldLive(code), info.seats ? null : flSeatsLive(code), info.chip ? null : flKline(code)]);
     if (box._fl !== my || $("#drawer").hidden) return;
     if (h?.length) { info.f = h; $("#dfChart").innerHTML = flChart(h, p); }
     else if (!info.f) $("#dfChart").innerHTML = `<p class="note">暂时取不到资金数据。</p>`;
-    if (now) { info.now = now; $("#dfNow").innerHTML = `<p class="note" style="margin:6px 0 0"><span class="live-dot" aria-hidden="true"></span>今日实时：主力（特大单）<b class="num ${cls(now.m)}">${yiS(now.m)}</b>，大单 <b class="num ${cls(now.big)}">${yiS(now.big)}</b>，小单 ${yiS(now.small)}，散单 ${yiS(now.retail)}；成交额 ${f(now.amt, 2)} 亿，主力占 ${f(now.amt ? now.m / now.amt * 100 : null, 1)}%</p>`; }
+    if (now) { info.now = now; info.fx = {d: trading() ? "盘中实时" : "最近一个交易日", ...now.fx}; $("#dfFxD").textContent = info.fx.d; $("#dfFx").innerHTML = flFxHtml(info.fx); }
+    else if (!info.fx) $("#dfFx").innerHTML = flFxHtml(null);
+    if (qg) info.qg = qg; if (hold) info.hold = hold;
+    $("#dfHold").innerHTML = info.qg || info.hold ? flHoldHtml(info.qg, info.hold, info.f) : `<p class="note" style="margin:0">暂时取不到。</p>`;
+    if (!info.chip && kl) { const ch = chipCalc(kl, r?.fsh); if (ch) info.chip = ch; }
+    $("#dfChip").innerHTML = chipHtml(info.chip, info.qg?.cost);
+    if (seats) info.seats = seats; $("#dfSeats").innerHTML = flSeatsHtml(info.seats);
     if (mvs) { info.mvs = mvs; $("#dfMvD").textContent = mmdd(date); $("#dfMv").innerHTML = flMvHtml(mvs); } else if (!info.mv) $("#dfMv").innerHTML = flListHtml(null);
     if (lhb) { info.lhb = lhb; $("#dfLhb").innerHTML = flListHtml(lhb, "lhb"); } else if (!info.lhb) $("#dfLhb").innerHTML = flListHtml(null);
     if (ann) { info.ann = ann; $("#dfAnn").innerHTML = flListHtml(ann, "ann"); } else if (!info.ann) $("#dfAnn").innerHTML = flListHtml(null);
@@ -3744,7 +3943,9 @@ function flowDrawer(code){
       flCtl?.abort(); flCtl = new AbortController(); const ctl = flCtl;
       btn.disabled = true; $("#dfStop").hidden = false; $("#dfStop").onclick = () => ctl.abort();
       $("#dfOut").innerHTML = `<span class="note">正在调查…</span>`;
-      const fx = (info.f || []).slice(-40).reverse().map(x => ({日期: x[0], 收盘: x[1], 涨跌pct: +(+x[2]).toFixed(2), 换手pct: +(+x[3]).toFixed(2), 成交额亿: +(+x[4]).toFixed(2), 主力净流入亿: +(+x[6]).toFixed(3), 大单净流入亿: +(+x[7]).toFixed(3), 全部净流入亿: +(+x[5]).toFixed(3)}));
+      const n3 = v => v == null ? null : +(+v).toFixed(3);
+      const fx = (info.f || []).slice(-40).reverse().map(x => ({日期: x[0], 收盘: x[1], 涨跌pct: n3(x[2]), 换手pct: n3(x[3]), 成交额亿: n3(x[4]), 主力净流入亿: n3(x[6]), 大单净流入亿: n3(x[7]), 小单净流入亿: n3(x[8]), 散单净流入亿: n3(x[9]), 小单和散单成交占比pct: x[11] == null ? null : n3(x[11])}));
+      const ch = info.chip ? {获利比例pct: info.chip.profit, 平均成本: info.chip.avg, "90%筹码区间和集中度": info.chip.r90, "70%筹码区间和集中度": info.chip.r70, 主峰: info.chip.peak, 解读: info.chip.text || chipText(info.chip, info.qg?.cost)} : null;
       const prompt = `你是严谨的A股资金面研究员。根据下面的数据，对这只股票做一次全面调查，判断主力资金是在吸筹、拉升、出货还是撤退。数据截至${LIVE.on ? "实时行情 " + liveTime() : ASOF}。
 今日大盘：${marketBrief()}。
 
@@ -3753,21 +3954,27 @@ ${JSON.stringify(stockBrief(r))}
 
 主力资金（新浪口径，主力 = 特大单，单位亿元，近 40 个交易日，新到旧）：
 ${JSON.stringify(fx)}
-${info.now ? `今日实时资金：${JSON.stringify({主力亿: +info.now.m.toFixed(3), 大单亿: +info.now.big.toFixed(3), 小单亿: +info.now.small.toFixed(3), 散单亿: +info.now.retail.toFixed(3), 成交额亿: +info.now.amt.toFixed(2)})}` : ""}
+资金流入流出明细（${info.fx?.d || ""}，[流入亿, 流出亿, 成交额亿]，r0 特大单、r1 大单、r2 小单、r3 散单）：${JSON.stringify(info.fx ? {r0: info.fx.r0, r1: info.fx.r1, r2: info.fx.r2, r3: info.fx.r3} : null)}
+主力控盘（东方财富千股千评：主力成本、机构参与度、主力买入占成交 %）：${JSON.stringify(info.qg)}
+持股结构（季度：十大流通股东合计 %、十大以外 %、机构持股、股东户数 [期末, 户数, 较上期 %, 户均持股, 户均市值万元, 集中度]、实控人）：${JSON.stringify(info.hold ? {期末: info.hold.end, 十大流通股东合计: info.hold.topSum, 十大以外: info.hold.other, 机构: info.hold.org, 股东户数: info.hold.hn, 实控人: info.hold.ctrl} : null)}
+筹码分布（按日K和换手率估算）：${JSON.stringify(ch)}
+龙虎榜买卖席位（近 45 天：日期、上榜原因、买入前 5 [席位, 买入亿, 卖出亿]、卖出前 5）：${JSON.stringify((info.seats || []).slice(0, 3))}
 盘口异动（东方财富，最近一个交易日，时间 类型）：${JSON.stringify((info.mvs || info.mv?.[2] || []).slice(-30))}${info.mv?.[1] ? "；统计：" + JSON.stringify(info.mv[1]) : ""}
 龙虎榜（近 3 个月：日期、上榜原因、席位概况、净买入亿元）：${JSON.stringify((info.lhb || []).slice(0, 8))}
 最新公告（日期、标题、标签）：${JSON.stringify((info.ann || []).slice(0, 10).map(x => [x[0], x[1], x[3]]))}
 最新新闻（时间、标题）：${JSON.stringify((info.news || []).slice(0, 10).map(x => [x[0], x[1]]))}
 资金监控状态：${JSON.stringify(flBrief(code) || "不在监控池")}
 
-请按以下结构输出，总长度不超过 900 字：
+请按以下结构输出，总长度不超过 1100 字：
 ## 一句话结论
-## 资金面（主力连续性和力度、特大单与大单、龙虎榜席位；判断主力在吸筹、拉升、出货还是撤退，写出依据）
+## 资金面（主力连续性和力度；特大单、大单、小单、散单谁在买谁在卖；龙虎榜哪些席位买卖了多少；判断主力在吸筹、拉升、出货还是撤退，写出依据）
+## 主力控盘与散户（机构参与度、主力成本与现价、十大流通股东和机构持股、股东户数变化、散户成交占比）
+## 筹码分布（获利盘、平均成本、筹码主峰是支撑还是压力、集中度）
 ## 技术面（位置、均线、量价、涨幅是否透支）
 ## 基本面（行业、业绩、估值）
 ## 消息面（只按公告和新闻标题字面意思，注明日期；没有就写“近期没有重要公告”）
 ## 主要风险
-## 接下来跟踪的信号（3 个，可量化，例如“主力连续 2 日净流出超过 X 亿”“收盘跌破 20 日线 Y 元”）
+## 接下来跟踪的信号（3 个，可量化，例如“主力连续 2 日净流出超过 X 亿”“收盘跌破 20 日线 Y 元”“跌破筹码主峰 Z 元”）
 不要给出确定的买卖指令、目标价或仓位，只讨论条件和情景。数据里没有的写“待核实”，推测要注明“推测”。结尾原样写：以上内容仅为基于公开信息的分析参考，不构成投资建议，市场有风险，决策需独立判断。`;
       try {
         const res = await sample(prompt, {signal: ctl.signal, onText: ({text}) => { if (ctl === flCtl) $("#dfOut").innerHTML = md(text); }});
@@ -3786,7 +3993,10 @@ async function flowTick(){
       FLV.busy = true;
       const codes = FL.pool.map(p => p.code), lanes = 4;
       const worker = async () => { for (let c = codes.shift(); c; c = codes.shift()) { const x = await flNow(c); if (x) FLV.live.set(c, x); } };
-      await Promise.all(Array.from({length: lanes}, worker));
+      const top = async asc => { const d = await sinaJsonp("ssl_bkzj_ssggzj", `page=1&num=30&sort=r0_net&asc=${asc}`);
+        return Array.isArray(d) ? d.filter(x => /^(sh|sz|bj)\d{6}$/.test(x.symbol)).map(x => [x.symbol.slice(2), BY.get(x.symbol.slice(2))?.name || x.name, (parseFloat(x.r0_net) || 0) / 1e8, (parseFloat(x.r0_ratio) || 0) * 100, (parseFloat(x.changeratio) || 0) * 100]) : null; };
+      const [up, dn] = await Promise.all([top(0), top(1), Promise.all(Array.from({length: lanes}, worker))]);
+      if (up && dn) FLV.top = {t: new Date(Date.now() + 8 * 3600e3).toISOString().slice(11, 16), top: up, bottom: dn};
       FLV.liveAt = Date.now(); FLV.busy = false;
       if (!$("#v-flow").hidden) renderFlow();
     }
