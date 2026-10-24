@@ -660,10 +660,13 @@ def investigate_batch(fl, by, new, chg, today, mk, key):
     for model in [os.environ.get("DEEPSEEK_MODEL", "deepseek-v4-pro"), "deepseek-flash"]:
         try:
             r = requests.post("https://api.deepseek.com/chat/completions", timeout=480, headers={"Authorization": f"Bearer {key}"},
-                              json={"model": model, "temperature": 0.3, "max_tokens": 16000, "response_format": {"type": "json_object"},
+                              json={"model": model, "temperature": 0.3, "max_tokens": 32000 if "pro" in model else 8000, "response_format": {"type": "json_object"},
                                     "messages": [{"role": "system", "content": SYSTEM}, {"role": "user", "content": json.dumps(ctx, ensure_ascii=False)}]})
             r.raise_for_status()
-            o = json.loads(r.json()["choices"][0]["message"]["content"])
+            ch = r.json()["choices"][0]
+            if ch.get("finish_reason") == "length":
+                raise ValueError("输出达到长度上限被截断")
+            o = json.loads(ch["message"]["content"])
             s = lambda x, n: str(x or "").strip()[:n]
             st = o.get("stocks") or {}
             got = 0
@@ -684,6 +687,10 @@ def investigate_batch(fl, by, new, chg, today, mk, key):
             return True
         except Exception as e:
             log("flow ai", model, "failed:", type(e).__name__, str(e)[:200])
+    if len(new) > 3:                                    # 两个模型都失败（多半是输出太长被截断）：拆成两半再试
+        ks = list(new); h = len(ks) // 2
+        a = investigate_batch(fl, by, {c: new[c] for c in ks[:h]}, chg, today, mk, key)
+        return investigate_batch(fl, by, {c: new[c] for c in ks[h:]}, {}, today, mk, key) or a
     return False
 
 
