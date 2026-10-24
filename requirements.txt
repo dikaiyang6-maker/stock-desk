@@ -4,3 +4,4 @@ lxml>=5
 html5lib>=1.1
 beautifulsoup4>=4.12
 finance-datareader>=0.9.90
+pypinyin

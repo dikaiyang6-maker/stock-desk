@@ -9,6 +9,9 @@ on:
       force:
         description: "全部重新抓取（1 = 是）"
         default: "0"
+      only:
+        description: "只跑这些任务（逗号分隔，如 picks,ai；留空 = 按时间表）"
+        default: ""
 
 permissions:
   contents: write   # 每周提交一次 last-run.txt，避免公开仓库 60 天无活动后定时任务被 GitHub 停用
@@ -44,6 +47,7 @@ jobs:
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           FORCE: ${{ github.event.inputs.force || '0' }}
+          ONLY: ${{ github.event.inputs.only || '' }}
         run: python scripts/build.py
 
       - name: 保存数据缓存

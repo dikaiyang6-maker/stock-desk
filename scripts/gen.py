@@ -1,10 +1,37 @@
 """把 data/ 里的最新数据合进 template.html，生成 site/index.html（网页版，浏览器里打开会自动切到腾讯实时行情）。"""
 import json
 
+from pypinyin import Style, lazy_pinyin
+
 import screen_data
 from common import DATA, ROOT, SITE, bj_now, load, log
 
 SEC_ZH2 = {"Finance": "金融", "Properties": "地产", "Utilities": "公用事业", "Commerce & Industry": "工商业"}
+
+
+PREFIX = ("*ST", "ST", "N", "C", "U", "W", "XD", "XR", "DR")
+
+
+def _ini(name):
+    letters = lazy_pinyin(name, style=Style.FIRST_LETTER, errors=lambda x: [c.lower() for c in x if c.isascii() and c.isalnum()])
+    return "".join(letters).lower()
+
+
+def pinyin_initials(a, G):
+    """A 股和全球个股名称的拼音首字母；带 ST、N 等前缀的另存一份去掉前缀的，空格分隔。"""
+    out = {"a": {}, "g": {}}
+    I = {c: i for i, c in enumerate(a["cols"])}
+    for r in a["rows"]:
+        name = r[I["name"]]; v = {_ini(name)}
+        for p in PREFIX:
+            if name.startswith(p) and len(name) > len(p):
+                v.add(_ini(name[len(p):].lstrip("-")))
+        out["a"][r[I["code"]]] = " ".join(x for x in v if x)
+    for y, s in (G.get("st") or {}).items():
+        n = s.get("n") or ""
+        if any("\u4e00" <= ch <= "\u9fff" for ch in n):          # 只给有汉字的名称（美股、港股中文简称等）
+            out["g"][y] = _ini(n)
+    return out
 
 
 def build():
@@ -33,6 +60,10 @@ def build():
     ai = load("ai.json")
     if ai:
         data["ai"] = ai
+    pk = load("picks.json", {})
+    if pk.get("tiers"):
+        data["pk"] = pk                                           # 每个交易日收盘后按规则更新的精选名单
+    data["py"] = pinyin_initials(a, G)                            # 拼音首字母，搜索用（如 拓普集团 → tpjt）
     sc = load("screen.json", {})
     if sc.get("ext") or sc.get("tech"):                       # 选股板块：按列压成数组，减小网页体积
         ext_cols = ["rd", "rdP", "debt", "cash", "eq", "gw", "revT", "lift", "hs", "es"]

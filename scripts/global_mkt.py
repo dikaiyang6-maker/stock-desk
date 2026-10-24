@@ -143,7 +143,9 @@ def idx_quotes():
     for sym, f in q.items():
         if sym.startswith("gz"):
             p, chg = num(f[3]), num(f[4])
-            out[sym] = {"p": p, "chg": chg, "pct": num(f[5]), "prev": r2(p - chg) if p is not None and chg is not None else None, "ts": bj_ms(f[2])}
+            ts = bj_ms(f[2])
+            out[sym] = {"p": p, "chg": chg, "pct": num(f[5]), "prev": r2(p - chg) if p is not None and chg is not None else None,
+                        "ts": ts if ts and ts <= (time.time() + 600) * 1000 else None}   # 泰国、越南等的报价时间偶尔是未来时间，不可信就不用
         else:
             out[sym] = {"p": num(f[3]), "prev": num(f[4]), "o": num(f[5]), "chg": num(f[31]), "pct": num(f[32]), "h": num(f[33]), "l": num(f[34]),
                         "ts": et_ms(f[30]) if sym.startswith("us") else bj_ms(f[30])}

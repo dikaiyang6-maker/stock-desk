@@ -136,6 +136,24 @@ td .cd{color:var(--muted);font-family:var(--f-num);font-size:12px;margin-left:6p
 .sbar i{display:block;height:100%;background:var(--accent)}
 .more{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px}
 
+/* AI 历史记录 */
+.hlist{display:grid;gap:6px}
+.hitem{border:1px solid var(--line);border-radius:var(--r);background:var(--bg)}
+.hitem>summary{cursor:pointer;display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 12px;font-size:13px}
+.hitem>summary b{font-weight:500;min-width:0;overflow-wrap:anywhere}
+.hbody{padding:0 12px 10px}
+.hbody .ai{background:var(--surface)}
+.hact{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+#v-ai .phead #chatNew{order:2}
+/* 选股页搜索 */
+.xgsearch{position:relative;margin:0 0 10px}
+.xgsearch .fld{width:100%}
+.xgres{position:absolute;z-index:15;left:0;right:0;top:100%;margin-top:4px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 10px 28px rgba(10,14,20,.16);max-height:60vh;overflow-y:auto}
+.xgres button{display:flex;justify-content:space-between;gap:10px;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:9px 12px;cursor:pointer;flex-wrap:wrap;align-items:baseline}
+.xgres button:hover,.xgres button:focus-visible{background:var(--accent-soft)}
+.xgres .cd{color:var(--muted);font-size:12px}
+.xgres .pill{margin-left:4px}
+.xgrh{font-size:11.5px;color:var(--muted);padding:6px 12px 4px;background:var(--sunk);position:sticky;top:0}
 /* 选股 */
 .xgpane{display:grid;grid-template-columns:minmax(0,1fr);gap:20px}
 .xgpane>*{min-width:0}
@@ -234,7 +252,7 @@ tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
 }
 /* 手机（竖屏宽度 ≤640 或横屏高度 ≤500）：AI 助手页不再套一层滚动，对话随页面滚动，输入栏吸底 */
 @media (max-width:640px),(max-height:500px){
-  .ask textarea,.dsset input,.dsset select{font-size:16px}
+  .ask textarea,.dsset input,.dsset select,#xgQ{font-size:16px}
   #v-ai{gap:12px}
   #v-ai .chat{--pad:12px;padding:var(--pad) var(--pad) 0;gap:10px}
   #v-ai .chat>.phead{order:-2;margin-bottom:0}
@@ -464,7 +482,7 @@ tbody tr.greg:hover{background:var(--bg)}
     <div class="panel">
       <div class="phead"><h2>全球个股</h2><span class="note" id="gsCount"></span></div>
       <div id="gMk" role="group" aria-label="选择市场"></div>
-      <div class="gfilters"><label class="fld w3">搜索名称或代码<input id="gQ" type="search" placeholder="如 苹果、NVDA、00700、Toyota"></label><label class="fld w2">行业<select id="gSec"></select></label></div>
+      <div class="gfilters"><label class="fld w3">搜索名称、代码或拼音首字母<input id="gQ" type="search" placeholder="如 苹果、pg、NVDA、00700、Toyota"></label><label class="fld w2">行业<select id="gSec"></select></label></div>
       <div class="kv" id="gBreadth" style="margin:0 0 10px"></div>
       <div class="tscroll"><table id="gsTbl"></table></div>
       <div class="more"><span class="note">美股、港股为腾讯行情（中文简称）；日本、欧洲、印度、韩国个股为 Yahoo Finance 快照。点表头排序。</span><button class="btn" id="gsMore">显示更多</button></div>
@@ -696,7 +714,7 @@ tbody tr.greg:hover{background:var(--bg)}
         <button class="btn" data-p="all" aria-pressed="false">全部 A 股</button>
       </div>
       <div class="filters">
-        <label class="fld w3">搜索代码或名称<input id="fQ" type="search" placeholder="如 688256 或 兆易"></label>
+        <label class="fld w3">搜索代码、名称或拼音首字母<input id="fQ" type="search" placeholder="如 688256、兆易 或 zycx"></label>
         <label class="fld w2">板块<select id="fBoard"><option value="">全部板块</option><option value="main">沪深主板</option><option value="sh">沪市主板</option><option value="sz">深市主板</option><option value="gem">创业板</option><option value="star">科创板</option><option value="bj">北交所</option></select></label>
         <label class="fld w2">题材<select id="fTheme"><option value="">全部</option></select></label>
         <label class="fld w2">行业<select id="fInd"><option value="">全部</option></select></label>
@@ -721,6 +739,7 @@ tbody tr.greg:hover{background:var(--bg)}
     <div class="panel">
       <div class="phead"><h2>选股</h2><span class="note" id="xgMeta"></span></div>
       <p class="note" style="margin:0 0 10px">推荐工作流（每个财报季重复一遍）：① 初筛：按下面的条件筛出候选股；② 人工核对：关键数字以巨潮资讯网、交易所官网上的公司公告为准；③ 定期复盘：新财报出来后检查买入逻辑是否还成立，再回到第 ① 步。财报披露截止日：年报和一季报 4 月 30 日，半年报 8 月 31 日，三季报 10 月 31 日。</p>
+      <div class="xgsearch"><label class="fld">搜索股票（代码、名称或拼音首字母，包括全球市场）<input id="xgQ" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" placeholder="如 tp、tpjt、601689、pg、AAPL"></label><div class="xgres" id="xgRes" hidden></div></div>
       <div class="ctabs" role="tablist" id="xgTabs"><button class="ctab" role="tab" data-t="d">D 型 · 科技成长</button><button class="ctab" role="tab" data-t="f">F 型 · 短线波段</button></div>
     </div>
     <div class="xgbody">
@@ -856,7 +875,7 @@ tbody tr.greg:hover{background:var(--bg)}
       <p class="note" id="dsMsg" role="status"></p>
     </details>
     <div class="panel chat">
-      <div class="phead"><h2>AI 选股助手</h2><span class="note" id="aiSub">Claude 读取本页 5500 多只沪深京 A 股数据后回答，使用你自己的 Claude 额度</span></div>
+      <div class="phead"><h2>AI 选股助手</h2><button class="btn" id="chatNew" title="清空当前对话（已保存在历史记录里）">新对话</button><span class="note" id="aiSub">Claude 读取本页 5500 多只沪深京 A 股数据后回答，使用你自己的 Claude 额度</span></div>
       <div class="sugg" id="sugg">
         <button class="btn" data-q="找出PE低于25倍、净利增速超过50%的科技股（全部板块），按评分排序列出前10只，并说明各自的前沿技术。">PE&lt;25 且高增长的科技股</button>
         <button class="btn" data-q="今天大跌中，哪些前沿科技题材股跌幅最小、业绩又好？列出5只并解释为什么抗跌。">今天抗跌的好公司</button>
@@ -866,6 +885,13 @@ tbody tr.greg:hover{background:var(--bg)}
       <div class="msgs" id="msgs"></div>
       <div class="ask"><textarea id="askBox" rows="1" enterkeyhint="send" aria-label="输入你的问题" placeholder="输入你的问题"></textarea><button class="btn pri" id="askBtn">发送</button><button class="btn" id="stopBtn" hidden>停止</button></div>
       <p class="note" id="aiState"></p>
+      <p class="note" id="aiBg" style="margin:0">分析进行时会保持屏幕常亮。切到别的 App 或锁屏时 iPhone 会暂停网页，回到这里后会自动接着重新分析；就算网页被系统关掉，下次打开这一页也会自动补上没完成的分析。每次的结果都保存在下面的历史记录里。</p>
+    </div>
+    <div class="panel" id="histPanel">
+      <div class="phead"><h2>历史记录</h2><span class="note">DeepSeek 的分析自动保存在这台设备的浏览器里，最多 80 条；换手机或清除浏览器数据后不会保留</span></div>
+      <div class="cg" id="histKinds" style="margin-bottom:10px"><button class="chip2" data-k="" aria-pressed="true">全部</button><button class="chip2" data-k="chat" aria-pressed="false">对话</button><button class="chip2" data-k="xg" aria-pressed="false">选股</button><button class="chip2" data-k="stk" aria-pressed="false">个股</button><button class="chip2" data-k="idx" aria-pressed="false">指数</button></div>
+      <div id="histList" class="hlist"></div>
+      <div class="more"><span class="note" id="histCnt"></span><button class="btn" id="histClear">清空全部</button></div>
     </div>
   </section>
 
@@ -884,6 +910,11 @@ const D = JSON.parse(document.getElementById("data").textContent);
 const TA = JSON.parse(document.getElementById("tadata").textContent || "{}");
 const R = D.rows.map(r => { const o = {}; D.cols.forEach((k, i) => o[k] = r[i]); o.roeA = o.roe == null ? null : +(o.roe * ({Q1: 4, H1: 2, Q3: 4 / 3, FY: 1}[o.rpt] || 1)).toFixed(1); return o; });
 const BY = new Map(R.map(r => [r.code, r]));
+// 拼音首字母（如 拓普集团 → tpjt），由 gen.py 用 pypinyin 生成；输入纯字母时按首字母前缀匹配
+const PY = D.py || {a: {}, g: {}};
+const isPyQ = q => /^[a-z]{1,12}$/i.test(q);
+const pyHit = (v, q) => !!v && v.split(" ").some(x => x.startsWith(q));
+const aMatch = (r, q) => !q || r.code.includes(q) || r.name.includes(q) || (isPyQ(q) && pyHit(PY.a[r.code], q.toLowerCase()));
 // 每小时更新的数据：日期、财报期都从数据里来；AI 研判每天由 DeepSeek 生成（没有时退回人工原文）
 const AI = D.ai && D.ai.dims ? D.ai : null, ASOF = D.asof || "";
 const RPT_NAME = {Q1: "一季度", H1: "上半年", Q3: "前三季", FY: "全年"}, RPT_DOC = {Q1: "一季报", H1: "半年报", Q3: "三季报（累计）", FY: "年报"};
@@ -908,7 +939,7 @@ function score(r){
 }
 R.forEach(r => r.sc = score(r));
 const IN_CLAUDE = !!(window.claude && typeof window.claude.use === "function");
-const use = n => IN_CLAUDE ? window.claude.use(n).catch(() => null) : Promise.resolve(n === "sample" ? dsSample : null);
+const use = n => IN_CLAUDE ? window.claude.use(n).then(x => n === "sample" && x ? keepAlive(x) : x).catch(() => null) : Promise.resolve(n === "sample" ? keepAlive(dsSample) : null);
 const store = {
   get(k, d){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(e){ return d; } },
   set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} },
@@ -993,6 +1024,56 @@ async function dsBalance(key){
   const j = await r.json(), b = (j.balance_infos || [])[0];
   return {ok: j.is_available !== false, text: b ? `余额 ${b.total_balance} ${b.currency === "CNY" ? "元" : b.currency}` : "余额未知"};
 }
+// 手机切到别的 App、锁屏或网络切换时，iPhone 会暂停网页，正在进行的 DeepSeek 请求会断开。
+// 分析期间请求屏幕常亮；断开后回到页面自动重新请求（最多 2 次），用户点了停止就不再重试。
+function keepAlive(sample){
+  const w = async (input, opts = {}) => {
+    let lock = null, wasHidden = document.hidden;
+    const grab = async () => { try { if (!lock && navigator.wakeLock && !document.hidden) { lock = await navigator.wakeLock.request("screen"); lock.addEventListener?.("release", () => { lock = null; }); } } catch(e) {} };
+    const onVis = () => { if (document.hidden) wasHidden = true; else grab(); };
+    document.addEventListener("visibilitychange", onVis); grab();
+    try {
+      for (let n = 0; ; n++) {
+        try { return await sample(input, opts); }
+        catch (e) {
+          const retry = n < 2 && !opts.signal?.aborted && (e.code === "network" || (e.code === "busy" && n < 1) || (e.code === "empty" && wasHidden));
+          if (!retry) throw e;
+          opts.onText?.({text: (e.text ? e.text + "\n\n" : "") + (document.hidden ? "（页面切到后台或锁屏时手机暂停了网页，连接断开了。回到这个页面后会自动重新分析…）" : "（连接断开了，正在自动重新分析…）")});
+          await waitVisible(opts.signal);
+          await new Promise(ok => setTimeout(ok, 600 * (n + 1)));
+          if (opts.signal?.aborted) throw aiErr("cancelled");
+          wasHidden = document.hidden;
+        }
+      }
+    } finally { document.removeEventListener("visibilitychange", onVis); try { await lock?.release(); } catch(e) {} }
+  };
+  w.limits = (...a) => typeof sample.limits === "function" ? sample.limits(...a) : Promise.resolve(null);
+  return w;
+}
+const waitVisible = signal => new Promise(ok => { if (!document.hidden) return ok(); const h = () => { if (!document.hidden || signal?.aborted) { document.removeEventListener("visibilitychange", h); ok(); } };
+  document.addEventListener("visibilitychange", h); signal?.addEventListener?.("abort", h); });
+
+/* ---------- AI 分析历史：只保存在这台设备的浏览器里（最近 80 条） ---------- */
+const AH_KIND = {chat: "对话", xgD: "选股 · D 型", xgF: "选股 · F 型", stock: "个股分析", index: "A 股指数", gindex: "全球指数", gstock: "全球个股"};
+const hid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const bjNow = () => new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 16).replace("T", " ");
+const AH = {
+  all(){ const a = store.get("aiHist", []); return Array.isArray(a) ? a : []; },
+  put(e){
+    e = {t: bjNow(), model: IN_CLAUDE ? "Claude" : dsModel(), ...e};
+    let a = [e, ...this.all().filter(x => x.id !== e.id)];
+    while (a.length > 80 || (a.length > 1 && JSON.stringify(a).length > 1.5e6)) a.pop();
+    for (let k = 0; k < 4; k++) { store.set("aiHist", a); if (this.all().length === a.length) break; a = a.slice(0, Math.max(1, a.length >> 1)); }   // 存储空间不够时减半再存
+    renderHist(); return e;
+  },
+  latest(kind, key){ return this.all().find(x => x.kind === kind && (key == null || x.key === key)); },
+  del(id){ store.set("aiHist", this.all().filter(x => x.id !== id)); renderHist(); },
+  clear(){ store.del("aiHist"); renderHist(); }
+};
+function aiLast(out, kind, key){                 // 打开个股或指数时，显示这一只上次的分析
+  const e = AH.latest(kind, key); if (!e || !out) return;
+  out.innerHTML = `<p class="note" style="margin:0 0 6px">上次分析：${esc(e.t)}（${esc(e.model || "")}），点上面的按钮可以重新分析。</p>${md(e.a)}` + (!IN_CLAUDE && !dsKey() ? aiNoKey() : "");
+}
 const aiNoKey = () => `<span class="note">先到「AI 助手」页填写 DeepSeek API Key 才能使用。</span> <button class="btn toAiSet">去填写</button>`;
 document.addEventListener("click", e => { if (e.target.closest(".toAiSet")) { closeStock(); show("ai"); $("#dsSet").open = true; $("#dsSet").scrollIntoView({block: "start"}); $("#dsKey").focus(); } });
 
@@ -1016,6 +1097,7 @@ function show(v){
   if (sel && nav.scrollWidth > nav.clientWidth) { const n = nav.getBoundingClientRect(), s = sel.getBoundingClientRect(); nav.scrollLeft += s.left - n.left - (n.width - s.width) / 2; }
   if (v === "watch") renderWatch();
   if (v === "xg") renderXg();
+  if (v === "ai") resumeChat();
   if (v === "global") { renderGlobal(); gStockTickSoon(); }
   try { history.replaceState(null, "", "#" + v); } catch(e){}
 }
@@ -1090,7 +1172,7 @@ function renderMarket(){
 renderMarket();
 
 /* ---------- picks ---------- */
-const PICKS = [
+const PICKS0 = [   // 2026-10-22 人工整理的原始名单；之后每个交易日收盘后按规则自动更新（D.pk），没有自动名单时用这份
   {tier:"业绩已兑现的前沿龙头", note:"高增长已经体现在报表上，估值相对合理", items:[
     ["601138","AI 服务器与 GB300 机柜放量，800G 以上交换机出货增 1.4 倍，CPO 全光交换机原型已出货"],
     ["603986","存储量价齐升叠加 MCU，自研 DDR4/LPDDR4 DRAM；扣非净利 48.8 亿，毛利率 63%"],
@@ -1134,6 +1216,7 @@ const PICKS = [
     ["002371","半导体设备龙头，半年报净利仅 +5%，市盈率约 69 倍"],
   ]},
 ];
+const PICKS = D.pk?.tiers?.length ? D.pk.tiers : PICKS0;
 function pickCard(code, why0){
   const why = AI?.picks?.[code] || why0;
   const r = BY.get(code); if (!r) return "";
@@ -1190,7 +1273,7 @@ function renderAI(){
   [...sec.children].forEach(p => { if (p !== box && !p.querySelector("#techTbl")) det.append(p); });
   sec.append(det);
   const tl = $("#techLive"); if (tl) tl.textContent = `表格为最新数据；多空逻辑见上方 AI 研判（${AI.generated}）。`;
-  const pk = $("#picks"); if (pk && Object.keys(AI.picks).length) pk.insertAdjacentHTML("beforebegin", `<p class="note" id="aiPickNote" style="margin:0">${tag} 个股点评按最新财报和行情自动生成；入选名单本身为 2026-10-22 人工整理。</p>`);
+  const pk = $("#picks"); if (pk && Object.keys(AI.picks).length) pk.insertAdjacentHTML("beforebegin", `<p class="note" id="aiPickNote" style="margin:0">${tag} 个股点评按最新财报和行情自动生成；${D.pk ? `入选名单每个交易日 A 股收盘后按规则自动更新（最近一次：${esc(D.pk.date)} 收盘），节假日沿用上一个交易日` : "入选名单本身为 2026-10-22 人工整理"}。</p>`);
 }
 renderAI();
 $("#ta").addEventListener("click", e => { const b = e.target.closest("[data-code]"); if (b) openStock(b.dataset.code); });
@@ -1222,7 +1305,7 @@ const num = id => { const v = $(id).value; return v === "" ? null : +v; };
 function filtered(){
   const q = $("#fQ").value.trim(), th = $("#fTheme").value, ind = $("#fInd").value, bd = $("#fBoard").value;
   const roe = num("#fRoe"), np = num("#fNp"), rev = num("#fRev"), pe = num("#fPe"), cap = num("#fCap"), st = $("#fSt").checked, tag = $("#fTag").checked;
-  let a = R.filter(r => (!q || r.code.includes(q) || r.name.includes(q)) && (!th || r.tags.includes(th)) && (!ind || r.ind === ind) && (!bd || (bd === "main" ? r.board === "sh" || r.board === "sz" : r.board === bd))
+  let a = R.filter(r => aMatch(r, q) && (!th || r.tags.includes(th)) && (!ind || r.ind === ind) && (!bd || (bd === "main" ? r.board === "sh" || r.board === "sz" : r.board === bd))
     && (roe == null || (r.roeA != null && r.roeA >= roe)) && (np == null || (r.npY != null && r.npY >= np && r.np > 0))
     && (rev == null || (r.revY != null && r.revY >= rev)) && (pe == null || (r.pe != null && r.pe > 0 && r.pe <= pe))
     && (cap == null || r.mcap >= cap) && (!st || !r.st) && (!tag || r.tags.length));
@@ -1316,7 +1399,7 @@ function md(s){
 }
 const ERR = {not_granted:"你没有允许本页使用 Claude，所以 AI 功能已关闭。", sampling_disabled:"你的账号当前不能在页面里使用 Claude。", rate_limited:"调用太频繁或额度已用完，稍后再试。", session_expired:"登录已过期，请重新登录 claude.ai。", refused:"Claude 拒绝回答这个请求，换个问法试试。", prompt_too_large:"内容太长了，缩小问题范围再试。",
   no_key:"还没有填写 DeepSeek API Key：到「AI 助手」页填写后再试。", bad_key:"DeepSeek 不认这个 Key（填错了或已在后台删除），请到「AI 助手」页重新填写。", no_balance:"DeepSeek 账户余额不足，充值后再试。",
-  busy:"DeepSeek 服务繁忙，稍后再试。", network:"连不上 DeepSeek（api.deepseek.com），检查网络后再试。", bad_request:"DeepSeek 拒绝了这次请求", too_long:"回答太长被截断，缩小问题范围再试。", empty:"DeepSeek 没有返回内容，请再试一次。"};
+  busy:"DeepSeek 服务繁忙，稍后再试。", network:"连不上 DeepSeek（api.deepseek.com）。如果是切到后台或锁屏造成的，回到页面会自动重试；否则检查网络后再点一次。", bad_request:"DeepSeek 拒绝了这次请求", too_long:"回答太长被截断，缩小问题范围再试。", empty:"DeepSeek 没有返回内容，请再试一次。"};
 const errMsg = e => (ERR[e && e.code] || "AI 暂时没有响应，请稍后点一次重试。") + (e?.detail && !["bad_key", "no_balance"].includes(e.code) ? `（${e.detail}）` : "");
 function openStock(code){
   const r = BY.get(code); if (!r) return;
@@ -1367,6 +1450,7 @@ function openStock(code){
   $("#dClose").onclick = closeStock; $("#dClose").focus();
   $("#dWl").onclick = () => { let w = store.get("wl", []); w = w.includes(code) ? w.filter(x => x !== code) : [...w, code]; store.set("wl", w); $("#dWl").textContent = w.includes(code) ? "移出自选" : "加入自选"; };
   const aiBtn = $("#dAi");
+  aiLast($("#dOut"), "stock", code);
   use("sample").then(sample => {
     if (!sample) { aiBtn.disabled = true; $("#dOut").innerHTML = `<span class="note">在 claude.ai 里打开本页才能使用 AI 分析。</span>`; return; }
     aiBtn.onclick = async () => {
@@ -1389,7 +1473,8 @@ ${JSON.stringify(stockBrief(r))}
 ## 在当前市场环境下的应对思路
 不要给出确定的买卖指令，只讨论条件和情景。数据里没有的信息不要编造，需要推测时注明“推测”。`;
       try {
-        await sample(prompt, { signal: my.signal, onText: ({ text }) => { if (my === aiCtl) $("#dOut").innerHTML = md(text); } });
+        const res = await sample(prompt, { signal: my.signal, onText: ({ text }) => { if (my === aiCtl) $("#dOut").innerHTML = md(text); } });
+        AH.put({id: hid(), kind: "stock", key: code, title: `${r.name}（${code}）`, q: "AI 个股分析", a: res.text});
       } catch (e) {
         if (my !== aiCtl) return;
         if (e.code === "cancelled") { if (!e.text) $("#dOut").innerHTML = `<span class="note">已停止。</span>`; }
@@ -1968,6 +2053,7 @@ function openIndex(code){
   $("#dClose").onclick = closeStock; $("#dClose").focus();
   $("#toResearch").onclick = () => { closeStock(); show("research"); window.scrollTo({top: 0}); };
   const btn = $("#ixAi");
+  aiLast($("#ixOut"), "index", code);
   use("sample").then(sample => {
     if (!sample) { btn.disabled = true; $("#ixOut").innerHTML = `<span class="note">在 claude.ai 里打开本页才能使用 AI 分析。</span>`; return; }
     btn.onclick = async () => {
@@ -1986,7 +2072,7 @@ function openIndex(code){
 
 该指数数据：${JSON.stringify(data)}
 全市场数据：${JSON.stringify(AI ? {日期: AI.asof, 生成: "DeepSeek " + AI.generated, ...Object.fromEntries(AI.dims.map(d => [d.name, d.facts.map(x => `${x.item}：${x.value}（${x.src}）`).join("；")])), 制度: MKT.制度} : MKT)}`;
-      try { await sample(prompt, {signal: my.signal, onText: ({text}) => { if (my === aiCtl) $("#ixOut").innerHTML = md(text); }}); }
+      try { const res = await sample(prompt, {signal: my.signal, onText: ({text}) => { if (my === aiCtl) $("#ixOut").innerHTML = md(text); }}); AH.put({id: hid(), kind: "index", key: code, title: ix.name, q: "AI 六维分析", a: res.text}); }
       catch (e) { if (my !== aiCtl) return;
         if (e.code === "cancelled") { if (!e.text) $("#ixOut").innerHTML = `<span class="note">已停止。</span>`; }
         else { $("#ixOut").innerHTML = (e.text && e.code !== "refused" ? md(e.text) : "") + `<p class="note">${esc(errMsg(e))}</p>`; if (["not_granted","sampling_disabled"].includes(e.code)) btn.hidden = true; } }
@@ -2119,7 +2205,7 @@ function gStocks(){
   const q = GV.q.trim().toLowerCase();
   let a = (G.mk[GV.mk] || []).map(y => G.st[y]).filter(Boolean);
   if (GV.sec) a = a.filter(s => s.sec === GV.sec);
-  if (q) a = a.filter(s => (s.n || "").toLowerCase().includes(q) || (s.en || "").toLowerCase().includes(q) || (s.t || "").toLowerCase().includes(q));
+  if (q) a = a.filter(s => (s.n || "").toLowerCase().includes(q) || (s.en || "").toLowerCase().includes(q) || (s.t || "").toLowerCase().includes(q) || (isPyQ(q) && pyHit(PY.g[s.y], q)));
   const {k, dir} = GV.ssort;
   const val = s => k === "r52" ? (s.h52 > s.l52 ? (s.p - s.l52) / (s.h52 - s.l52) : null) : s[k];
   return a.sort((x, y) => { let u = val(x), v = val(y); if (u == null || u === "") return 1; if (v == null || v === "") return -1; return (typeof u === "string" ? u.localeCompare(v, "zh") : u - v) * dir; });
@@ -2243,7 +2329,7 @@ function openGIndex(key){
   const panel = mountPanel($("#gxPanel"), {...gPanelSrc(ix), levels});
   if (LIVE.on) gLoadIndexLive(ix, panel);
   $("#dClose").onclick = closeStock; $("#dClose").focus();
-  gAiButton($("#gxAi"), $("#gxStop"), $("#gxOut"), () => {
+  gAiButton({kind: "gindex", key, title: ix.n, q: "AI 技术面分析"}, $("#gxAi"), $("#gxStop"), $("#gxOut"), () => {
     const data = {指数: ix.n, 地区: ix.r, 交易所时区: ix.tz, 计价: s.cur, 最新: s.p, 涨跌pct: s.pct == null ? null : +s.pct.toFixed(2), 年初至今pct: s.ytd == null ? null : +s.ytd.toFixed(1), 状态: s.st.t,
       近5日pct: st && +st.r5.toFixed(1), 近20日pct: st && +st.r20.toFixed(1), 近60日pct: st && +st.r60.toFixed(1), 一年高点: st && +st.hi250.toFixed(1), 一年低点: st && +st.lo250.toFixed(1),
       支撑: st?.sup.map(v => +v.toFixed(0)), 压力: st?.res.map(v => +v.toFixed(0)), 多周期指标: has ? techBrief(gRows(ix), gMonthly(ix)) : null, 历史极值: at};
@@ -2261,13 +2347,14 @@ function openGIndex(key){
 数据：${JSON.stringify(data)}`;
   });
 }
-function gAiButton(btn, stop, out, makePrompt){
+function gAiButton(meta, btn, stop, out, makePrompt){
+  aiLast(out, meta.kind, meta.key);
   use("sample").then(sample => {
     if (!sample) { btn.disabled = true; out.innerHTML = `<span class="note">在 claude.ai 里打开本页才能使用 AI 分析。</span>`; return; }
     btn.onclick = async () => {
       aiCtl?.abort(); aiCtl = new AbortController(); const my = aiCtl;
       btn.disabled = true; stop.hidden = false; stop.onclick = () => my.abort(); out.innerHTML = `<span class="note">思考中…</span>`;
-      try { await sample(makePrompt(), {signal: my.signal, onText: ({text}) => { if (my === aiCtl) out.innerHTML = md(text); }}); }
+      try { const res = await sample(makePrompt(), {signal: my.signal, onText: ({text}) => { if (my === aiCtl) out.innerHTML = md(text); }}); AH.put({id: hid(), ...meta, a: res.text}); }
       catch (e) { if (my !== aiCtl) return;
         if (e.code === "cancelled") { if (!e.text) out.innerHTML = `<span class="note">已停止。</span>`; }
         else { out.innerHTML = (e.text && e.code !== "refused" ? md(e.text) : "") + `<p class="note">${esc(errMsg(e))}</p>`; if (["not_granted", "sampling_disabled"].includes(e.code)) btn.hidden = true; } }
@@ -2303,7 +2390,7 @@ function openGStock(y){
     gLoadStockLive(s, kind, panel);
   }
   $("#dClose").onclick = closeStock; $("#dClose").focus();
-  gAiButton($("#gsAi"), $("#gsStop"), $("#gsOut"), () => {
+  gAiButton({kind: "gstock", key: y, title: `${s.n || s.en}（${s.t}）`, q: "AI 个股分析"}, $("#gsAi"), $("#gsStop"), $("#gsOut"), () => {
     const rows = openState?.type === "gstock" && openState.key === y ? openState.rows : null;
     const data = {名称: s.n, 英文名: s.en, 代码: s.t, 所属指数: mks, 交易所: s.ex, 行业: s.sec, 货币: s.cur, 最新价: s.p, 涨跌幅pct: s.pct, 开盘: s.o, 最高: s.h, 最低: s.l, 昨收: s.prev, 成交量股: s.vol,
       市值: s.mcap, 市盈率: s.pe, 周52最高: s.h52, 周52最低: s.l52, 多周期指标: rows?.length >= 30 ? techBrief(rows, null) : null, 上市以来前复权极值: rows?.length ? allTime(rows, null) : null};
@@ -2421,7 +2508,7 @@ const TOOLS = [
       minRoe: {type: "number"}, minNpGrowth: {type: "number"}, minRevGrowth: {type: "number"}, maxPe: {type: "number"}, minMcap: {type: "number", description: "亿元"}, onlyTagged: {type: "boolean"},
       sortBy: {type: "string", enum: ["sc","chg","pe","npY","roeA","mcap","revY"]}, ascending: {type: "boolean"}, limit: {type: "number"}}},
     execute(i){ const lim = clamp(+i.limit || 15, 1, 30), k = ["sc","chg","pe","npY","roeA","mcap","revY"].includes(i.sortBy) ? i.sortBy : "sc", d = i.ascending ? 1 : -1;
-      const bdv = String(i.board || ""), a = R.filter(r => (i.includeSt || !r.st) && (!bdv || (bdv === "main" ? r.board === "sh" || r.board === "sz" : r.board === bdv)) && (!i.theme || r.tags.includes(String(i.theme))) && (!i.industry || r.ind === String(i.industry)) && (!i.query || r.name.includes(String(i.query)) || r.code.includes(String(i.query)))
+      const bdv = String(i.board || ""), a = R.filter(r => (i.includeSt || !r.st) && (!bdv || (bdv === "main" ? r.board === "sh" || r.board === "sz" : r.board === bdv)) && (!i.theme || r.tags.includes(String(i.theme))) && (!i.industry || r.ind === String(i.industry)) && aMatch(r, String(i.query || "").trim())
         && (i.minRoe == null || (r.roeA ?? -1e9) >= +i.minRoe) && (i.minNpGrowth == null || ((r.npY ?? -1e9) >= +i.minNpGrowth && r.np > 0)) && (i.minRevGrowth == null || (r.revY ?? -1e9) >= +i.minRevGrowth)
         && (i.maxPe == null || (r.pe > 0 && r.pe <= +i.maxPe)) && (i.minMcap == null || r.mcap >= +i.minMcap) && (!i.onlyTagged || r.tags.length));
       a.sort((x, y) => ((x[k] ?? -1e9) - (y[k] ?? -1e9)) * d);
@@ -2451,12 +2538,59 @@ function chatScroll(force){
 }
 function growAsk(){ const t = $("#askBox"); t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight + 2, innerHeight * .4) + "px"; }
 $("#askBox").addEventListener("input", growAsk);
+// 恢复上次的对话（最近 16 条消息）
+(function restoreChat(){
+  const saved = store.get("aiChat", []);
+  if (!Array.isArray(saved) || !saved.length) return;
+  turns = saved.filter(m => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string");
+  turns.forEach(m => addMsg(m.role === "user" ? "u" : "a", m.role === "user" ? esc(m.content) : md(m.content)));
+})();
+$("#chatNew").addEventListener("click", () => { chatCtl?.abort(); turns = []; store.del("aiChat"); store.del("aiJob"); $("#msgs").innerHTML = ""; });
+// 网页被系统关掉时没完成的问题：打开 AI 助手页时自动重新分析（30 分钟内的）
+let pendingChat = (() => { const j = store.get("aiJob", null); return j && j.kind === "chat" && Date.now() - j.at < 30 * 60e3 ? j.q : null; })();
+function resumeChat(){
+  if (!pendingChat || !sampleFn || $("#v-ai").hidden) return;
+  const q = pendingChat; pendingChat = null;
+  addMsg("tool", "上次的问题在网页被系统关闭时没有完成，正在自动重新分析…"); ask(q);
+}
+let histKind = "";
+function renderHist(){
+  const box = $("#histList"); if (!box) return;
+  const all = AH.all(), pick = e => !histKind || (histKind === "xg" ? e.kind.startsWith("xg") : histKind === "idx" ? /index/.test(e.kind) : histKind === "stk" ? /stock/.test(e.kind) : e.kind === histKind);
+  const a = all.filter(pick);
+  $("#histCnt").textContent = all.length ? `共 ${all.length} 条${histKind ? `，当前显示 ${a.length} 条` : ""}` : "";
+  $("#histClear").hidden = !all.length;
+  box.innerHTML = a.map(e => `<details class="hitem" data-id="${esc(e.id)}"><summary><span class="num mut">${esc(e.t)}</span><span class="pill na">${esc(AH_KIND[e.kind] || e.kind)}</span><b>${esc(e.title || "")}</b></summary><div class="hbody"></div></details>`).join("")
+    || `<p class="note">还没有记录。DeepSeek 的分析完成后会自动保存在这里。</p>`;
+}
+$("#histList").addEventListener("toggle", e => {
+  const d = e.target; if (!d.open || d.dataset.ready) return;
+  const x = AH.all().find(h => h.id === d.dataset.id); if (!x) return;
+  d.dataset.ready = 1;
+  const open = x.key && /stock|index/.test(x.kind) ? `<button class="btn" data-act="open">打开${x.kind.includes("index") ? "指数" : "个股"}</button>` : x.kind.startsWith("xg") ? `<button class="btn" data-act="open">打开选股页</button>` : "";
+  d.querySelector(".hbody").innerHTML = `${x.q ? `<p class="note" style="margin:0 0 6px">${esc(x.q.length > 120 ? x.q.slice(0, 120) + "…" : x.q)} · ${esc(x.model || "")}</p>` : ""}<div class="ai">${md(x.a || "")}</div>
+    <div class="hact">${open}<button class="btn" data-act="copy">复制</button><button class="btn" data-act="del">删除</button></div>`;
+}, true);
+$("#histList").addEventListener("click", e => {
+  const b = e.target.closest("[data-act]"); if (!b) return;
+  const id = b.closest(".hitem").dataset.id, x = AH.all().find(h => h.id === id); if (!x) return;
+  if (b.dataset.act === "del") AH.del(id);
+  else if (b.dataset.act === "copy") xgCopy(b, (x.q ? x.q + "\n\n" : "") + x.a);
+  else if (x.kind === "stock") openStock(x.key); else if (x.kind === "index") openIndex(x.key);
+  else if (x.kind === "gindex") openGIndex(x.key); else if (x.kind === "gstock") openGStock(x.key);
+  else if (x.kind.startsWith("xg")) { show("xg"); window.scrollTo({top: 0}); }
+});
+$("#histKinds").addEventListener("click", e => { const b = e.target.closest("[data-k]"); if (!b) return; histKind = b.dataset.k;
+  $("#histKinds").querySelectorAll("[data-k]").forEach(x => x.setAttribute("aria-pressed", x === b)); renderHist(); });
+$("#histClear").addEventListener("click", () => { if (confirm("清空全部历史记录？这一步不能撤销。")) AH.clear(); });
+renderHist();
 use("sample").then(async s => {
   sampleFn = s;
   if (!s) { $("#aiState").textContent = "在 claude.ai 里打开本页才能使用 AI 助手。"; $("#askBtn").disabled = true; return; }
   const lim = await s.limits().catch(() => null); toolsOk = !!(lim && lim.tools);
   if (IN_CLAUDE) $("#aiState").textContent = toolsOk ? "AI 会调用本页的筛选工具查询数据。第一次使用需要你确认授权。" : "当前环境不支持页面工具，AI 将基于页面摘要回答。";
   else dsInit();
+  resumeChat();
 });
 function dsState(){
   const k = dsKey();
@@ -2489,6 +2623,7 @@ const chatCtx = tools => tools ? RULES : RULES + "\n\n页面摘要：" + JSON.st
 async function ask(q){
   if (!sampleFn || !q.trim()) return;
   turns.push({role: "user", content: q}); addMsg("u", esc(q));
+  store.set("aiJob", {kind: "chat", q, at: Date.now()});          // 网页中途被系统关掉时，下次打开自动补上
   const bubble = addMsg("a", `<span class="note">思考中…</span>`);
   chatCtl = new AbortController(); const my = chatCtl;
   $("#askBtn").disabled = true; $("#stopBtn").hidden = false;
@@ -2503,8 +2638,10 @@ async function ask(q){
       r = await sampleFn([{role: "user", content: chatCtx(false)}, ...turns.slice(-8)], opts);
     }
     turns.push({role: "assistant", content: r.text});
+    store.set("aiChat", turns.slice(-16)); store.del("aiJob");
+    AH.put({id: hid(), kind: "chat", title: q.length > 40 ? q.slice(0, 40) + "…" : q, q, a: r.text});
   } catch (e) {
-    turns.pop();
+    turns.pop(); store.del("aiJob");
     if (e.code === "cancelled") bubble.innerHTML = e.text ? md(e.text) : `<span class="note">已停止。</span>`;
     else bubble.innerHTML = (e.text && e.code !== "refused" ? md(e.text) : "") + `<p class="note">${esc(errMsg(e))}</p>`;
     if (["not_granted","sampling_disabled"].includes(e.code)) { aiOff = true; $("#aiState").textContent = errMsg(e); }
@@ -3123,30 +3260,75 @@ function xgCopy(btn, text){
     try { document.execCommand("copy") ? ok() : alert("复制失败，请手动选择复制"); } catch(e) { alert("复制失败，请手动选择复制"); } ta.remove(); };
   if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(ok, fallback); else fallback();
 }
-const XAI = {d: {turns: [], ctl: null}, f: {turns: [], ctl: null}};
+const XAI = {d: {turns: [], ctl: null, log: [], hid: null}, f: {turns: [], ctl: null, log: [], hid: null}};
 async function xgAsk(kind, q, label){
   const box = $(kind === "d" ? "#xgD" : "#xgF"), out = box.querySelector(".xgout"), st = XAI[kind], sample = await use("sample");
   if (!sample) { out.innerHTML = `<p class="note">在 claude.ai 里打开本页才能使用 AI 分析。</p>`; return; }
   if (!IN_CLAUDE && !dsKey()) { out.innerHTML = aiNoKey(); return; }
   st.ctl?.abort(); st.ctl = new AbortController(); const my = st.ctl;
   const sys = `你是严谨的A股研究员。严格按用户给的提示词执行，只用提供的数据，数据里没有的写“待核实”，推测要注明“推测”。用中文；对比类信息用 Markdown 表格（| 列 | 列 |），结论用要点，语言简洁。结尾原样写：以上内容仅为基于公开信息的分析参考，不构成投资建议，市场有风险，决策需独立判断。`;
+  const before = st.turns.slice();
   st.turns.push({role: "user", content: q});
+  store.set("aiJob", {kind: "xg" + kind.toUpperCase(), q, label, turns: before, log: st.log, hid: st.hid, at: Date.now()});
   const bubble = document.createElement("div"); bubble.className = "ai";
   out.insertAdjacentHTML("beforeend", `<p class="xgq"><b>你：</b>${esc(label)}</p>`); out.append(bubble); bubble.innerHTML = `<span class="note">思考中…</span>`;
   box.querySelectorAll(".xgrun,.xgnext").forEach(b => b.disabled = true); box.querySelector(".xgstop").hidden = false; box.querySelector(".xgstop").onclick = () => my.abort();
   try {
     const {text} = await sample([{role: "user", content: sys}, ...st.turns], {signal: my.signal, onText: ({text}) => { if (my === st.ctl) bubble.innerHTML = md(text); }});
-    st.turns.push({role: "assistant", content: text});
+    st.turns.push({role: "assistant", content: text}); store.del("aiJob");
+    st.log.push({label, text});
+    AH.put({id: st.hid || (st.hid = hid()), kind: "xg" + kind.toUpperCase(), title: st.log[0].label, q: st.log.map(x => x.label).join(" → "),
+      a: st.log.map(x => "### " + x.label + "\n" + x.text).join("\n\n"), log: st.log, turns: JSON.stringify(st.turns).length < 90000 ? st.turns : null});
     box.querySelector(".xgnextbar").hidden = false;
   } catch (e) {
-    st.turns.pop();
+    st.turns.pop(); store.del("aiJob");
     bubble.innerHTML = e.code === "cancelled" ? (e.text ? md(e.text) : `<span class="note">已停止。</span>`) : (e.text && e.code !== "refused" ? md(e.text) : "") + `<p class="note">${esc(errMsg(e))}</p>`;
   } finally { if (my === st.ctl) { box.querySelectorAll(".xgrun,.xgnext").forEach(b => b.disabled = false); box.querySelector(".xgstop").hidden = true; } }
+}
+// 网页被系统关掉时没完成的选股分析：回到对应的 D/F 页时自动重新分析（30 分钟内的）
+function resumeXg(){
+  const j = store.get("aiJob", null); if (!j || !/^xg[DF]$/.test(j.kind) || Date.now() - j.at > 30 * 60e3) return;
+  const k = j.kind === "xgD" ? "d" : "f"; if (XG.tab !== k || $("#v-xg").hidden) return;
+  store.del("aiJob"); Object.assign(XAI[k], {turns: j.turns || [], log: j.log || [], hid: j.hid || hid()});
+  $(k === "d" ? "#xgD" : "#xgF").querySelector(".xgout").insertAdjacentHTML("beforeend", `<p class="note">上次的分析在网页被系统关闭时没有完成，正在自动重新分析…</p>`);
+  xgAsk(k, j.q, j.label);
+}
+function xgSearchInit(){
+  const inp = $("#xgQ"), res = $("#xgRes"); if (!inp) return;
+  const find = q => {
+    const ql = q.toLowerCase(), py = isPyQ(q), a = [], g = [];
+    for (const r of R) { if (r.code.startsWith(q) || r.name.includes(q) || (py && pyHit(PY.a[r.code], ql))) a.push(r); }
+    a.sort((x, y) => (y.code === q) - (x.code === q) || (y.name === q) - (x.name === q) || (PY.a[x.code] || "").length - (PY.a[y.code] || "").length || y.mcap - x.mcap);
+    for (const [y, st] of Object.entries(G.st || {})) {
+      if ((st.t || "").toLowerCase().startsWith(ql) || (st.n || "").toLowerCase().includes(ql) || (ql.length >= 3 && (st.en || "").toLowerCase().includes(ql)) || (py && pyHit(PY.g[y], ql))) g.push([y, st]);
+    }
+    g.sort((x, y) => ((y[1].t || "").toLowerCase() === ql) - ((x[1].t || "").toLowerCase() === ql) || (y[1].mcap || 0) - (x[1].mcap || 0));
+    return {a: a.slice(0, 8), g: g.slice(0, 6)};
+  };
+  let dRank = null;
+  const badge = c => { dRank ||= new Map(dCompute(XG.d).out.map((x, i) => [x.r.code, i + 1]));
+    const d = dRank.get(c), fI = (XG.fTop || []).findIndex(x => x.r.code === c);
+    return (d ? `<span class="pill yes">D 型第 ${d} 名</span>` : "") + (fI >= 0 ? `<span class="pill hold">F 型第 ${fI + 1} 名</span>` : ""); };
+  const render = () => {
+    const q = inp.value.trim(); if (!q) { res.hidden = true; return; }
+    const {a, g} = find(q);
+    res.innerHTML = (a.length ? `<div class="xgrh">A 股</div>` + a.map(r => `<button type="button" data-a="${r.code}"><span><b>${esc(r.name)}</b> <span class="cd num">${r.code}</span> <span class="mut">${BOARD[r.board]} · ${esc(r.ind || "")}</span></span><span class="num">${f(r.price)} <span class="${cls(r.chg)}">${pct(r.chg, 2)}</span> ${badge(r.code)}</span></button>`).join("") : "")
+      + (g.length ? `<div class="xgrh">全球市场</div>` + g.map(([y, st]) => { const mk = GMK.filter(([m]) => (G.mk[m] || []).includes(y)).map(([, t]) => t).slice(0, 2).join("、");
+          return `<button type="button" data-g="${esc(y)}"><span><b>${esc(st.n || st.en)}</b> <span class="cd num">${esc(st.t)}</span> <span class="mut">${esc(mk)}</span></span><span class="num">${st.p == null ? "—" : fmtAxis(st.p)} <span class="${cls(st.pct)}">${pct(st.pct, 2)}</span></span></button>`; }).join("") : "")
+      || `<p class="note" style="margin:8px 10px">没有找到。可以输入代码、名称或拼音首字母，比如 tpjt（拓普集团）、pg（苹果）。</p>`;
+    res.hidden = false;
+  };
+  inp.addEventListener("input", render);
+  inp.addEventListener("focus", () => { dRank = null; if (inp.value.trim()) render(); });
+  inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); res.querySelector("button")?.click(); } if (e.key === "Escape") { res.hidden = true; inp.blur(); } });
+  res.addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; res.hidden = true; if (b.dataset.a) openStock(b.dataset.a); else openGStock(b.dataset.g); });
+  document.addEventListener("click", e => { if (!e.target.closest(".xgsearch")) res.hidden = true; });
 }
 function renderXg(){
   if (!SC) { $("#v-xg").querySelector(".xgbody").innerHTML = `<p class="note">选股数据还没生成，等下一次自动更新。</p>`; return; }
   $("#xgMeta").textContent = `行情 ${LIVE.on ? "实时 " + liveTime() : ASOF} · 日K统计 ${SC.techDate || "—"} · 财务、解禁、减持 ${SC.extAsof || "—"}`;
   if (XG.tab === "d") renderD(); else renderF();
+  resumeXg();
 }
 function xgInit(){
   if (!SC) { renderXg(); return; }
@@ -3158,7 +3340,7 @@ function xgInit(){
     box.querySelector(".xgmore").onclick = () => { XG.showAll[k] = !XG.showAll[k]; renderXg(); };
     box.addEventListener("click", e => { const t = e.target.closest("[data-code]"); if (t && !e.target.closest(".xgset")) { e.preventDefault(); openStock(t.dataset.code); } });
     box.querySelector(".xgcopy").onclick = e => xgCopy(e.currentTarget, k === "d" ? dPrompt(box.querySelector(".xgwith").checked, false) : fPrompt(box.querySelector(".xgwith").checked, false, 0));
-    box.querySelector(".xgrun").onclick = () => { XAI[k].turns = []; box.querySelector(".xgout").innerHTML = ""; box.querySelector(".xgnextbar").hidden = true;
+    box.querySelector(".xgrun").onclick = () => { XAI[k].turns = []; XAI[k].log = []; XAI[k].hid = hid(); box.querySelector(".xgout").innerHTML = ""; box.querySelector(".xgnextbar").hidden = true;
       if (k === "d") xgAsk("d", dPrompt(true, true), `D 型科技成长选股（${XG.d.n} 只，研发投入 ≥${XG.d.rd}%）`);
       else xgAsk("f", fPrompt(true, true, 1), "F 型短线波段：先完成第 1-2 步（市场情绪、主线题材）"); };
     box.querySelector(".xgnextbar").addEventListener("click", e => { const b = e.target.closest("[data-q]"); if (b) xgAsk(k, b.dataset.q, b.textContent); });
@@ -3166,6 +3348,12 @@ function xgInit(){
   $("#xgTabs").addEventListener("click", e => { const b = e.target.closest("[data-t]"); if (!b) return; XG.tab = b.dataset.t; store.set("xgTab", XG.tab);
     document.querySelectorAll("#xgTabs [data-t]").forEach(x => x.setAttribute("aria-selected", x.dataset.t === XG.tab)); $("#xgD").hidden = XG.tab !== "d"; $("#xgF").hidden = XG.tab !== "f"; renderXg(); });
   document.querySelectorAll("#xgTabs [data-t]").forEach(x => x.setAttribute("aria-selected", x.dataset.t === XG.tab)); $("#xgD").hidden = XG.tab !== "d"; $("#xgF").hidden = XG.tab !== "f";
+  // 上次的选股分析：恢复显示，可以接着追问
+  ["d", "f"].forEach(k => { const e = AH.latest("xg" + k.toUpperCase()), box = $(k === "d" ? "#xgD" : "#xgF"); if (!e?.log?.length) return;
+    box.querySelector(".xgout").innerHTML = `<p class="note" style="margin:0">上次分析：${esc(e.t)}（${esc(e.model || "")}）。点“${k === "d" ? "AI 分析" : "AI 分析（先做第 1-2 步）"}”会重新开始，也可以接着追问。</p>`
+      + e.log.map(x => `<p class="xgq"><b>你：</b>${esc(x.label)}</p><div class="ai">${md(x.text)}</div>`).join("");
+    Object.assign(XAI[k], {turns: e.turns || [], log: e.log, hid: e.id}); box.querySelector(".xgnextbar").hidden = !e.turns; });
+  xgSearchInit();
   const aiLabel = `让 ${AI_NAME} 分析`; document.querySelectorAll(".xgrun").forEach(b => { if (!b.dataset.l) b.textContent = b.id === "xgRunF" ? aiLabel + "（先做第 1-2 步）" : aiLabel; });
   document.querySelectorAll(".xgaiq").forEach(n => n.textContent = AI_QUOTA);
 }

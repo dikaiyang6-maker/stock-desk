@@ -1,13 +1,42 @@
 """每天用 DeepSeek 根据最新数据写六维研判、今日市场解读和精选个股点评。没有 DEEPSEEK_API_KEY 时跳过，网页沿用上一版或原始文字。"""
+import datetime as dt
 import json
 import os
 import re
+from zoneinfo import ZoneInfo
 
 import requests
 
 from common import ROOT, bj_now, load, log, save
 
 DIMS = ["宏观环境", "政策面", "资金面", "技术面", "板块与题材", "市场情绪"]
+
+
+# 各市场当地收盘时间（时:分）；没列出的欧洲市场按 17:35，其余按 16:00
+CLOSE = {"America/New_York": (16, 0), "America/Toronto": (16, 0), "America/Sao_Paulo": (17, 0), "America/Mexico_City": (15, 0), "Europe/Istanbul": (18, 10),
+         "Asia/Tokyo": (15, 30), "Asia/Seoul": (15, 30), "Asia/Taipei": (13, 30), "Asia/Hong_Kong": (16, 10), "Asia/Shanghai": (15, 0), "Asia/Kolkata": (15, 30),
+         "Australia/Sydney": (16, 10), "Asia/Singapore": (17, 0), "Asia/Jakarta": (16, 15), "Asia/Bangkok": (16, 40)}
+
+
+def market_day(ix):
+    """按各市场自己的时区和收盘时间判断最近交易日和是否休市（各国节假日不同）：最近成交日期早于应有的交易日，就是当地休市或数据没更新。"""
+    tz = ix.get("tz")
+    if not tz:
+        return {}
+    z = ZoneInfo(tz); now = dt.datetime.now(z)
+    ch, cm = CLOSE.get(tz, (17, 35) if tz.startswith("Europe/") else (16, 0))
+    ts = (ix.get("q") or {}).get("ts")
+    last = dt.datetime.fromtimestamp(ts / 1000, z).date() if ts and ts <= (now.timestamp() + 600) * 1000 else None   # 个别数据源的时间戳会跑到未来，忽略
+    if ix.get("k"):
+        kd = dt.date.fromisoformat(ix["k"][-1][0]); last = max(last, kd) if last else kd
+    if not last:
+        return {}
+    closed_today = now.hour * 60 + now.minute >= ch * 60 + cm + 15
+    exp = now.date() if closed_today else now.date() - dt.timedelta(days=1)
+    while exp.weekday() >= 5:
+        exp -= dt.timedelta(days=1)
+    state = "交易中" if last == now.date() and now.weekday() < 5 and not closed_today else "已收盘" if last >= exp else f"休市（当地最近交易日 {last}）"
+    return {"最近交易日": str(last), "状态": state}
 
 
 def sma(a, p):
@@ -83,18 +112,23 @@ def context():
     for ix in G.get("idx", []):
         q = ix.get("q") or {}
         if q.get("p"):
-            glob[ix["n"]] = {"最新": q["p"], "涨跌pct": q.get("pct")}
+            glob[ix["n"]] = {"最新": q["p"], "涨跌pct": q.get("pct"), **market_day(ix)}
     ctx["全球指数"] = glob
     ctx["快讯标题"] = [f'{i["t"]} [{i["src"]}] {i["title"]}' for i in (news.get("items") or [])[:70]]
-    # 精选个股
-    tpl = (ROOT / "template.html").read_text(encoding="utf-8")
-    block = tpl[tpl.index("const PICKS = ["):tpl.index("];", tpl.index("const PICKS = ["))]
-    codes = re.findall(r'\["(\d{6})",', block); by = {r["code"]: r for r in R}
+    # 精选个股：每个交易日收盘后按规则更新的名单（data/picks.json），没有就用网页里的原始名单
+    pk = load("picks.json", {})
+    if pk.get("tiers"):
+        codes = [c for t in pk["tiers"] for c, _ in t["items"]]
+    else:
+        tpl = (ROOT / "template.html").read_text(encoding="utf-8")
+        block = tpl[tpl.index("const PICKS0 = ["):tpl.index("];", tpl.index("const PICKS0 = ["))]
+        codes = re.findall(r'\["(\d{6})",', block)
+    by = {r["code"]: r for r in R}
     ctx["精选个股"] = {c: {k: by[c].get(k) for k in ("name", "ind", "price", "chg", "pe", "rpt", "rev", "revY", "np", "npY", "roe", "gm", "tags")} for c in codes if c in by}
     return ctx
 
 
-SYSTEM = """你是严谨的A股策略研究员，为一个研究型网页撰写每日研判。只能使用用户给出的JSON数据（指数、宽度、行业、题材、两融、北向成交、全球指数、快讯标题、精选个股），不得编造数据、事件、政策或来源；快讯标题只能按标题字面意思引用并注明时间与来源；数据里没有的内容写进 missing，不要猜。
+SYSTEM = """你是严谨的A股策略研究员，为一个研究型网页撰写每日研判。只能使用用户给出的JSON数据（指数、宽度、行业、题材、两融、北向成交、全球指数、快讯标题、精选个股），全球指数里“状态”为休市的市场当天没有交易（各国节假日不同），不要把它的涨跌当作当日表现；不得编造数据、事件、政策或来源；快讯标题只能按标题字面意思引用并注明时间与来源；数据里没有的内容写进 missing，不要猜。
 规则：每个维度分别列多方逻辑和空方逻辑，不给单边结论；关键判断注明依据（数据+时间）；结合T+1和涨跌停制度（主板±10%含ST，创业板/科创板±20%，北交所±30%）；短期（1-2周）与中期（1-3个月）展望用“情景+触发条件”表达；不给具体买卖指令、目标价或仓位建议。全部用简体中文。
 只输出一个JSON对象，结构严格如下：
 {"title": "A 股六维研判 · <日期>", "summary": "一句话总结（不超过60字）",
