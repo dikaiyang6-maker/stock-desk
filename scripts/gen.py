@@ -63,6 +63,9 @@ def build():
     pk = load("picks.json", {})
     if pk.get("tiers"):
         data["pk"] = pk                                           # 每个交易日收盘后按规则更新的精选名单
+    fl = load("flow.json", {})
+    if fl.get("pool") is not None:
+        data["fl"] = {k: v for k, v in fl.items() if k != "prev"}  # 资金监控：每日资金异动选股、监控池、观察期
     data["py"] = pinyin_initials(a, G)                            # 拼音首字母，搜索用（如 拓普集团 → tpjt）
     sc = load("screen.json", {})
     if sc.get("ext") or sc.get("tech"):                       # 选股板块：按列压成数组，减小网页体积
@@ -80,6 +83,8 @@ def build():
     SITE.mkdir(exist_ok=True)
     (SITE / "index.html").write_text(head + t + "</body></html>", encoding="utf-8")
     (SITE / ".nojekyll").write_text("", encoding="utf-8")
+    if fl.get("pool") is not None:                                # 完整的监控状态，数据缓存丢了时 flow.py 从这里取回
+        (SITE / "flow.json").write_text(json.dumps(fl, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     log("site", (SITE / "index.html").stat().st_size // 1024, "KB | asof", a.get("asof"), "| ai", ai.get("generated") if ai else None,
         "| global idx", len(data.get("g", {}).get("idx", [])), "stocks", len(data.get("g", {}).get("st", {})))
 

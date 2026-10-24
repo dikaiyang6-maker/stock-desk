@@ -10,7 +10,7 @@ on:
         description: "全部重新抓取（1 = 是）"
         default: "0"
       only:
-        description: "只跑这些任务（逗号分隔，如 picks,ai；留空 = 按时间表）"
+        description: "只跑这些任务（逗号分隔，如 picks,flow,ai；留空 = 按时间表）"
         default: ""
 
 permissions:

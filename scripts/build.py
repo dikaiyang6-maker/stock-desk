@@ -5,7 +5,8 @@
     选股板块：研发、负债、商誉、解禁、减持（每 20 小时）；全市场日K统计（交易日 15:10 之后一次）
     欧洲、印度成分股（Yahoo，较慢）                                 每 6 小时
     财报、两融与北向成交                                           每 20 小时
-    精选名单（规则选股）与 DeepSeek 研判（A 股收盘后，北京时间 15:30 之后）  每个交易日一次，节假日跳过
+    精选名单（规则选股）、资金监控（资金异动选股、监控池、DeepSeek 调查）与 DeepSeek 研判
+                                     （A 股收盘后，北京时间 15:30 之后）  每个交易日一次，节假日跳过
     指数完整历史、题材股月K、成分股名单                             每 7 天
 
 环境变量：FORCE=1 全部重跑；ONLY=任务名,任务名 只跑指定任务；DEEPSEEK_API_KEY 可选。"""
@@ -18,7 +19,7 @@ import traceback
 
 sys.path.insert(0, os.path.dirname(__file__))
 from common import DATA, ROOT, bj_now, done, due, load, log, save   # noqa: E402
-import a_share, global_mkt, news, ai_commentary, gen, picks, screen_data   # noqa: E402
+import a_share, global_mkt, news, ai_commentary, flow, gen, picks, screen_data   # noqa: E402
 
 
 def seed():
@@ -83,6 +84,11 @@ def main():
             results["picks"] = "ok" if picks.refresh_picks() is not False else "kept-previous"
         except Exception as e:
             traceback.print_exc(); results["picks"] = f"failed: {type(e).__name__}"
+    if (not only and flow.flow_due()) or "flow" in only or (not only and os.environ.get("FORCE") == "1"):   # 资金监控：交易日收盘后一次
+        try:
+            results["flow"] = "ok" if flow.refresh_flow() is not False else "kept-previous"
+        except Exception as e:
+            traceback.print_exc(); results["flow"] = f"failed: {type(e).__name__}"
     if (not only or "ai" in only) and (ai_due() or os.environ.get("FORCE") == "1" or "ai" in only):
         try:
             results["ai"] = "ok" if ai_commentary.refresh_ai() else "kept-previous"
