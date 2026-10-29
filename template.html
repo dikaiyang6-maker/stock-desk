@@ -3551,18 +3551,18 @@ function flChart(rows, p){       // 近 40 日主力净流入（柱）和收盘�
     <div class="legend"><span><i style="background:var(--up);height:8px;width:8px"></i>主力净流入</span><span><i style="background:var(--dn);height:8px;width:8px"></i>主力净流出</span><span><i style="background:var(--ink)"></i>收盘价</span><span>近 5 日 <b class="num ${cls(sum5)}">${yiS(sum5)}</b></span><span>近 20 日 <b class="num ${cls(sum20)}">${yiS(sum20)}</b></span></div>`;
 }
 function flAlertHtml(a, date){
-  return `<button type="button" class="falert lv-${a.lv.startsWith("l") ? (a.lv === "lgood" ? "good" : "bad") : a.lv}" data-code="${a.code}"><span class="lvl">${FL_LV[a.lv] || ""}</span><span class="tx"><b>${esc(a.name)}</b><span class="cd">${a.code}</span>${esc(a.text)}</span>${date ? `<span class="dt">${esc(date)}</span>` : ""}</button>`;
+  return `<button type="button" class="falert lv-${a.lv.startsWith("l") ? (a.lv === "lgood" ? "good" : "bad") : a.lv}" data-code="${a.code}"><span class="lvl">${a.lv[0] === "l" ? (flIntra() ? "盘中" : "实时") : FL_LV[a.lv] || ""}</span><span class="tx"><b>${esc(a.name)}</b><span class="cd">${a.code}</span>${esc(a.text)}</span>${date ? `<span class="dt">${esc(date)}</span>` : ""}</button>`;
 }
 function flLiveAlerts(){        // 实时提醒：监控池里主力大幅流出、跌破 20 日线、大跌，或主力大幅流入（交易中，或收盘后结果还没生成时）
   if (!flLive() || !FLV.live.size) return [];
-  const out = [];
+  const out = [], intra = flIntra(), w = intra ? "盘中" : "", px = intra ? "现价" : "收盘";
   for (const p of FL.pool) {
     const x = FLV.live.get(p.code), r = BY.get(p.code); if (!x || !r) continue;
     const mr = x.amt ? x.m / x.amt * 100 : 0, big = BIGB.has(p.board) ? 7 : 5;
-    if (x.m <= -0.3 && mr <= -10) out.push({lv: "lbad", code: p.code, name: p.name, text: `盘中主力净流出 ${yiS(-x.m).slice(1)}（占成交额 ${f(-mr, 0)}%），现价 ${f(r.price)}（${pct(r.chg, 2)}）`});
-    else if (r.chg <= -big) out.push({lv: "lbad", code: p.code, name: p.name, text: `盘中大跌 ${pct(r.chg, 2)}，主力 ${yiS(x.m)}`});
-    if (p.k?.ma20 && r.price < p.k.ma20) out.push({lv: "lbad", code: p.code, name: p.name, text: `盘中跌破 20 日线 ${f(p.k.ma20)}（现价 ${f(r.price)}）`});
-    if (x.m >= 0.5 && mr >= 10) out.push({lv: "lgood", code: p.code, name: p.name, text: `盘中主力净流入 ${yiS(x.m)}（占成交额 ${f(mr, 0)}%），现价 ${f(r.price)}（${pct(r.chg, 2)}）`});
+    if (x.m <= -0.3 && mr <= -10) out.push({lv: "lbad", code: p.code, name: p.name, text: `${w}主力净流出 ${yiS(-x.m).slice(1)}（占成交额 ${f(-mr, 0)}%），${px} ${f(r.price)}（${pct(r.chg, 2)}）`});
+    else if (r.chg <= -big) out.push({lv: "lbad", code: p.code, name: p.name, text: `${intra ? "盘中" : "收盘"}大跌 ${pct(r.chg, 2)}，主力 ${yiS(x.m)}`});
+    if (p.k?.ma20 && r.price < p.k.ma20) out.push({lv: "lbad", code: p.code, name: p.name, text: `${intra ? "盘中" : "收盘"}跌破 20 日线 ${f(p.k.ma20)}（${px} ${f(r.price)}）`});
+    if (x.m >= 0.5 && mr >= 10) out.push({lv: "lgood", code: p.code, name: p.name, text: `${w}主力净流入 ${yiS(x.m)}（占成交额 ${f(mr, 0)}%），${px} ${f(r.price)}（${pct(r.chg, 2)}）`});
   }
   return out;
 }
@@ -4034,8 +4034,8 @@ async function flowTick(){
       if (flStale() && !flIntra() && !(FLV.seats?.d >= ld)) { const b = await flSeatBoardLive(ld); if (b) FLV.seats = b; }
       const codes = FL.pool.map(p => p.code), lanes = 4;
       const worker = async () => { for (let c = codes.shift(); c; c = codes.shift()) { const x = await flNow(c); if (x) FLV.live.set(c, x); } };
-      const top = async asc => { const d = await sinaJsonp("ssl_bkzj_ssggzj", `page=1&num=30&sort=r0_net&asc=${asc}`);
-        return Array.isArray(d) ? d.filter(x => /^(sh|sz|bj)\d{6}$/.test(x.symbol)).map(x => [x.symbol.slice(2), BY.get(x.symbol.slice(2))?.name || x.name, (parseFloat(x.r0_net) || 0) / 1e8, (parseFloat(x.r0_ratio) || 0) * 100, (parseFloat(x.changeratio) || 0) * 100]) : null; };
+      const top = async asc => { const d = await sinaJsonp("ssl_bkzj_ssggzj", `page=1&num=100&sort=r0_net&asc=${asc}`);   // 新浪的排行里有 ETF、债券基金，只留 A 股
+        return Array.isArray(d) ? d.filter(x => /^(sh|sz|bj)\d{6}$/.test(x.symbol) && BY.has(x.symbol.slice(2))).slice(0, 30).map(x => [x.symbol.slice(2), BY.get(x.symbol.slice(2))?.name || x.name, (parseFloat(x.r0_net) || 0) / 1e8, (parseFloat(x.r0_ratio) || 0) * 100, (parseFloat(x.changeratio) || 0) * 100]) : null; };
       const [up, dn] = await Promise.all([top(0), top(1), Promise.all(Array.from({length: lanes}, worker))]);
       if (up && dn) FLV.top = {t: new Date(Date.now() + 8 * 3600e3).toISOString().slice(11, 16), top: up, bottom: dn};
       FLV.liveAt = Date.now(); FLV.busy = false;

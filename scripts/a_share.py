@@ -68,15 +68,16 @@ def quarter_ends(today, n=5):
 
 
 def refresh_reports():
-    """取最近两期：最新一期（正在披露，可能不全）+ 上一期已基本披露完（≥3000 家）的一期。"""
+    """取最新一期（正在披露，可能不全）到它之前第一个基本披露完（≥3000 家）的一期，中间正在披露的也取；
+    每只股票用其中最新的一期。最新一期过了 3000 家也还没披露完，所以总要带上之前完整的一期，否则还没披露的公司会从行情里消失。"""
     cands = quarter_ends(bj_now().date())
     counts = {}
     for d in cands:
         res = ((_report_page(d, 1, 1) or {}).get("result") or {})
         counts[d] = res.get("count") or 0
-    newest = next((d for d in cands if counts[d] >= 50), None)
-    base = next((d for d in cands if counts[d] >= 3000), None)
-    dates = sorted({d for d in (base, newest) if d})
+    i = next((k for k, d in enumerate(cands) if counts[d] >= 50), None)
+    j = next((k for k in range(i + 1, len(cands)) if counts[cands[k]] >= 3000), i) if i is not None else None
+    dates = sorted(d for d in cands[i:j + 1] if counts[d] >= 50) if i is not None else []
     if not dates:
         log("reports: 东方财富数据中心没有返回数据，沿用缓存")
         return False
@@ -92,7 +93,10 @@ def refresh_market():
     if not rep:
         log("market: 没有财报缓存，跳过"); return False
     keep = lambda r: r["TRADE_MARKET"] in MARKETS and r["SECURITY_TYPE_CODE"] != "058001002"   # 去掉 B 股
-    by_date = {d: {r["SECURITY_CODE"]: r for r in rep["rows"][d] if keep(r)} for d in rep["dates"]}
+    group = lambda rep: {d: {r["SECURITY_CODE"]: r for r in rep["rows"][d] if keep(r)} for d in rep["dates"]}
+    by_date = group(rep)
+    if len(set().union(*by_date.values())) < 5000 and refresh_reports():   # 财报缓存不全（比如只剩正在披露的一期）：马上重取
+        rep = load("reports.json"); by_date = group(rep)
     order = sorted(rep["dates"], reverse=True)          # 新的一期优先
     codes = sorted(set().union(*by_date.values()))
     q = tx_quotes([a_sym(c) for c in codes])
