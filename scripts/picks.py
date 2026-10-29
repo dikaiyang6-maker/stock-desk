@@ -78,9 +78,9 @@ def picks_due():
 
 
 def refresh_picks():
-    n = len(load("a.json", {}).get("rows") or [])
-    if n < 5000:
-        log("picks: 行情只有", n, "只，不完整，沿用上次名单"); return False
+    na = len(load("a.json", {}).get("rows") or [])
+    if na < 5000:
+        log("picks: 行情只有", na, "只，不完整，沿用上次名单"); return False
     rows, asof = _rows()
     if len(rows) < 200:
         log("picks: 前沿科技股只有", len(rows), "只，数据不完整，沿用上次名单"); return False
@@ -89,6 +89,6 @@ def refresh_picks():
         cand = sorted((r for r in rows if r["code"] not in used and ok(r)), key=score, reverse=True)[:n]
         used.update(r["code"] for r in cand)
         tiers.append({"tier": name, "note": note, "items": [[r["code"], _why(r)] for r in cand]})
-    save("picks.json", {"date": asof[:10], "asof": asof, "n": n, "generated": bj_now().strftime("%Y-%m-%d %H:%M"), "tiers": tiers})
+    save("picks.json", {"date": asof[:10], "asof": asof, "n": na, "generated": bj_now().strftime("%Y-%m-%d %H:%M"), "tiers": tiers})
     log("picks", asof, {t["tier"][:6]: len(t["items"]) for t in tiers})
     return True
