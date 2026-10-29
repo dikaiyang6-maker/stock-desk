@@ -2,8 +2,8 @@
 
 前沿科技股 = 选股页 D 型的八个方向（东方财富行业）+ 本站题材标签（不含防御/高股息），剔除 ST 和日均成交额不足 3 亿元的。
 每档的条件写在 TIERS 里，同一只股票只进一档；理由由数据生成，DeepSeek 每日研判再给每只写一句点评。
-节假日（当天没有 A 股收盘数据）不更新，沿用上一个交易日的名单。"""
-from common import bj_now, load, log, save
+节假日（当天没有 A 股收盘数据）不更新，沿用上一个交易日的名单；行情不完整（少于 5000 只）时不生成。"""
+from common import bj_now, close_date, load, log, save
 from screen_data import THEME_TRACK, TRACKS
 
 ANN = {"Q1": 4, "H1": 2, "Q3": 4 / 3, "FY": 1}
@@ -71,17 +71,16 @@ TIERS = [
 
 
 def picks_due():
-    """交易日 15:30 之后、当天有 A 股收盘数据、今天还没生成过时运行。"""
-    t = bj_now()
-    if t.weekday() >= 5 or t.hour * 60 + t.minute < 15 * 60 + 30:
-        return False
-    asof = load("a.json", {}).get("asof", "")
-    if asof[:10] != t.strftime("%Y-%m-%d") or asof[11:] < "15:00":
-        return False
-    return load("picks.json", {}).get("date") != asof[:10]
+    """有某个交易日收盘后的完整行情、那天的名单还没生成（或上次用的行情不完整）时运行；当天没跑成的，第二天开盘前补上。"""
+    d = close_date()
+    pk = load("picks.json", {})
+    return bool(d) and (pk.get("date") != d or pk.get("n", 0) < 5000)
 
 
 def refresh_picks():
+    n = len(load("a.json", {}).get("rows") or [])
+    if n < 5000:
+        log("picks: 行情只有", n, "只，不完整，沿用上次名单"); return False
     rows, asof = _rows()
     if len(rows) < 200:
         log("picks: 前沿科技股只有", len(rows), "只，数据不完整，沿用上次名单"); return False
@@ -90,6 +89,6 @@ def refresh_picks():
         cand = sorted((r for r in rows if r["code"] not in used and ok(r)), key=score, reverse=True)[:n]
         used.update(r["code"] for r in cand)
         tiers.append({"tier": name, "note": note, "items": [[r["code"], _why(r)] for r in cand]})
-    save("picks.json", {"date": asof[:10], "asof": asof, "generated": bj_now().strftime("%Y-%m-%d %H:%M"), "tiers": tiers})
+    save("picks.json", {"date": asof[:10], "asof": asof, "n": n, "generated": bj_now().strftime("%Y-%m-%d %H:%M"), "tiers": tiers})
     log("picks", asof, {t["tier"][:6]: len(t["items"]) for t in tiers})
     return True

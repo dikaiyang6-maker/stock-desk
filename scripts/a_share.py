@@ -96,7 +96,7 @@ def refresh_market():
     order = sorted(rep["dates"], reverse=True)          # 新的一期优先
     codes = sorted(set().union(*by_date.values()))
     q = tx_quotes([a_sym(c) for c in codes])
-    rows, ts = [], ""
+    rows, tss = [], []
     for c in codes:
         f = q.get(a_sym(c))
         d = next((d for d in order if c in by_date[d]), None)
@@ -105,7 +105,7 @@ def refresh_market():
         price = num(f[3]) or 0
         if price <= 0:
             continue                                     # 停牌等无成交
-        r = by_date[d][c]; ts = max(ts, f[30])
+        r = by_date[d][c]; tss.append(f[30])
         lu, ld = num(f[47]), num(f[48])
         rows.append([c, f[1], board(c), r.get("BOARD_NAME") or "", price, num(f[32]) or 0.0, num(f[39]), num(f[46]), round(num(f[45]) or 0, 1),
                      RPT[d[5:]], round((r["TOTAL_OPERATE_INCOME"] or 0) / 1e8, 2), None if r["YSTZ"] is None else round(r["YSTZ"], 1),
@@ -114,8 +114,14 @@ def refresh_market():
                      round((num(f[37]) or 0) / 1e4, 2), TAG.get(c, []), 1 if "ST" in f[1] else 0,
                      None if r.get("MGJYXJJE") is None else round(r["MGJYXJJE"], 2), num(f[4]), lu if lu and lu > 0 else None, ld if ld and ld > 0 else None,
                      num(f[33]), num(f[38]), num(f[44]), num(f[72]) if len(f) > 72 else None, num(f[49])])   # 最高、换手率%、流通市值亿、流通股本、量比
-    if len(rows) < 1000:
-        log("market: 行情只拿到", len(rows), "只，沿用缓存"); return False
+    prev = len((load("a.json") or {}).get("rows") or [])
+    if len(rows) < 0.97 * max(prev, 5000):              # 腾讯限流时会少一大批，不完整就不覆盖上一次的完整行情
+        log("market: 行情只拿到", len(rows), "只（上一次", prev, "只），不完整，沿用缓存"); return False
+    days = {}
+    for t in tss:
+        days[t[:8]] = days.get(t[:8], 0) + 1
+    main = max(days, key=days.get) if days else ""
+    ts = max((t for t in tss if t[:8] == main), default="")   # 按大多数股票的报价日期算数据时间，个别股票的时间戳不影响
     hist = load("hist.json", {})
     ik = {c: {"name": n, "k": [[r[0], r[2]] for r in (hist.get("idxk", {}).get(c, {}).get("k") or [])[-260:]]} for c, n in IDX.items()}
     asof = f"{ts[:4]}-{ts[4:6]}-{ts[6:8]} {ts[8:10]}:{ts[10:12]}" if len(ts) >= 12 else bj_now().strftime("%Y-%m-%d %H:%M")

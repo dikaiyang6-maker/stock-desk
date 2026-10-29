@@ -18,7 +18,7 @@ import time
 import traceback
 
 sys.path.insert(0, os.path.dirname(__file__))
-from common import DATA, ROOT, bj_now, done, due, load, log, save   # noqa: E402
+from common import DATA, ROOT, close_date, done, due, load, log, save   # noqa: E402
 import a_share, global_mkt, news, ai_commentary, flow, gen, picks, screen_data   # noqa: E402
 
 
@@ -32,14 +32,10 @@ def seed():
 
 
 def ai_due():
-    t = bj_now()
-    if t.weekday() >= 5 or t.hour * 60 + t.minute < 15 * 60 + 30:     # 交易日 15:30 之后
-        return False
-    asof = load("a.json", {}).get("asof", "")
-    if asof[:10] != t.strftime("%Y-%m-%d") or asof[11:] < "15:00":    # 节假日休市（行情不是今天的收盘数据）时不生成
-        return False
-    last = load("ai.json", {}).get("generated", "")
-    return not last.startswith(t.strftime("%Y-%m-%d"))
+    """有某个交易日收盘后的完整行情、那天的研判还没生成（或上次用的行情不完整）时运行；节假日没有新的收盘数据，不生成。"""
+    d = close_date()
+    ai = load("ai.json", {})
+    return bool(d) and ((ai.get("asof") or "")[:10] != d or ai.get("n", 0) < 5000)
 
 
 TASKS = [  # 名称, 周期（小时）, 函数

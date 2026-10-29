@@ -170,13 +170,16 @@ def refresh_ai():
     key = os.environ.get("DEEPSEEK_API_KEY")
     if not key:
         log("ai: 没有 DEEPSEEK_API_KEY，跳过（网页沿用上一版研判）"); return False
+    n = len(load("a.json", {}).get("rows") or [])
+    if n < 5000:
+        log("ai: 行情只有", n, "只，不完整，跳过（网页沿用上一版研判）"); return False
     ctx = context()
     if not ctx.get("A股指数"):
         log("ai: 缺少指数数据，跳过"); return False
     for model in [os.environ.get("DEEPSEEK_MODEL", "deepseek-v4-pro"), "deepseek-flash"]:
         try:
             out = clean(call(model, ctx, key), set(ctx.get("精选个股", {})))
-            out.update({"generated": bj_now().strftime("%Y-%m-%d %H:%M"), "model": model, "asof": ctx.get("数据时间"), "news_n": len(ctx["快讯标题"])})
+            out.update({"generated": bj_now().strftime("%Y-%m-%d %H:%M"), "model": model, "asof": ctx.get("数据时间"), "n": n, "news_n": len(ctx["快讯标题"])})
             save("ai.json", out)
             log("ai ok", model, "| dims", [len(d["bull"]) + len(d["bear"]) for d in out["dims"]], "| picks", len(out["picks"]))
             return True

@@ -11,7 +11,7 @@ import math
 import re
 from concurrent.futures import ThreadPoolExecutor
 
-from common import a_sym, bj_now, due, done, jget, load, log, num, r2, save, tx_daily
+from common import a_sym, bj_now, close_date, done, due, jget, load, log, num, r2, save, tx_daily
 
 EM = "https://datacenter-web.eastmoney.com/api/data/v1/get"
 
@@ -233,12 +233,12 @@ TECH_COLS = ["ma5", "ma10", "ma20", "ma60", "ma250", "ma5p", "ma10p", "ma60p", "
 
 
 def tech_due():
-    """交易日 15:10 之后、当天还没算过时运行；从没算过时随时运行。"""
-    st = load("screen.json", {}).get("techAsof", "")
-    t = bj_now()
-    if not st:
+    """有某个交易日收盘后的完整行情、那天的日K统计还没算过（或上次用的行情不完整）时运行；从没算过时随时运行。"""
+    sc = load("screen.json", {})
+    if not sc.get("techAsof"):
         return True
-    return t.weekday() < 5 and t.hour * 60 + t.minute >= 15 * 60 + 10 and not st.startswith(t.strftime("%Y-%m-%d"))
+    d = close_date()
+    return bool(d) and (sc.get("techDate") != d or sc.get("techN", 0) < 5000)
 
 
 def _lim_price(prev, lim, up=True):
@@ -289,6 +289,8 @@ def refresh_tech():
         return False
     I = {c: i for i, c in enumerate(a["cols"])}
     rows = a["rows"]
+    if len(rows) < 5000:
+        log("tech: 行情只有", len(rows), "只，不完整，沿用缓存"); return False
     if "fsh" not in I:
         log("tech: 行情缓存里还没有流通股本，先跑一次 market"); return False
     t0 = dt.datetime.now()
@@ -347,7 +349,7 @@ def refresh_tech():
             amt_day[b[0]] = amt_day.get(b[0], 0) + b[6] / 1e4
     ad = [amt_day[d] for d in sorted(amt_day)[-21:-1]]
     out = load("screen.json", {})
-    out.update({"tech": tech, "techCols": TECH_COLS, "techAsof": bj_now().strftime("%Y-%m-%d %H:%M"), "techDate": days[-1] if days else None,
+    out.update({"tech": tech, "techCols": TECH_COLS, "techAsof": bj_now().strftime("%Y-%m-%d %H:%M"), "techDate": days[-1] if days else None, "techN": len(rows),
                 "emo": emo, "amt20": round(sum(ad) / len(ad), 0) if ad else None})
     save("screen.json", out)
     log("tech", ok, "/", len(rows), "stocks in", (dt.datetime.now() - t0).seconds, "s | last day", emo[-1] if emo else None)

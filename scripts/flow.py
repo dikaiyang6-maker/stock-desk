@@ -2,18 +2,20 @@
 
 选股：先按当天的主力资金（新浪口径，主力 = 特大单）、盘口异动（东方财富 22 类）、龙虎榜和量价从全市场粗筛，
      再取候选股近 30 个交易日的资金流向细算连续性，分两类打分：强势异动（涨停或涨幅 ≥7%，看当天资金力度和异动）、
-     资金吸筹（涨得不多但主力连续 ≥3 日流入），满 45 分的各取最多 4 只、同一行业最多 2 只（核心入选，每天最多 8 只）；
-     监控池不足 30 只时，两类轮流从 35 分以上的补充入选到 30 只（同一行业当天最多 3 只）。监控池上限 50 只。
+     资金吸筹（涨得不多但主力连续 ≥3 日流入），满 45 分的各取最多 4 只、同一行业最多 2 只（核心入选，每天最多 8 只，
+     监控池快满时少选、至少 3 只）；监控池不足 30 只时，两类轮流从 35 分以上的补充入选到 30 只（同一行业当天最多 3 只）。
+     监控池保持 30–50 只（含观察期）：超过 50 只时，观察最久的提前结束观察、移出。
 评分：同一套公式每天按最新数据重算（今日评分），页面显示每一项的得分。
 详细信息：资金流入流出明细（特大单、大单、小单、散单）、主力控盘与持股（东方财富千股千评、十大流通股东、机构持仓、股东户数）、
      散户占比（小单和散单成交占比、十大流通股东以外的持股）、筹码分布（按日K和换手率估算）、龙虎榜买卖席位。
 监控：池里每只股票每天更新主力净流入、涨跌、异动、龙虎榜、公告和新闻。
      出现“主力放弃”（连续 3 日流出且吐出入选以来流入的一半、放量大跌出货、跌破 20 日线且流出、龙虎榜机构净卖出）
-     或其他因素（利空公告、较入选价跌超 12%、入选满 10 天资金热度消退、监控池已满）时进入观察期，
+     或其他因素（利空公告、较入选价跌超 12%、入选满 10 天资金热度消退）时进入观察期，
      再观察 5 个交易日（约一周）：期间主力回流（连续 2 日净流入且站上 10 日线）就恢复跟踪，否则移出。
 DeepSeek：对新入选的股票做全面调查，对状态变化写说明（有 DEEPSEEK_API_KEY 时）。
-节假日（当天没有 A 股收盘数据，或资金数据不是当天的）不运行，沿用上一个交易日的结果。
-同一天重复运行时从当天开始前的状态重算，不会重复计观察天数。"""
+节假日（没有新的收盘数据，或资金数据和收盘行情对不上）不运行，沿用上一个交易日的结果；收盘当天没跑成的，第二天开盘前补上。
+龙虎榜、千股千评收盘后要过一阵才公布：当时还没公布的记为“待补全”，之后的运行再重算一次（每个交易日最多 6 次）。
+同一天重复运行时从当天开始前的状态重算，不会重复计观察天数；已经写好的 DeepSeek 报告直接沿用。"""
 import copy
 import datetime as dt
 import json
@@ -22,7 +24,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import requests
 
-from common import a_sym, bj_now, get, jget, load, log, num, save, tx_daily
+from common import a_sym, bj_now, close_date, get, jget, load, log, num, save, tx_daily
 
 SINA = "https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/MoneyFlow."
 EMX, EMX_UT = "https://push2ex.eastmoney.com/", "7eea3edcaed734bea9cbfc24409ed989"
@@ -36,6 +38,7 @@ BAD_ANN = ("减持", "立案", "调查", "处罚", "问询函", "监管函", "�
 GOOD_ANN = ("中标", "重大合同", "签订", "回购", "增持", "预增", "预盈", "扭亏", "定点", "订单", "获批", "注册生效")
 NEUTRAL_ANN = ("回复", "回函", "异常波动", "更正", "补充", "法律意见", "不减持", "终止减持", "提前终止", "实施完毕", "回购注销", "进展")   # 例行回复、更正、承诺不减持等不算利好利空
 NEW_PER_DAY, POOL_MIN, POOL_MAX, WATCH_DAYS, STOP_LOSS = 8, 30, 50, 5, -12
+MIN_NEW = 3                                             # 监控池满了也每天至少选 3 只（核心入选），观察最久的提前移出
 CORE_MIN, FILL_MIN = 45, 35                             # 核心入选、补充入选的最低分
 BIG_BOARD = ("gem", "star", "bj")
 f2 = lambda v, d=2: None if v is None else round(v, d)
@@ -61,8 +64,15 @@ def sina_market():
         s = r.get("symbol") or ""
         if s[:2] in ("sh", "sz", "bj"):
             out[s[2:]] = {"m": (num(r.get("r0_net")) or 0) / 1e8, "mr": (num(r.get("r0_ratio")) or 0) * 100, "net": (num(r.get("netamount")) or 0) / 1e8,
-                          "amt": (num(r.get("amount")) or 0) / 1e8, "cps": num(r.get("r0x_ratio"))}
+                          "amt": (num(r.get("amount")) or 0) / 1e8, "cps": num(r.get("r0x_ratio")), "p": num(r.get("trade"))}
     return out
+
+
+def sina_matches(F, U):
+    """新浪资金数据没有日期，用收盘价核对它和这份收盘行情是不是同一天（不是同一天的价格大多对不上）。"""
+    xs = [(F[c]["p"], U[c]["price"]) for c in U if c in F and F[c].get("p") and U[c]["price"]]
+    ok = sum(1 for a, b in xs if abs(a - b) < 0.011)
+    return len(xs) >= 3000 and ok >= 0.9 * len(xs), ok, len(xs)
 
 
 def sina_hist(code, n=30):
@@ -238,8 +248,9 @@ def score_parts(kind, m, mr, k, cap5, mv, lh_net, qr):
     return round(sum(x[1] for x in pts), 1), pts
 
 
-def select(U, F, MV, LHB, today, skip, need):
-    """今天新入选的股票：[{c 代码, s 分数, why 理由, h 资金历史, parts 评分构成, kind 类型, tier 核心/补充}]。"""
+def select(U, F, MV, LHB, today, skip, cap, fill):
+    """今天新入选的股票：[{c 代码, s 分数, why 理由, h 资金历史, parts 评分构成, kind 类型, tier 核心/补充}]。
+    cap：核心入选最多几只；fill：核心不够时用补充凑到几只（监控池不足 30 只时）。"""
     pre = []
     for c, r in U.items():
         f = F.get(c)
@@ -254,7 +265,7 @@ def select(U, F, MV, LHB, today, skip, need):
     pre.sort(reverse=True)
     hot = lambda c: U[c]["chg"] >= 7 or U[c]["price"] >= U[c]["lu"] - 0.0005
     cands = [c for _, c in pre if hot(c)][:60] + [c for _, c in pre if not hot(c)][:100]
-    H = pmap(lambda c: sina_hist(c, 30), cands)
+    H = pmap(lambda c: hist_today(c, 30, today, U[c]["price"]), cands)
     out = []
     for c in cands:
         h, r, f = H.get(c), U[c], F[c]
@@ -285,17 +296,17 @@ def select(U, F, MV, LHB, today, skip, need):
     def take(t, tier):
         pick.append({**t, "tier": tier}); ind = U[t["c"]]["ind"]; n_ind[ind] = n_ind.get(ind, 0) + 1
     core = [t for t in out if t["s"] >= CORE_MIN]
-    for half in (True, False):                          # 核心：满 45 分，两类各取 4 只，一类不够再用另一类补满 8 只；同一行业最多 2 只
+    for half in (True, False):                          # 核心：满 45 分，两类各取一半（最多 4 只），一类不够再用另一类补满；同一行业最多 2 只
         for want in ("强势异动", "资金吸筹"):
             for t in core:
-                if len(pick) >= NEW_PER_DAY or (half and sum(1 for x in pick if x["kind"] == want) >= NEW_PER_DAY // 2):
+                if len(pick) >= cap or (half and sum(1 for x in pick if x["kind"] == want) >= cap // 2):
                     break
                 if t["kind"] == want and all(x["c"] != t["c"] for x in pick) and n_ind.get(U[t["c"]]["ind"], 0) < 2:
                     take(t, "核心")
     q = {k: [t for t in out if t["kind"] == k and all(x["c"] != t["c"] for x in pick)] for k in ("资金吸筹", "强势异动")}
-    while len(pick) < need and (q["资金吸筹"] or q["强势异动"]):   # 补充：监控池不足 30 只时，两类轮流按分数补到 30 只（35 分以上）；同一行业当天最多 3 只
+    while len(pick) < fill and (q["资金吸筹"] or q["强势异动"]):   # 补充：监控池不足 30 只时，两类轮流按分数补到 30 只（35 分以上）；同一行业当天最多 3 只
         for k in ("资金吸筹", "强势异动"):
-            while q[k] and len(pick) < need:
+            while q[k] and len(pick) < fill:
                 t = q[k].pop(0)
                 if n_ind.get(U[t["c"]]["ind"], 0) < 3:
                     take(t, "补充"); break
@@ -350,7 +361,7 @@ def update_pool(fl, U, MV, LHB30, A, N, today):
     alerts = []
     say = lambda p, lv, text: (alerts.append({"lv": lv, "code": p["code"], "name": p["name"], "text": text}), p["log"].append([today, lv, text]), p.__setitem__("log", p["log"][-20:]))
     codes = [p["code"] for p in fl["pool"]]
-    H = pmap(lambda c: sina_hist(c, 40), codes)
+    H = pmap(lambda c: hist_today(c, 40, today, (U.get(c) or {}).get("price")), codes)
     keep, gone = [], []
     for p in fl["pool"]:
         c, h, r = p["code"], H.get(p["code"]), U.get(p["code"])
@@ -365,6 +376,8 @@ def update_pool(fl, U, MV, LHB30, A, N, today):
         p["lhb"] = (LHB30.get(c) or [])[:6]
         if MV.get(c):
             p["mv"] = [[today, {k: v for k, v in MV[c].items() if k != "_ev"}, MV[c]["_ev"][-12:]]] + [x for x in p.get("mv") or [] if x[0] != today][:4]
+        elif MV:                                        # 今天有异动数据、但这只没有：记一条空的，网页显示“今天没有盘口异动”，不会把旧的当成今天的
+            p["mv"] = [[today, {}, []]] + [x for x in p.get("mv") or [] if x[0] != today][:4]
         if not h or h[0][0] != today:                   # 停牌或数据没更新：不计观察天数
             if p["in"] != today:
                 p["halt"] = today
@@ -415,20 +428,53 @@ def update_pool(fl, U, MV, LHB30, A, N, today):
         (gone if p["st"] == "out" else keep).append(p)
     fl["pool"] = keep
     for p in gone:
-        fl["removed"].insert(0, {"code": p["code"], "name": p["name"], "ind": p.get("ind"), "in": p["in"], "out": today, "inP": p["inP"], "why": p["why"],
-                                 "watch": (p.get("watch") or {}).get("why"), **summary(p), "log": p["log"][-8:], "ai": p.get("ai")})
+        fl["removed"].insert(0, out_rec(p, today))
     fl["removed"] = fl["removed"][:40]
     return alerts
 
 
+def out_rec(p, today):
+    """移出监控池的记录：区间表现、观察期原因、最后几条提醒。"""
+    return {"code": p["code"], "name": p["name"], "ind": p.get("ind"), "in": p["in"], "out": today, "inP": p["inP"], "why": p["why"],
+            "watch": (p.get("watch") or {}).get("why"), **summary(p), "log": p["log"][-8:], "ai": p.get("ai")}
+
+
 # ---------- 详细信息：资金明细、主力控盘与持股、筹码分布、龙虎榜席位 ----------
+_NOW = {}
+
+
+def sina_raw(code):
+    """新浪当天（收盘后为最近一个交易日）的分类资金原始数据，一次运行里每只只取一次。"""
+    if code not in _NOW:
+        d = jget(SINA + "ssi_ssfx_flzjtj", {"daima": a_sym(code)}, tries=2)
+        _NOW[code] = d if isinstance(d, dict) and d.get("r0_in") is not None else None
+    return _NOW[code]
+
+
 def sina_now(code):
     """最近一个交易日的资金分类（新浪）：{r0 特大单, r1 大单, r2 小单, r3 散单: [流入亿, 流出亿, 成交额亿]}。"""
-    d = jget(SINA + "ssi_ssfx_flzjtj", {"daima": a_sym(code)}, tries=2)
-    if not isinstance(d, dict) or d.get("r0_in") is None:
+    d = sina_raw(code)
+    if not d:
         return None
     n = lambda k: f2((num(d.get(k)) or 0) / 1e8, 3)
     return {k: [n(k + "_in"), n(k + "_out"), n(k)] for k in ("r0", "r1", "r2", "r3")}
+
+
+def hist_today(code, n, today, price):
+    """近 n 天的每日资金（新到旧），最新一行是 today。新浪的历史资金有时收盘后过一阵才更新：
+    还没更新时，用当天的分类资金补上 today 这一行（收盘价和行情对得上才补，格式同 sina_hist）。"""
+    h = sina_hist(code, n)
+    if h and h[0][0] == today:
+        return h
+    d = sina_raw(code)
+    if not d or not price or abs((num(d.get("trade")) or 0) - price) >= 0.011:
+        return h
+    v = {k: (num(d.get(k)) or 0) / 1e8 for k in ("r0", "r1", "r2", "r3", "netamount")}
+    net = lambda k: f2((num(d.get(k + "_in")) or 0) / 1e8 - (num(d.get(k + "_out")) or 0) / 1e8, 3)
+    amt = v["r0"] + v["r1"] + v["r2"] + v["r3"]
+    row = [today, num(d.get("trade")), f2((num(d.get("changeratio")) or 0) * 100), f2((num(d.get("turnover")) or 0) / 100), f2(amt, 3), f2(v["netamount"], 3),
+           net("r0"), net("r1"), net("r2"), net("r3"), f2(v["r0"] / amt * 100, 1) if amt else None, f2((v["r2"] + v["r3"]) / amt * 100, 1) if amt else None]
+    return [row] + [x for x in h or [] if x[0] < today][:n - 1]
 
 
 QG_COLS = "SECURITY_CODE,PRIME_COST,PRIME_COST_20DAYS,PRIME_COST_60DAYS,ORG_PARTICIPATE,PARTICIPATE_TYPE,RATIO,RATIO_3DAYS,RATIO_50DAYS,TOTALSCORE,RANK,FOCUS"
@@ -632,25 +678,39 @@ def _stock_ctx(p, r, mv, extra):
             "龙虎榜席位": p.get("seats") or [], "评分": p.get("sc", [None, None, None])[1:], **extra}
 
 
-def investigate(fl, U, MV, alerts, today, mk):
-    key = os.environ.get("DEEPSEEK_API_KEY")
-    if not key:
-        log("flow ai: 没有 DEEPSEEK_API_KEY，跳过"); return False
+def investigate(fl, U, MV, alerts, today, mk, reuse=None, prev_ai=None):
+    """reuse：同一天上一次运行已经写好的 {代码: (报告, 说明)}，这次仍是新入选、或仍有同样状态变化的直接沿用，不重复调用；
+    prev_ai：上一次运行的全市场概括，这次没有新写的报告时沿用。"""
+    reuse = reuse or {}
     by = {p["code"]: p for p in fl["pool"]} | {p["code"]: p for p in fl["removed"] if p.get("out") == today}
-    new = {c: _stock_ctx(by[c], U[c], MV.get(c), {}) for c in fl["new"] if c in by and c in U}
+    changed = {a["code"] for a in alerts if (a["lv"] in ("warn", "out") and not a.get("trim")) or (a["lv"] == "good" and "回流" in a["text"])}
+    for c, (ai, notes) in reuse.items():
+        if c in by and ai and c in fl["new"]:
+            by[c]["ai"] = ai
+        if c in by and notes and c in changed:
+            by[c]["notes"] = notes + [x for x in by[c].get("notes") or [] if x[0] != today][:5]
+    done_ = {c for c in fl["new"] if ((by.get(c) or {}).get("ai") or {}).get("d") == today} | {c for c in changed if any(x[0] == today for x in (by.get(c) or {}).get("notes") or [])}
+    new = {c: _stock_ctx(by[c], U[c], MV.get(c), {}) for c in fl["new"] if c in by and c in U and c not in done_}
     chg = {}
     for a in alerts:
-        if a["lv"] in ("warn", "out") or (a["lv"] == "good" and "回流" in a["text"]):
-            p = by.get(a["code"])
-            if p and a["code"] not in new:
-                chg[a["code"]] = {"名称": a["name"], "变化": a["text"], "入选日": p["in"], "入选理由": p["why"],
-                                  "近10日主力": [[x[0], x[2], x[6]] for x in (p.get("f") or [])[-10:]], "公告": [x[:2] for x in (p.get("ann") or [])[:5]]}
+        p = by.get(a["code"])
+        if a["code"] in changed and p and a["code"] not in fl["new"] and a["code"] not in done_:
+            chg[a["code"]] = {"名称": a["name"], "变化": a["text"], "入选日": p["in"], "入选理由": p["why"],
+                              "近10日主力": [[x[0], x[2], x[6]] for x in (p.get("f") or [])[-10:]], "公告": [x[:2] for x in (p.get("ann") or [])[:5]]}
     if not new and not chg:
-        return False
+        fl["ai"] = prev_ai
+        log("flow ai: 没有需要新写的报告（沿用当天已写好的", len(done_), "份）"); return True
+    key = os.environ.get("DEEPSEEK_API_KEY")
+    if not key:
+        fl["ai"] = prev_ai
+        log("flow ai: 没有 DEEPSEEK_API_KEY，跳过"); return False
+    fl["ai"] = None
     codes, ok = list(new), False
     for i in range(0, max(len(codes), 1), 10):          # 新入选可能有 30 只：每批 10 只，状态变化放在第一批
         part = {c: new[c] for c in codes[i:i + 10]}
         ok = investigate_batch(fl, by, part, chg if i == 0 else {}, today, mk, key) or ok
+    if not fl.get("ai"):
+        fl["ai"] = prev_ai
     return ok
 
 
@@ -696,13 +756,13 @@ def investigate_batch(fl, by, new, chg, today, mk, key):
 
 # ---------- 入口 ----------
 def flow_due():
-    t = bj_now()
-    if t.weekday() >= 5 or t.hour * 60 + t.minute < 15 * 60 + 30:
+    """有某个交易日收盘后的完整行情、那天的资金监控还没生成时运行（当天没跑成的，第二天开盘前补上）；
+    已经生成、但当时龙虎榜、千股千评或盘口异动还没公布的，之后的运行再重算补全，每个交易日最多 6 次。"""
+    d = close_date()
+    if not d:
         return False
-    asof = load("a.json", {}).get("asof", "")
-    if asof[:10] != t.strftime("%Y-%m-%d") or asof[11:] < "15:00":
-        return False
-    return load("flow.json", {}).get("date") != asof[:10]
+    fl = load("flow.json", {})
+    return fl.get("date", "") < d or (fl.get("date") == d and bool(fl.get("pending")) and fl.get("tries", 0) < 6)
 
 
 def seed():
@@ -724,15 +784,25 @@ def seed():
 def refresh_flow():
     U, asof = universe()
     today = asof[:10]
-    if len(U) < 4000 or asof[11:] < "15:00":
-        log("flow: 没有当天收盘后的 A 股数据，跳过"); return False
-    fl = load("flow.json") or seed() or {}
-    base = fl.get("prev") if fl.get("date") == today and fl.get("prev") else {"pool": fl.get("pool", []), "removed": fl.get("removed", [])}   # 同一天重跑：从当天开始前的状态重算
+    if len(U) < 5000 or asof[11:] < "15:00":
+        log("flow: 没有收盘后的完整 A 股行情（", len(U), "只，", asof, "），跳过"); return False
+    _NOW.clear()
+    fl0 = load("flow.json") or seed() or {}
+    same = fl0.get("date") == today
+    base = fl0.get("prev") if same and fl0.get("prev") else {"pool": fl0.get("pool", []), "removed": fl0.get("removed", [])}   # 同一天重跑：从当天开始前的状态重算
     fl = {"prev": copy.deepcopy(base), **copy.deepcopy(base)}
     F = sina_market()
-    chk = sina_hist("600519", 2)
-    if not F or len(F) < 4000 or not chk or chk[0][0] != today:
-        log("flow: 新浪资金数据不是", today, "的（", chk[0][0] if chk else None, "），跳过"); return False
+    ok, n_ok, n_all = sina_matches(F or {}, U)
+    if not ok:
+        log("flow: 新浪资金数据和", today, "的收盘价对不上（", n_ok, "/", n_all, "只一致），可能还没更新，跳过"); return False
+    lhb_before = set(fl0.get("lhbCodes") or []) if same else set()
+    reuse = {}
+    if same:                                            # 同一天上一次运行写好的 DeepSeek 报告和说明
+        for p in fl0.get("pool", []) + fl0.get("removed", []):
+            ai = p.get("ai") if (p.get("ai") or {}).get("d") == today else None
+            notes = [x for x in p.get("notes") or [] if x[0] == today]
+            if ai or notes:
+                reuse[p["code"]] = (ai, notes)
     MV, MVN = em_moves(today) or ({}, {})
     lhb_today = em_all("RPT_DAILYBILLBOARD_DETAILSNEW", f"(TRADE_DATE='{today}')", LHB_COLS) or []
     LHB = lhb_rows(lhb_today)
@@ -746,25 +816,39 @@ def refresh_flow():
         return L, pmap(anns, codes, 3), pmap(news, codes, 3)
     alerts = update_pool(fl, U, MV, *info([p["code"] for p in fl["pool"]]), today)           # 先更新池里已有的股票
     skip = {p["code"] for p in fl["pool"]} | {p["code"] for p in fl["removed"] if p.get("out") == today}
-    picks = select(U, F, MV, LHB, today, skip, max(NEW_PER_DAY, POOL_MIN - len(fl["pool"])))   # 再选新股票，监控池不足 30 只时补到 30 只
+    n0 = len(fl["pool"])                                # 再选新股票：核心每天最多 8 只、监控池快满时少选（至少 3 只）；不足 30 只时用补充凑到 30 只
+    picks = select(U, F, MV, LHB, today, skip, min(NEW_PER_DAY, max(POOL_MAX - n0, MIN_NEW)), POOL_MIN - n0)
     new = {"pool": [entry_new(t, U[t["c"]], today) for t in picks], "removed": []}
     alerts_new = [{"lv": "new", "code": t["c"], "name": U[t["c"]]["name"], "text": f'{"新入选" if t["tier"] == "核心" else "补充入选"}（{t["s"]:.0f} 分）：' + "；".join(t["why"][:3])} for t in picks]
     alerts = alerts_new + update_pool(new, U, MV, *info([t["c"] for t in picks]), today) + alerts
     fl["pool"] += new["pool"]
     fl["new"] = [t["c"] for t in picks]
+    watch = sorted((p for p in fl["pool"] if p["st"] == "watch"), key=lambda p: (-p["watch"]["n"], (p.get("k") or {}).get("m5", 0)))
+    for p in watch[:max(0, len(fl["pool"]) - POOL_MAX)]:   # 监控池超过 50 只（含观察期）：观察最久的提前结束观察、移出
+        s = summary(p); p["st"] = "out"; p["outD"] = today
+        text = f'监控池超过 {POOL_MAX} 只，观察期提前结束（已观察 {p["watch"]["n"]}/{WATCH_DAYS} 天），移出：入选以来 {s["ret"] or 0:+.1f}%，主力累计 {s["mcum"]:+.2f} 亿'
+        p["log"].append([today, "out", text]); alerts.append({"lv": "out", "code": p["code"], "name": p["name"], "text": text, "trim": True})
+        fl["pool"].remove(p); fl["removed"].insert(0, out_rec(p, today))
+    fl["removed"] = fl["removed"][:40]
     track = [p for p in fl["pool"] if p["st"] == "track" and p["in"] != today]
-    for p in sorted(track, key=lambda p: (p.get("k") or {}).get("m5", 0))[:max(0, len(fl["pool"]) - POOL_MAX)]:   # 监控池超过 50 只：资金热度最弱的进入观察期
+    for p in sorted(track, key=lambda p: (p.get("k") or {}).get("m5", 0))[:max(0, len(fl["pool"]) - POOL_MAX)]:   # 观察期的都移出了还超过 50 只：资金热度最弱的进入观察期
         p["st"] = "watch"; p["watch"] = {"since": today, "why": ["监控池已满（50 只），这只近 5 日主力资金最弱"], "cats": ["满"], "n": 0}
         text = "进入观察期：监控池已满，这只近 5 日主力资金最弱"; p["log"].append([today, "warn", text])
         alerts.append({"lv": "warn", "code": p["code"], "name": p["name"], "text": text})
     details(fl, U, today, since)
     mk = market(U, F, MVN, LHB, today)
     S_today = seats(f"(TRADE_DATE='{today}')")
-    fl.update({"date": today, "asof": asof, "generated": bj_now().strftime("%Y-%m-%d %H:%M"), "alerts": alerts, "market": mk, "ai": None, "seats": seat_board(S_today, U, today),
+    lhb_codes = sorted(c for c, x in LHB.items() if x and x[0][0] == today)
+    reuse = {c: v for c, v in reuse.items() if c not in lhb_codes or c in lhb_before}    # 当时没有龙虎榜、现在上榜了的，报告重写
+    pending = [n for n, miss in (("龙虎榜", not lhb_codes), ("龙虎榜席位", lhb_codes and not S_today), ("盘口异动", not MV),
+                                 ("千股千评", sum(1 for p in fl["pool"] if (p.get("qg") or {}).get("d") == today) < 0.8 * len(fl["pool"]))) if miss]
+    fl.update({"date": today, "asof": asof, "generated": bj_now().strftime("%Y-%m-%d %H:%M"), "alerts": alerts, "market": mk, "ai": None,
+               "seats": seat_board(S_today, U, today), "lhbCodes": lhb_codes, "pending": pending, "tries": (fl0.get("tries", 0) if same else 0) + 1,
                "src": {"flow": "新浪财经（主力 = 特大单）", "moves": "东方财富盘口异动" if MV else "（今天没取到）", "lhb": "东方财富龙虎榜", "ann": "东方财富公告", "news": "东方财富个股资讯",
                        "qg": "东方财富千股千评", "hold": "东方财富 F10 股东研究", "chip": "按腾讯日K和换手率估算"}})
-    investigate(fl, U, MV, alerts, today, mk)
+    investigate(fl, U, MV, alerts, today, mk, reuse, fl0.get("ai") if same else None)
     save("flow.json", fl)
     log("flow", today, "| 新入选", len(picks), "核心", sum(1 for t in picks if t["tier"] == "核心"), [U[c]["name"] for c in fl["new"]], "| 监控池", len(fl["pool"]),
-        {s: sum(1 for p in fl["pool"] if p["st"] == s) for s in ("track", "watch")}, "| 提醒", len(alerts), "| 移出", sum(1 for p in fl["removed"] if p["out"] == today))
+        {s: sum(1 for p in fl["pool"] if p["st"] == s) for s in ("track", "watch")}, "| 提醒", len(alerts), "| 移出", sum(1 for p in fl["removed"] if p["out"] == today),
+        "| 第", fl["tries"], "次 | 待补全", pending or "无")
     return True

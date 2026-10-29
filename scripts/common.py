@@ -110,11 +110,10 @@ def r2(x):
 
 # ----- 腾讯行情 -----
 def tx_quotes(codes, lanes=4):
-    """批量查询 qt.gtimg.cn，返回 {代码: 字段列表}。每次 60 个，lanes 路并发。"""
-    parts = [codes[i:i + 60] for i in range(0, len(codes), 60)]
-
+    """批量查询 qt.gtimg.cn，返回 {代码: 字段列表}。每次 60 个，lanes 路并发；
+    腾讯偶尔限流（返回 403 或只返回一部分），没拿到的再分成小批、降低并发重试两轮。"""
     def one(part):
-        r = get("https://qt.gtimg.cn/q=" + ",".join(part), timeout=20)
+        r = get("https://qt.gtimg.cn/q=" + ",".join(part), timeout=20, stop=(400, 404, 422))
         out = {}
         if r is None:
             return out
@@ -124,11 +123,29 @@ def tx_quotes(codes, lanes=4):
                 out[m.group(1)] = m.group(2).split("~")
         return out
 
-    res = {}
-    with ThreadPoolExecutor(lanes) as ex:
-        for d in ex.map(one, parts):
-            res.update(d)
+    res, todo = {}, list(codes)
+    for size, n, pause in ((60, lanes, 0), (30, 2, 5), (15, 1, 15)):
+        if not todo:
+            break
+        time.sleep(pause)
+        with ThreadPoolExecutor(n) as ex:
+            for d in ex.map(one, [todo[i:i + size] for i in range(0, len(todo), size)]):
+                res.update(d)
+        todo = [c for c in todo if c not in res]
     return res
+
+
+def close_date():
+    """a.json 是一个交易日收盘后的完整行情时，返回那个交易日（YYYY-MM-DD），否则 None。
+    收盘当天 15:30 之后、或者第二天开盘前运行都算，这样当天晚上没跑成的，第二天早上还能补上。"""
+    a = load("a.json", {})
+    asof = a.get("asof", "")
+    if len(a.get("rows", [])) < 5000 or asof[11:] < "15:00":
+        return None
+    t = bj_now()
+    if asof[:10] == t.strftime("%Y-%m-%d") and t.hour * 60 + t.minute < 15 * 60 + 30:   # 当天 15:30 之前资金等数据可能还没定稿
+        return None
+    return asof[:10]
 
 
 def a_sym(code):
