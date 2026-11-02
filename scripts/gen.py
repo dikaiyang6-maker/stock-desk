@@ -66,6 +66,9 @@ def build():
     fl = load("flow.json", {})
     if fl.get("pool") is not None:
         data["fl"] = {k: v for k, v in fl.items() if k != "prev"}  # 资金监控：每日资金异动选股、监控池、观察期
+    hot = load("hot.json", {})
+    if hot.get("date"):
+        data["hot"] = hot                                         # 热点：同花顺、东方财富（Scrapling 抓取）
     data["py"] = pinyin_initials(a, G)                            # 拼音首字母，搜索用（如 拓普集团 → tpjt）
     sc = load("screen.json", {})
     if sc.get("ext") or sc.get("tech"):                       # 选股板块：按列压成数组，减小网页体积

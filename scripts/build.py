@@ -2,6 +2,7 @@
 
     行情、指数与题材股 K 线、分时、全球指数、美股港股日韩成分股   每次（约 1 小时）
     快讯标题                                                       每次
+    热点：同花顺涨停池、炸板跌停、涨停题材、人气热榜，东方财富人气榜（Scrapling 抓取）   每次；同花顺资金流向收盘后一次
     选股板块：研发、负债、商誉、解禁、减持（每 20 小时）；全市场日K统计（交易日 15:10 之后一次）
     欧洲、印度成分股（Yahoo，较慢）                                 每 6 小时
     财报、两融与北向成交                                           每 20 小时
@@ -19,7 +20,7 @@ import traceback
 
 sys.path.insert(0, os.path.dirname(__file__))
 from common import DATA, ROOT, close_date, done, due, load, log, save   # noqa: E402
-import a_share, global_mkt, news, ai_commentary, flow, gen, picks, screen_data   # noqa: E402
+import a_share, global_mkt, news, ai_commentary, flow, gen, hot, picks, screen_data   # noqa: E402
 
 
 def seed():
@@ -50,6 +51,7 @@ TASKS = [  # 名称, 周期（小时）, 函数
     ("jp_kr", 0.9, global_mkt.refresh_jp_kr),
     ("others", 6, global_mkt.refresh_others),
     ("news", 0.9, news.refresh_news),
+    ("hot", 0.9, hot.refresh_hot),
 ]
 
 

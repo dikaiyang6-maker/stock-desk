@@ -418,6 +418,22 @@ tbody tr.greg:hover{background:var(--bg)}
 .fcard{align-content:start}
 .fcard .why{display:grid;gap:3px;margin:0;padding-left:1.1em;font-size:12.5px;color:var(--muted)}
 .fcard .why li::marker{color:var(--faint)}
+.htblocks{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+.htb{border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:grid;gap:6px;background:var(--surface);align-content:start}
+.htbh{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.htbs{display:flex;flex-wrap:wrap;gap:6px}
+.htladder{display:grid;gap:12px}
+.htl{display:grid;grid-template-columns:64px minmax(0,1fr);gap:10px;align-items:start}
+.htlk{display:grid;font-weight:700;color:var(--up);font-family:var(--f-num);font-size:16px;padding-top:4px}
+.htlk .mut{font-size:11.5px;font-weight:400}
+.htls{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px}
+.htlc{display:grid;gap:3px;text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:6px 8px;cursor:pointer;font-size:12.5px;color:var(--ink)}
+.htlc:hover{border-color:var(--accent)}
+.htlc .htw{color:var(--muted);font-size:12px;line-height:1.4}
+td.htwhy{white-space:normal;min-width:220px;max-width:380px;line-height:1.45}
+.htx{background:none;border:0;color:var(--accent);cursor:pointer;font-size:12px;padding:0 2px}
+.htinfo{margin-top:6px;font-size:12.5px;color:var(--muted);line-height:1.55;white-space:normal;text-align:left}
+.htd{display:grid;gap:8px;font-size:13.5px;line-height:1.55}
 .fcard .aic{font-size:13px;border-top:1px dashed var(--line);padding-top:6px;margin-top:2px}
 .dflow{display:grid;gap:12px;grid-template-columns:minmax(0,1fr)}
 .dflow>*{min-width:0}
@@ -458,6 +474,7 @@ tbody tr.greg:hover{background:var(--bg)}
       <button role="tab" data-v="screen">全市场筛选</button>
       <button role="tab" data-v="xg">选股</button>
       <button role="tab" data-v="flow">资金监控</button>
+      <button role="tab" data-v="hot">热点</button>
       <button role="tab" data-v="tools">仓位工具</button>
       <button role="tab" data-v="watch">自选</button>
       <button role="tab" data-v="ai">AI 助手</button>
@@ -943,6 +960,39 @@ tbody tr.greg:hover{background:var(--bg)}
       </ol>
     </details>
   </section>
+  <section class="view" id="v-hot" hidden>
+    <div class="panel">
+      <div class="phead"><h2>热点</h2><span class="note" id="htMeta"></span></div>
+      <p class="note" style="margin:0">同花顺的涨停复盘（涨停原因、连板、炸板、跌停、涨停题材）、人气热榜和个股资金流向，以及东方财富人气榜。用 <a href="https://github.com/D4Vinci/Scrapling" target="_blank" rel="noopener">Scrapling</a> 抓取：同花顺会直接拒绝普通爬虫，资金流向页还要先运行它的 JS，所以用 Scrapling 模拟浏览器和真实浏览器抓。每次自动更新时刷新；打开本页时，交易时段每 2 分钟直接从同花顺、东方财富刷新。点股票看详细信息。</p>
+      <p class="warn" id="htStale" style="margin:10px 0 0" hidden></p>
+    </div>
+    <div class="panel"><div class="phead"><h3>涨跌停概况</h3><span class="note" id="htKpiNote"></span></div><div class="kpis" id="htKpi"></div></div>
+    <div class="panel"><div class="phead"><h3>涨停题材排行</h3><span class="note" id="htBlkNote"></span></div><div id="htBlocks" class="htblocks"></div></div>
+    <div class="panel"><div class="phead"><h3>连板天梯</h3><span class="note" id="htLadderNote"></span></div><div id="htLadder" class="htladder"></div></div>
+    <div class="panel">
+      <div class="phead"><h3>涨停池</h3><span class="note" id="htZtNote"></span></div>
+      <div class="cg" id="htZtFilter" style="margin-bottom:10px"><button class="chip2" data-z="">全部</button><button class="chip2" data-z="lb">连板</button><button class="chip2" data-z="sb">首板</button><button class="chip2" data-z="yz">一字板</button><button class="chip2" data-z="back">回封</button><button class="chip2" data-z="zb">开过板</button></div>
+      <div class="tscroll"><table id="htZt" class="fltbl"></table></div>
+      <p class="note" style="margin:8px 0 0">涨停原因来自同花顺；点“详解”展开同花顺用 AI 汇总公开信息生成的说明（只有涨停题材排行里的股票有），以上市公司公告为准。</p>
+    </div>
+    <div class="grid2">
+      <div class="panel"><div class="phead"><h3>炸板池</h3><span class="note" id="htZbNote"></span></div><div class="tscroll"><table id="htZb" class="fltop"></table></div></div>
+      <div class="panel"><div class="phead"><h3>跌停池</h3><span class="note" id="htDtNote"></span></div><div class="tscroll"><table id="htDt" class="fltop"></table></div></div>
+    </div>
+    <div class="grid2">
+      <div class="panel"><div class="phead"><h3>同花顺人气热榜</h3><span class="note" id="htHotNote"></span></div>
+        <div class="ctabs" role="tablist" id="htHotTabs"><button class="ctab" role="tab" data-h="hour">1 小时</button><button class="ctab" role="tab" data-h="day">24 小时</button></div>
+        <div class="tscroll" style="margin-top:10px"><table id="htHot" class="fltop"></table></div></div>
+      <div class="panel"><div class="phead"><h3>东方财富人气榜</h3><span class="note" id="htEmNote"></span></div><div class="tscroll"><table id="htEm" class="fltop"></table></div></div>
+    </div>
+    <div id="htFundBox">
+      <div class="grid2">
+        <div class="panel"><div class="phead"><h3>同花顺资金流向：净流入前 30</h3><span class="note" id="htFundNote"></span></div><div class="tscroll"><table id="htFundTop" class="fltop"></table></div></div>
+        <div class="panel"><div class="phead"><h3>同花顺资金流向：净流出前 30</h3></div><div class="tscroll"><table id="htFundBot" class="fltop"></table></div></div>
+      </div>
+      <p class="note" style="margin:-8px 0 20px">同花顺口径的资金流入、流出和净额（全市场每只股票，收盘后抓取一次）。不同网站对资金的划分不同，和资金监控页新浪口径的“主力”（特大单）数字会有差别。</p>
+    </div>
+  </section>
   <section class="view" id="v-tools" hidden>
     <div class="grid2">
       <div class="panel tool">
@@ -1217,7 +1267,7 @@ function stockMinute(code){
 const idxMinute = code => (D.idxm?.[code] || []).map(x => ({d: x.d, prec: x.prec, p: x.p}));
 
 /* ---------- tabs ---------- */
-const VIEWS = ["market","global","research","picks","screen","xg","flow","tools","watch","ai"];
+const VIEWS = ["market","global","research","picks","screen","xg","flow","hot","tools","watch","ai"];
 function show(v){
   if (!VIEWS.includes(v)) v = "market";
   VIEWS.forEach(x => { document.getElementById("v-" + x).hidden = x !== v; });
@@ -1227,6 +1277,7 @@ function show(v){
   if (v === "watch") renderWatch();
   if (v === "xg") renderXg();
   if (v === "flow") { renderFlow(); FLV.liveAt = 0; }
+  if (v === "hot") { renderHot(); HTV.liveAt = 0; }
   if (v === "ai") resumeChat();
   if (v === "global") { renderGlobal(); gStockTickSoon(); }
   try { history.replaceState(null, "", "#" + v); } catch(e){}
@@ -1541,7 +1592,7 @@ function openStock(code){
     <div class="dh"><div><span class="eyebrow">${esc(r.ind)} · ${BOARD[r.board]} · 涨跌幅 ±${LIMIT[r.board]}%${r.st ? " · ST" : ""}</span><h2>${esc(r.name)} <span class="num mut" style="font-size:15px">${code}</span></h2>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${r.tags.map(x => `<span class="chip">${esc(x)}</span>`).join("")}</div></div>
       <button class="close" id="dClose" aria-label="关闭">×</button></div>
-    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span class="big num" id="dPrice">${f(r.price)}</span><span class="num ${cls(r.chg)}" id="dChg" style="font-size:16px">${pct(r.chg, 2)}</span><span class="note" id="dTime">${LIVE.on ? "实时 " + liveTime() : "2026-10-22 收盘"}</span>
+    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span class="big num" id="dPrice">${f(r.price)}</span><span class="num ${cls(r.chg)}" id="dChg" style="font-size:16px">${pct(r.chg, 2)}</span><span class="note" id="dTime">${LIVE.on ? "实时 " + liveTime() : esc(ASOF) + " 数据"}</span>
       <span style="margin-left:auto;display:flex;gap:8px"><button class="btn" id="dWl">${inWl ? "移出自选" : "加入自选"}</button></span></div>
     <div class="facts">
       <div><small>市盈率 TTM</small><b>${f(r.pe, 1)}</b></div><div><small>市净率</small><b>${f(r.pb, 2)}</b></div><div><small>总市值</small><b>${yi(r.mcap)}</b></div>
@@ -1553,6 +1604,7 @@ function openStock(code){
     </div>
     ${chartable ? `<div id="dPanel"></div>` : `<p class="note">本页只缓存了 ${Object.keys(D.sk).length} 只题材股的 K 线和分时。在浏览器里直接打开独立版 HTML（实时行情），可以加载任意股票上市以来的 K 线和最近五个交易日的分时。</p>`}
     <div class="panel" id="dTech" style="padding:12px 14px" hidden></div>
+    <div class="panel" id="dHot" style="padding:12px 14px" hidden></div>
     <div class="panel" id="dFlow" style="padding:12px 14px"></div>
     ${t ? `<div class="panel" style="padding:12px 14px"><div class="phead" style="margin-bottom:6px"><h3>TradingAgents 结论</h3><span class="note">2026-10-22 运行</span>${decisionPill(t.action)}</div><div class="sum" style="font-size:13.5px;white-space:pre-wrap">${esc(t.summary || t.error || "")}</div></div>` : ""}
     <div class="panel tool" style="padding:12px 14px">
@@ -1566,7 +1618,7 @@ function openStock(code){
     </div>`;
   $("#drawer").hidden = false; $("#scrim").hidden = false; $("#drawer").scrollTop = 0;
   openState = {type: "stock", code, rows: srows};
-  flowDrawer(code);
+  flowDrawer(code); hotDrawer(code);
   if (chartable) {
     if (srows && LIVE.on) liveStockBar(r, srows);
     const panel = mountPanel($("#dPanel"), {daily: srows || [], monthly: smon, minute: stockMinute(code), name: r.name, isIndex: false,
@@ -3381,9 +3433,9 @@ ${emo.join("\n")}
 全市场成交额 20 日均值：${SC.amt20} 亿；本站规则判断的情绪阶段：${XG.fPhase.ph}（情绪分 ${XG.fPhase.now}，前 3 日均 ${XG.fPhase.base}）
 ## 板块（近 5 日涨停家数从前到后：前4日…今日；资金集中=5日成交额占比相对20日的倍数）
 ${XG.fLines.slice(0, 8).map(g => `${g.k}（${g.type}）：近5日涨停 ${g.days.slice().reverse().join("/")} 共${g.zt5}；5日成交占比 ${g.share.toFixed(1)}%，相对20日 ×${g.ratio ? g.ratio.toFixed(2) : "—"}；市值加权5日涨幅 ${g.r5 == null ? "—" : g.r5.toFixed(1)}%；本站判断 ${g.kind}、${g.stage}；龙头 ${g.lead ? g.lead.r.name + g.lead.r.code + (g.lead.lb ? " " + g.lead.lb + "板" : "") : "—"}；中军 ${g.mid ? g.mid.name + g.mid.code : "—"}`).join("\n")}
-## 候选个股（已按第 3 步条件筛过，${XG.fTop.length} 只）
+${htPrompt()}## 候选个股（已按第 3 步条件筛过，${XG.fTop.length} 只）
 ${fPicks(o, XG.fLines).slice(0, 10).map(x => JSON.stringify({代码: x.r.code, 名称: x.r.name, 板块: BOARD[x.r.board], 所属: x.g.k, 现价: x.r.price, 今日涨跌: x.r.chg, 换手: x.r.tr, 五日均换手: x.t.tr5, 量比: x.vr, MA5: x.t.ma5, MA10: x.t.ma10, MA20: x.t.ma20,
-  二十日高点: x.t.h20, 近5日涨幅: x.t.r5, 近20日涨幅: x.t.r20, 连板: x.lbNow, 形态: [x.brk && "放量突破", x.along && "沿均线上行"].filter(Boolean).join("+"), 净利增速: x.r.npY, PE_TTM: x.r.pe})).join("\n")}`;
+  二十日高点: x.t.h20, 近5日涨幅: x.t.r5, 近20日涨幅: x.t.r20, 连板: x.lbNow, 形态: [x.brk && "放量突破", x.along && "沿均线上行"].filter(Boolean).join("+"), 净利增速: x.r.npY, PE_TTM: x.r.pe, ...htPick(x.r.code)})).join("\n")}`;
   }
   if (step === 1) p += `\n\n先完成第1-2步（市场情绪、主线题材），第3步以后等我说“继续”再做。`;
   return p;
@@ -4045,6 +4097,202 @@ async function flowTick(){
   finally { setTimeout(flowTick, 15e3); }
 }
 flowInit();
+
+// ---- 热点：同花顺涨停复盘、人气热榜、资金流向，东方财富人气榜（Scrapling 抓取；交易时段网页里直接刷新） ----
+const HT = D.hot?.date ? D.hot : null;
+const HTV = {live: null, liveAt: 0, blkAt: 0, busy: false, zf: store.get("htZf", ""), hk: "hour", open: new Set(), bopen: new Set()};
+const THS_API = "https://data.10jqka.com.cn/dataapi/limit_up/", THS_F = "199112,10,9001,330323,330324,330325,9002,330329,133971,133970,1968584,3475914,9003,9004";
+const htD = () => HTV.live && (!HT || HTV.live.date >= HT.date) ? HTV.live : HT;      // 实时获取的不比生成的旧就用实时的
+const htStale = () => !!(HT && flLD() && flLD() > HT.date);                           // 网页里的数据比最新交易日旧（自动更新还没跑）
+const htLive = () => LIVE.on && (flIntra() || htStale());
+const htWhen = x => !x ? "" : `${x.d}${x.live ? (flIntra() ? ` 盘中 ${x.t}（实时）` : `（${x.t} 实时获取）`) : x.final === false ? ` 盘中 ${x.t}` : " 收盘"}`;
+const htNm = (c, n) => `<span class="nm">${esc(n || BY.get(c)?.name || c)}</span><span class="cd">${c}</span>`;
+const htHms = ts => +ts ? new Date(+ts * 1000 + 8 * 3600e3).toISOString().slice(11, 19) : null;
+function htBoards(x){ const v = x.high_days_value; return v > 0 ? [v >> 16, v & 0xFFFF] : x.high_days === "首板" ? [1, 1] : [null, null]; }   // 板数 << 16 | 天数
+function htZt(x){ const [b, d] = htBoards(x);
+  return {c: x.code, n: x.name, why: x.reason_type || "", hd: x.high_days || "", b, d, t1: htHms(x.first_limit_up_time), t2: htHms(x.last_limit_up_time), zb: x.open_num || 0,
+    tp: x.limit_up_type || "", fd: (x.order_amount || 0) / 1e8, tr: x.turnover_rate, mv: (x.currency_value || 0) / 1e8, chg: x.change_rate, p: x.latest, back: x.change_tag === "LIMIT_BACK" && x.open_num > 0 ? 1 : 0, new: x.is_new || 0}; }
+const htZb = x => ({c: x.code, n: x.name, t1: htHms(x.first_limit_up_time), t2: htHms(x.last_limit_up_time), zb: x.open_num || 0, tr: x.turnover_rate, mv: (x.currency_value || 0) / 1e8, chg: x.change_rate, p: x.latest});
+const htDt = x => ({c: x.code, n: x.name, tr: x.turnover_rate, mv: (x.currency_value || 0) / 1e8, chg: x.change_rate, p: x.latest});
+function htStat(d){ const u = d.limit_up_count || {}, l = d.limit_down_count || {}, one = (a = {}, b = {}) => ({zt: a.num, ztEver: a.history_num, fbl: a.rate != null ? a.rate * 100 : null, zb: a.open_num, dt: b.num, dtEver: b.history_num});
+  return {...one(u.today, l.today), y: one(u.yesterday, l.yesterday)}; }
+async function htJson(url, opt = {}, ms = 10000){       // 同花顺要带本站的 Referer，不能用 getJson（它不发 Referer）
+  const c = new AbortController(), t = setTimeout(() => c.abort(), ms);
+  try { const r = await fetch(url, {...opt, signal: c.signal, credentials: "omit"}); return r.ok ? await r.json() : null; } catch (e) { return null; } finally { clearTimeout(t); }
+}
+async function htPool(kind, day){                       // 同花顺涨停池 / 炸板池 / 跌停池，翻页取全
+  let rows = [], data = null; const ymd = day.replace(/-/g, "");
+  for (let pg = 1; pg <= 5; pg++) {
+    const d = await htJson(`${THS_API}${kind}?page=${pg}&limit=200&field=${THS_F}&filter=HS,GEM2STAR&order_field=${kind === "limit_up_pool" ? 330324 : 199112}&order_type=0&date=${ymd}`);
+    if (d?.status_code !== 0 || !d.data || d.data.date !== ymd) return null;
+    data = d.data; rows = rows.concat(data.info || []);
+    if (pg >= (data.page?.count || 0)) break;
+  }
+  return data?.trade_status?.id === "no_open" && !rows.length ? null : {rows, data};
+}
+async function htBlocksLive(day){
+  const d = await htJson(`${THS_API}block_top?filter=HS,GEM2STAR&date=${day.replace(/-/g, "")}`); if (d?.status_code !== 0 || !Array.isArray(d.data)) return null;
+  const info = {};
+  const list = d.data.map(b => ({c: b.code, n: b.name, chg: b.change, zt: b.limit_up_num, lb: b.continuous_plate_num, hi: b.high || "", days: b.days,
+    s: (b.stock_list || []).map(s => { const t = (s.reason_info || "").trim().replace(/\s*（免责声明[:：][\s\S]*?）\s*$/, ""); if (t) info[s.code] = t; return [s.code, s.name, s.high || "", s.change_rate]; })}));
+  return {list, info};
+}
+async function htHotLive(kind){
+  const xs = (await htJson(`https://dq.10jqka.com.cn/fuyao/hot_list_data/out/hot_list/v1/stock?stock_type=a&type=${kind}&list_type=normal`))?.data?.stock_list;
+  return Array.isArray(xs) && xs.length ? xs.map(x => ({c: x.code, n: x.name, rk: x.order, rkc: x.hot_rank_chg, chg: x.rise_and_fall, heat: +x.rate || null, tags: x.tag?.concept_tag || [], pop: x.tag?.popularity_tag || ""})) : null;
+}
+async function htEmLive(){
+  const d = await htJson("https://emappdata.eastmoney.com/stockrank/getAllCurrentList", {method: "POST", headers: {"Content-Type": "application/json"}, referrerPolicy: "no-referrer",
+    body: JSON.stringify({appId: "appId01", globalId: "786e4c21-70dc-435a-93bb-38", marketType: "", pageNo: 1, pageSize: 100})});
+  return Array.isArray(d?.data) && d.data.length ? d.data.filter(x => (x.sc || "").length === 8).map(x => [x.sc.slice(2), x.rk, x.hisRc]) : null;
+}
+function renderHotKpi(P){
+  if (!P) { $("#htKpi").innerHTML = `<p class="note" style="margin:0;padding:10px 12px;background:var(--surface)">暂时没有涨跌停数据。</p>`; $("#htKpiNote").textContent = ""; return; }
+  const s = P.stat || {}, y = s.y || {}, k = (t, v, sub, c = "") => `<div><small>${t}</small><b class="${c}">${v}</b><span class="mut">${sub}</span></div>`;
+  const lb = P.zt.filter(x => x.b >= 2), top = P.zt.slice().sort((a, b) => (b.b || 0) - (a.b || 0) || (b.d || 0) - (a.d || 0))[0];
+  $("#htKpi").innerHTML = k("涨停", `${s.zt ?? P.zt.length} 只`, `上一交易日 ${y.zt ?? "—"}`, "up") + k("曾涨停（盘中触及）", `${s.ztEver ?? "—"} 只`, `上一交易日 ${y.ztEver ?? "—"}`)
+    + k("封板率", `${f(s.fbl, 1)}%`, `上一交易日 ${f(y.fbl, 1)}%`) + k("炸板", `${s.zb ?? P.zb.length} 只`, `上一交易日 ${y.zb ?? "—"}`)
+    + k("跌停", `${s.dt ?? P.dt.length} 只`, `上一交易日 ${y.dt ?? "—"}`, "dn") + k("连板", `${lb.length} 只`, top?.b ? `最高 ${esc(top.n)} ${esc(top.hd)}` : "—")
+    + k("首板", `${P.zt.filter(x => x.b === 1).length} 只`, `回封 ${P.zt.filter(x => x.back).length} 只`) + k("一字板", `${P.zt.filter(x => x.tp === "一字板").length} 只`, `T字板 ${P.zt.filter(x => x.tp === "T字板").length} 只`);
+  $("#htKpiNote").textContent = `${htWhen(P)} · 同花顺`;
+}
+function renderHotBlocks(B, P){
+  const box = $("#htBlocks"), zt = new Map((P?.zt || []).map(x => [x.c, x]));
+  $("#htBlkNote").textContent = B?.list?.length ? `${htWhen(B)} · 同花顺 · 按涨停家数排序，点股票看详情` : "";
+  box.innerHTML = B?.list?.length ? B.list.map((b, i) => `<div class="htb"><div class="htbh"><b>${i + 1}. ${esc(b.n)}</b><span class="num ${cls(b.chg)}">${pct(b.chg, 2)}</span></div>
+    <div class="note">涨停 <b class="up">${b.zt ?? "—"}</b> 家${b.lb ? ` · 连板 ${b.lb} 家` : ""} · 最高 ${esc(b.hi || "—")}${b.days > 1 ? ` · <span title="同花顺统计的题材持续天数">持续 ${b.days} 天</span>` : ""}</div>
+    <div class="htbs">${(HTV.bopen.has(b.n) ? b.s : b.s.slice(0, 12)).map(s => `<button type="button" class="chip2" data-code="${s[0]}" title="${esc(zt.get(s[0])?.why || "")}">${esc(s[1])} <span class="mut">${esc(s[2])}</span></button>`).join("")}${b.s.length > 12 ? `<button type="button" class="htx" data-b="${esc(b.n)}">${HTV.bopen.has(b.n) ? "收起" : `全部 ${b.s.length} 只`}</button>` : ""}</div></div>`).join("")
+    : `<p class="note" style="margin:0">暂时没有涨停题材数据。</p>`;
+}
+function renderHotLadder(P){
+  const g = {};
+  (P?.zt || []).filter(x => x.b >= 2).forEach(x => (g[x.b] ||= []).push(x));
+  const ks = Object.keys(g).map(Number).sort((a, b) => b - a);
+  $("#htLadderNote").textContent = P ? `${htWhen(P)} · 按涨停板数分组（“5天4板”= 5 个交易日里 4 次涨停）` : "";
+  $("#htLadder").innerHTML = ks.length ? ks.map(k => `<div class="htl"><div class="htlk">${k} 板<span class="mut">${g[k].length} 只</span></div><div class="htls">${g[k].sort((a, b) => (a.d || 0) - (b.d || 0) || (a.t1 || "").localeCompare(b.t1 || "")).map(x =>
+    `<button type="button" class="htlc" data-code="${x.c}"><span><b>${esc(x.n)}</b> <span class="mut">${esc(x.hd)}${x.tp === "一字板" ? " · 一字" : ""}</span></span><span class="htw">${esc(x.why)}</span></button>`).join("")}</div></div>`).join("")
+    : `<p class="note" style="margin:0">${P ? "这一天没有连板股。" : "暂时没有数据。"}</p>`;
+}
+const HT_ZF = {"": () => true, lb: x => x.b >= 2, sb: x => x.b === 1, yz: x => x.tp === "一字板", back: x => x.back, zb: x => x.zb > 0};
+function renderHotZt(P, B){
+  const info = B?.info || {}, pass = HT_ZF[HTV.zf] || HT_ZF[""];
+  document.querySelectorAll("#htZtFilter [data-z]").forEach(b => b.setAttribute("aria-pressed", b.dataset.z === HTV.zf));
+  const rows = (P?.zt || []).filter(pass).sort((a, b) => (b.b || 0) - (a.b || 0) || (a.t1 || "99").localeCompare(b.t1 || "99"));
+  $("#htZtNote").textContent = P ? `${htWhen(P)} · ${P.zt.length} 只 · 同花顺` : "";
+  $("#htZt").innerHTML = `<thead><tr><th class="l" style="cursor:default">股票</th><th class="l" style="cursor:default">涨停原因</th><th style="cursor:default">几天几板</th><th style="cursor:default">首次封板</th><th style="cursor:default">最后封板</th><th style="cursor:default">炸板</th><th style="cursor:default">封单额</th><th style="cursor:default">换手</th><th style="cursor:default">流通市值</th><th class="l" style="cursor:default">类型</th></tr></thead><tbody>`
+    + (rows.map(x => `<tr data-code="${x.c}"><td class="l">${htNm(x.c, x.n)}</td>
+      <td class="l htwhy">${esc(x.why || "—")}${info[x.c] ? ` <button type="button" class="htx" data-x="${x.c}">${HTV.open.has(x.c) ? "收起" : "详解"}</button>` : ""}${HTV.open.has(x.c) && info[x.c] ? `<div class="htinfo">${esc(info[x.c]).replace(/\n+/g, "<br>")}</div>` : ""}</td>
+      <td>${esc(x.hd || "—")}</td><td class="num">${x.t1 || "—"}</td><td class="num">${x.t2 || "—"}</td><td class="num">${x.zb || 0}</td>
+      <td class="num">${x.fd ? f(x.fd, 2) + "亿" : "—"}</td><td class="num">${f(x.tr, 1)}%</td><td class="num">${f(x.mv, 0)}亿</td>
+      <td class="l">${esc(x.tp || "")}${x.back ? ` <span class="pill na">回封</span>` : ""}${x.new ? ` <span class="pill na">新股</span>` : ""}</td></tr>`).join("")
+      || `<tr class="nohov"><td colspan="10" class="l note">${P ? "没有符合条件的股票。" : "暂时没有数据。"}</td></tr>`) + `</tbody>`;
+}
+function renderHotZbDt(P){
+  const empty = n => `<tr class="nohov"><td colspan="${n}" class="l note">${P ? "没有。" : "暂时没有数据。"}</td></tr>`;
+  const zb = (P?.zb || []).slice().sort((a, b) => (b.chg || 0) - (a.chg || 0)), dn = (P?.dt || []).slice().sort((a, b) => (a.chg || 0) - (b.chg || 0));
+  $("#htZbNote").textContent = P ? `${htWhen(P)} · ${zb.length} 只 · 盘中涨停过、收盘没封住` : "";
+  $("#htDtNote").textContent = P ? `${htWhen(P)} · ${dn.length} 只` : "";
+  $("#htZb").innerHTML = `<thead><tr><th class="l" style="cursor:default">股票</th><th style="cursor:default">涨跌</th><th style="cursor:default">首次封板</th><th style="cursor:default">开板次数</th><th style="cursor:default">换手</th><th style="cursor:default">流通市值</th></tr></thead><tbody>`
+    + (zb.map(x => `<tr data-code="${x.c}"><td class="l">${htNm(x.c, x.n)}</td><td class="num ${cls(x.chg)}">${pct(x.chg, 2)}</td><td class="num">${x.t1 || "—"}</td><td class="num">${x.zb}</td><td class="num">${f(x.tr, 1)}%</td><td class="num">${f(x.mv, 0)}亿</td></tr>`).join("") || empty(6)) + `</tbody>`;
+  $("#htDt").innerHTML = `<thead><tr><th class="l" style="cursor:default">股票</th><th style="cursor:default">跌幅</th><th style="cursor:default">现价</th><th style="cursor:default">换手</th><th style="cursor:default">流通市值</th></tr></thead><tbody>`
+    + (dn.map(x => `<tr data-code="${x.c}"><td class="l">${htNm(x.c, x.n)}</td><td class="num ${cls(x.chg)}">${pct(x.chg, 2)}</td><td class="num">${f(x.p)}</td><td class="num">${f(x.tr, 1)}%</td><td class="num">${f(x.mv, 0)}亿</td></tr>`).join("") || empty(5)) + `</tbody>`;
+}
+function renderHotLists(H){
+  const k = HTV.hk, th = H?.hot?.[k] || [], em = H?.emHot?.list || [], emR = new Map(em.map(x => [x[0], x[1]])), thR = new Map((H?.hot?.hour || []).map(x => [x.c, x.rk]));
+  const chg = (c, v) => BY.get(c)?.chg ?? v;
+  document.querySelectorAll("#htHotTabs [data-h]").forEach(b => b.setAttribute("aria-selected", b.dataset.h === k));
+  $("#htHotNote").textContent = H?.hot ? `${H.hot.t}${H.hot.live ? "（实时获取）" : ""} · 前 ${th.length} 名` : "";
+  $("#htHot").innerHTML = `<thead><tr><th style="cursor:default">排名</th><th class="l" style="cursor:default">股票</th><th style="cursor:default">涨跌</th><th class="l" style="cursor:default">人气标签</th><th class="l" style="cursor:default">概念</th><th style="cursor:default">东财排名</th></tr></thead><tbody>`
+    + (th.map(x => `<tr data-code="${x.c}"><td class="num">${x.rk ?? "—"}</td><td class="l">${htNm(x.c, x.n)}</td><td class="num ${cls(chg(x.c, x.chg))}">${pct(chg(x.c, x.chg), 2)}</td>
+      <td class="l">${x.pop ? `<span class="pill ${/板|涨停/.test(x.pop) ? "yes" : "na"}">${esc(x.pop)}</span>` : ""}</td><td class="l mut" style="font-size:12px">${esc((x.tags || []).join("、"))}</td><td class="num">${emR.get(x.c) ?? ""}</td></tr>`).join("")
+      || `<tr class="nohov"><td colspan="6" class="l note">暂时没有数据。</td></tr>`) + `</tbody>`;
+  $("#htEmNote").textContent = H?.emHot ? `${H.emHot.t}${H.emHot.live ? "（实时获取）" : ""} · 前 ${em.length} 名` : "";
+  $("#htEm").innerHTML = `<thead><tr><th style="cursor:default">排名</th><th class="l" style="cursor:default">股票</th><th style="cursor:default">涨跌</th><th style="cursor:default">较前一日</th><th style="cursor:default">同花顺排名</th></tr></thead><tbody>`
+    + (em.map(([c, rk, ch]) => `<tr data-code="${c}"><td class="num">${rk}</td><td class="l">${htNm(c)}</td><td class="num ${cls(chg(c))}">${pct(chg(c), 2)}</td>
+      <td class="num ${ch > 0 ? "up" : ch < 0 ? "dn" : ""}">${ch ? (ch > 0 ? "↑" : "↓") + Math.abs(ch) : "—"}</td><td class="num">${thR.get(c) ?? ""}</td></tr>`).join("")
+      || `<tr class="nohov"><td colspan="5" class="l note">暂时没有数据。</td></tr>`) + `</tbody>`;
+}
+function renderHotFund(F){
+  $("#htFundBox").hidden = !F?.rows;
+  if (!F?.rows) return;
+  const xs = Object.entries(F.rows).filter(([c]) => BY.has(c)).map(([c, v]) => ({c, i: v[0], o: v[1], net: v[2], amt: v[3]}));
+  const head = `<thead><tr><th class="l" style="cursor:default">股票</th><th style="cursor:default">净额</th><th style="cursor:default">流入</th><th style="cursor:default">流出</th><th style="cursor:default">成交额</th></tr></thead>`;
+  const row = x => `<tr data-code="${x.c}"><td class="l">${htNm(x.c)}</td><td class="num ${cls(x.net)}">${yiS(x.net)}</td><td class="num">${f(x.i, 2)}</td><td class="num">${f(x.o, 2)}</td><td class="num">${f(x.amt, 2)}</td></tr>`;
+  $("#htFundTop").innerHTML = head + `<tbody>${xs.slice().sort((a, b) => b.net - a.net).slice(0, 30).map(row).join("")}</tbody>`;
+  $("#htFundBot").innerHTML = head + `<tbody>${xs.slice().sort((a, b) => a.net - b.net).slice(0, 30).map(row).join("")}</tbody>`;
+  $("#htFundNote").textContent = `${F.d} 收盘 · ${F.n} 只 · 金额单位亿元`;
+}
+function renderHot(){
+  const H = htD();
+  if (!H) { $("#htMeta").textContent = ""; $("#htKpi").innerHTML = `<p class="note" style="margin:0;padding:10px 12px;background:var(--surface)">热点数据还没生成，等下一次自动更新。</p>`; return; }
+  $("#htMeta").textContent = `数据 ${H.date}${H === HTV.live ? " · 实时获取" : ` · 生成于 ${HT.generated}`}${LIVE.on ? " · 行情实时 " + liveTime() : ""}`;
+  const st = $("#htStale"); st.hidden = !(htStale() && H !== HTV.live);
+  if (!st.hidden) st.textContent = `网页里的热点数据是 ${HT.date} 的（自动更新还没跑到 ${flLD()}），正在从同花顺、东方财富直接获取最新数据…`;
+  renderHotKpi(H.pool); renderHotBlocks(H.blocks, H.pool); renderHotLadder(H.pool); renderHotZt(H.pool, H.blocks); renderHotZbDt(H.pool); renderHotLists(H); renderHotFund(H.fund || HT?.fund);
+}
+function hotDrawer(code){                 // 个股抽屉里的“同花顺 · 东方财富”：涨停原因、炸板跌停、人气排名、同花顺资金流向
+  const box = $("#dHot"), H = htD(); if (!box || !H) return;
+  const P = H.pool || {}, z = (P.zt || []).find(x => x.c === code), zb = (P.zb || []).find(x => x.c === code), dn = (P.dt || []).find(x => x.c === code);
+  const bl = (H.blocks?.list || []).filter(b => b.s.some(s => s[0] === code)).map(b => b.n), info = H.blocks?.info?.[code];
+  const th = (H.hot?.hour || []).find(x => x.c === code), thd = (H.hot?.day || []).find(x => x.c === code), em = (H.emHot?.list || []).find(x => x[0] === code);
+  const F = H.fund || HT?.fund, fd = F?.rows?.[code], items = [];
+  if (z) items.push(`<div><b class="up">${esc(P.d)} 涨停 · ${esc(z.hd || "")}</b>：${esc(z.why || "—")}<div class="note">首次封板 ${z.t1 || "—"}，最后封板 ${z.t2 || "—"}，炸板 ${z.zb} 次，封单 ${z.fd ? f(z.fd, 2) + " 亿元" : "—"}${z.tp ? "，" + esc(z.tp) : ""}${bl.length ? "；所属涨停题材：" + esc(bl.join("、")) : ""}</div>${info ? `<details><summary class="note" style="cursor:pointer">涨停原因详解（同花顺用 AI 汇总公开信息生成，以公司公告为准）</summary><div class="htinfo">${esc(info).replace(/\n+/g, "<br>")}</div></details>` : ""}</div>`);
+  if (zb) items.push(`<div><b>${esc(P.d)} 炸板</b>：首次封板 ${zb.t1 || "—"}，开板 ${zb.zb} 次，收盘 ${pct(zb.chg, 2)}</div>`);
+  if (dn) items.push(`<div><b class="dn">${esc(P.d)} 跌停</b>：换手 ${f(dn.tr, 1)}%</div>`);
+  const pop = [th && `同花顺热榜（1 小时）第 ${th.rk} 名${th.pop ? "，" + esc(th.pop) : ""}`, thd && `同花顺热榜（24 小时）第 ${thd.rk} 名`,
+    em && `东方财富人气榜第 ${em[1]} 名${em[2] ? `（较前一日${em[2] > 0 ? "上升" : "下降"} ${Math.abs(em[2])} 名）` : ""}`].filter(Boolean);
+  if (pop.length) items.push(`<div>人气：${pop.join("；")}${(th || thd)?.tags?.length ? `<div class="note">同花顺概念标签：${esc((th || thd).tags.join("、"))}</div>` : ""}</div>`);
+  if (fd) items.push(`<div>同花顺资金流向（${esc(F.d)} 收盘）：净额 <b class="${cls(fd[2])}">${yiS(fd[2])}</b>，流入 ${f(fd[0], 2)} 亿，流出 ${f(fd[1], 2)} 亿，成交额 ${f(fd[3], 2)} 亿</div>`);
+  box.hidden = !items.length;
+  box.innerHTML = items.length ? `<div class="phead" style="margin-bottom:6px"><h3>同花顺 · 东方财富</h3><span class="note">Scrapling 抓取</span></div><div class="htd">${items.join("")}</div>` : "";
+}
+function htPick(code){                    // F 型候选个股附上同花顺涨停原因和人气排名
+  const H = htD(); if (!H) return {};
+  const z = (H.pool?.zt || []).find(x => x.c === code), th = (H.hot?.hour || []).find(x => x.c === code), em = (H.emHot?.list || []).find(x => x[0] === code);
+  return {同花顺涨停原因: z ? `${z.hd}：${z.why}` : null, 同花顺人气排名: th?.rk ?? null, 东方财富人气排名: em?.[1] ?? null};
+}
+function htPrompt(){                      // F 型提示词里的同花顺涨停复盘（和日K统计同一天或更新的才附）
+  const H = htD(), P = H?.pool; if (!P || P.d < (SC.techDate || "")) return "";
+  const s = P.stat || {}, y = s.y || {}, lb = P.zt.filter(x => x.b >= 2).sort((a, b) => b.b - a.b || a.d - b.d);
+  return `## 同花顺涨停复盘（${htWhen(P)}，Scrapling 抓取）
+涨停 ${s.zt ?? P.zt.length}（曾涨停 ${s.ztEver ?? "—"}，封板率 ${f(s.fbl, 1)}%），炸板 ${s.zb ?? P.zb.length}，跌停 ${s.dt ?? P.dt.length}；上一交易日涨停 ${y.zt ?? "—"}、封板率 ${f(y.fbl, 1)}%、跌停 ${y.dt ?? "—"}
+涨停题材：${(H.blocks?.list || []).slice(0, 8).map(b => `${b.n}（涨停${b.zt}家，连板${b.lb}家，最高${b.hi}）：${b.s.slice(0, 6).map(x => x[1] + x[2]).join("、")}`).join("；") || "—"}
+连板股（几天几板：涨停原因）：${lb.slice(0, 20).map(x => `${x.n}${x.hd}：${x.why}`).join("；") || "无"}
+同花顺人气热榜前 20：${(H.hot?.day || H.hot?.hour || []).slice(0, 20).map(x => x.n + (x.pop ? `（${x.pop}）` : "")).join("、") || "—"}
+`;
+}
+async function hotTick(){                 // 热点页打开时：交易时段每 2 分钟（涨停题材每 10 分钟，数据大）、收盘后数据还没生成时每 10 分钟，直接从同花顺、东方财富刷新
+  try {
+    if (htLive() && !$("#v-hot").hidden && !document.hidden && !HTV.busy && Date.now() - HTV.liveAt > (trading() ? 120e3 : 600e3)) {
+      HTV.busy = true;
+      const day = flLD() || HT?.date, base = htD() || {}, t = new Date(Date.now() + 8 * 3600e3).toISOString().slice(11, 16);
+      const blkDue = Date.now() - HTV.blkAt > 600e3 || base.blocks?.d !== day;
+      const [zt, zb, dn, bl, hh, hd, em] = await Promise.all([htPool("limit_up_pool", day), htPool("open_limit_pool", day), htPool("lower_limit_pool", day), blkDue ? htBlocksLive(day) : null, htHotLive("hour"), htHotLive("day"), htEmLive()]);
+      if (bl) HTV.blkAt = Date.now();
+      if (zt || hh || em) HTV.live = {date: zt ? day : base.date || day, live: true,
+        pool: zt ? {d: day, t, live: true, final: !flIntra(), stat: htStat(zt.data), zt: zt.rows.map(htZt), zb: (zb?.rows || []).map(htZb), dt: (dn?.rows || []).map(htDt)} : base.pool,
+        blocks: bl ? {d: day, t, live: true, ...bl} : base.blocks,
+        hot: hh ? {t: bjDate() + " " + t, live: true, hour: hh, day: hd || base.hot?.day || []} : base.hot,
+        emHot: em ? {t: bjDate() + " " + t, live: true, list: em} : base.emHot, fund: HT?.fund || null};
+      HTV.liveAt = Date.now(); HTV.busy = false;
+      if (!$("#v-hot").hidden) renderHot();
+    }
+  } catch (e) { HTV.busy = false; }
+  finally { setTimeout(hotTick, 15e3); }
+}
+function hotInit(){
+  $("#htZtFilter").addEventListener("click", e => { const b = e.target.closest("[data-z]"); if (!b) return; HTV.zf = b.dataset.z; store.set("htZf", HTV.zf); renderHotZt(htD()?.pool, htD()?.blocks); });
+  $("#htHotTabs").addEventListener("click", e => { const b = e.target.closest("[data-h]"); if (b) { HTV.hk = b.dataset.h; renderHotLists(htD()); } });
+  $("#v-hot").addEventListener("click", e => {
+    const x = e.target.closest(".htx");
+    if (x?.dataset.b) { const n = x.dataset.b; HTV.bopen.has(n) ? HTV.bopen.delete(n) : HTV.bopen.add(n); renderHotBlocks(htD()?.blocks, htD()?.pool); return; }
+    if (x) { e.stopPropagation(); const c = x.dataset.x; HTV.open.has(c) ? HTV.open.delete(c) : HTV.open.add(c); renderHotZt(htD()?.pool, htD()?.blocks); return; }
+    const t = e.target.closest("[data-code]"), a = e.target.closest("a"); if (!t || (a && !a.dataset.code)) return;
+    e.preventDefault(); openStock(t.dataset.code);
+    const box = $("#dHot"), at = $("#drawer .facts"); if (box && at) at.after(box); });     // 从热点页打开：同花顺、东方财富的信息放在最前面
+  hotTick();
+}
+hotInit();
 
 // 自动更新是否停了：工作日（北京时间 10 点后）超过 4 小时、或任何时候超过 52 小时没有重新生成网页，就在顶部提醒
 (function staleCheck(){

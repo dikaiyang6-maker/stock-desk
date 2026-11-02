@@ -1,4 +1,4 @@
-"""公共工具：HTTP 重试、数据目录读写、任务排程状态、腾讯行情批量查询。"""
+"""公共工具：HTTP 重试（东方财富、同花顺走 Scrapling，见 scrape.py）、数据目录读写、任务排程状态、腾讯行情批量查询。"""
 import datetime as dt
 import json
 import os
@@ -8,6 +8,8 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import requests
+
+import scrape
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
@@ -24,10 +26,11 @@ def log(*a):
 
 
 def get(url, params=None, headers=None, tries=4, timeout=30, stop=(400, 403, 404, 422)):
-    """GET 并重试；返回 Response 或 None。stop 里的状态码不重试。"""
+    """GET 并重试；返回 Response 或 None。stop 里的状态码不重试。东方财富、同花顺用 Scrapling 抓，其他网站用 requests。"""
+    via = scrape.handles(url)
     for k in range(tries):
         try:
-            r = S.get(url, params=params, headers=headers, timeout=timeout)
+            r = scrape.request("GET", url, params, headers, timeout) if via else S.get(url, params=params, headers=headers, timeout=timeout)
             if r.status_code == 200:
                 return r
             if r.status_code in stop:
@@ -35,7 +38,7 @@ def get(url, params=None, headers=None, tries=4, timeout=30, stop=(400, 403, 404
             if r.status_code == 429:
                 time.sleep(20 * (k + 1))
                 continue
-        except requests.RequestException:
+        except (requests.RequestException, scrape.FetchError):
             pass
         time.sleep(1.5 * (k + 1))
     return None
