@@ -68,10 +68,16 @@ def sina_market():
     return out
 
 
+def same_px(a, b):
+    """新浪的价格和本站收盘价是不是同一天的：新浪的资金数据里常是收盘集合竞价（14:57–15:00）之前的成交价，差几分钱，
+    所以允许 1% 的误差；如果是上一个交易日的数据，大部分股票会差得更多。"""
+    return bool(a and b) and abs(a - b) <= max(0.011, b * 0.01)
+
+
 def sina_matches(F, U):
     """新浪资金数据没有日期，用收盘价核对它和这份收盘行情是不是同一天（不是同一天的价格大多对不上）。"""
     xs = [(F[c]["p"], U[c]["price"]) for c in U if c in F and F[c].get("p") and U[c]["price"]]
-    ok = sum(1 for a, b in xs if abs(a - b) < 0.011)
+    ok = sum(1 for a, b in xs if same_px(a, b))
     return len(xs) >= 3000 and ok >= 0.9 * len(xs), ok, len(xs)
 
 
@@ -467,12 +473,12 @@ def hist_today(code, n, today, price):
     if h and h[0][0] == today:
         return h
     d = sina_raw(code)
-    if not d or not price or abs((num(d.get("trade")) or 0) - price) >= 0.011:
+    if not d or not same_px(num(d.get("trade")), price):
         return h
     v = {k: (num(d.get(k)) or 0) / 1e8 for k in ("r0", "r1", "r2", "r3", "netamount")}
     net = lambda k: f2((num(d.get(k + "_in")) or 0) / 1e8 - (num(d.get(k + "_out")) or 0) / 1e8, 3)
     amt = v["r0"] + v["r1"] + v["r2"] + v["r3"]
-    row = [today, num(d.get("trade")), f2((num(d.get("changeratio")) or 0) * 100), f2((num(d.get("turnover")) or 0) / 100), f2(amt, 3), f2(v["netamount"], 3),
+    row = [today, price, f2((num(d.get("changeratio")) or 0) * 100), f2((num(d.get("turnover")) or 0) / 100), f2(amt, 3), f2(v["netamount"], 3),
            net("r0"), net("r1"), net("r2"), net("r3"), f2(v["r0"] / amt * 100, 1) if amt else None, f2((v["r2"] + v["r3"]) / amt * 100, 1) if amt else None]
     return [row] + [x for x in h or [] if x[0] < today][:n - 1]
 

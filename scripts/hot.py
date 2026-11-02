@@ -167,7 +167,7 @@ def ths_fund(prices):
     except Exception as e:                                      # 浏览器启动失败、超时等
         log("hot: 同花顺资金流向抓取出错", type(e).__name__, str(e)[:200])
     xs = [(c, v[0], prices.get(c)) for c, v in rows.items() if prices.get(c) and v[0]]
-    ok = sum(1 for _, a, b in xs if abs(a - b) < 0.011)
+    ok = sum(1 for _, a, b in xs if abs(a - b) <= max(0.011, b * 0.01))     # 允许收盘集合竞价造成的几分钱差别
     log("hot: 同花顺资金流向", len(rows), "只 /", pages, "页，最新价和本站收盘价一致", ok, "/", len(xs))
     if len(rows) < 4000 or ok < 0.9 * len(xs):                  # 不完整或者还不是这一天的收盘数据
         return None
