@@ -229,7 +229,38 @@ def _mainop(codes, dates):
 
 
 # ---------- 腾讯日K：技术面与市场情绪 ----------
-TECH_COLS = ["ma5", "ma10", "ma20", "ma60", "ma250", "ma5p", "ma10p", "ma60p", "r5", "r20", "r60", "r250", "amt5", "amt20", "tr5", "vr5", "h20", "lb", "zt5", "zb", "first", "n"]
+TECH_COLS = ["ma5", "ma10", "ma20", "ma60", "ma250", "ma5p", "ma10p", "ma60p", "r5", "r20", "r60", "r250", "amt5", "amt20", "tr5", "vr5", "h20", "lb", "zt5", "zb", "first", "n",
+             "cpx", "cst", "bs", "bsAgo", "bsDir", "bsRet"]   # 操盘线=EMA13(收盘)；cst 多空 1/-1/0；bs 今日信号；bsAgo/bsDir/bsRet 最近一次信号
+
+
+def _ema(x, p):
+    k = 2 / (p + 1); e = x[0]; out = []
+    for v in x:
+        e = v * k + e * (1 - k); out.append(e)
+    return out
+
+
+def cpx_sig(bars):
+    """操盘线与 B/S 信号（公开公式，只用收盘价）：
+    操盘线 TL = EMA(收盘, 13)；多空：收盘 > TL 且 TL 上行（近 5 日）为多头，收盘 < TL 且 TL 下行为空头，否则震荡；
+    B 点 = 收盘上穿操盘线且 MACD 的 DIF > DEA（动能转多）；S 点 = 收盘下破操盘线且 DIF < DEA。
+    返回 [操盘线, 多空, 今日信号, 最近信号距今天数, 最近信号方向, 最近信号以来涨跌%] 和逐日信号（回测用）。"""
+    c = [b[2] for b in bars]; n = len(c)
+    if n < 34 or not all(c):
+        return [None] * 6, []
+    tl = _ema(c, 13)
+    dif = [a - b for a, b in zip(_ema(c, 12), _ema(c, 26))]; dea = _ema(dif, 9)
+    sig = [0] * n
+    for i in range(1, n):
+        if c[i] > tl[i] and c[i - 1] <= tl[i - 1] and dif[i] > dea[i]:
+            sig[i] = 1
+        elif c[i] < tl[i] and c[i - 1] >= tl[i - 1] and dif[i] < dea[i]:
+            sig[i] = -1
+    slope = tl[-1] - tl[-6]
+    st = 1 if c[-1] > tl[-1] and slope > 0 else -1 if c[-1] < tl[-1] and slope < 0 else 0
+    li = next((i for i in range(n - 1, -1, -1) if sig[i]), None)
+    last = [n - 1 - li, sig[li], round((c[-1] / c[li] - 1) * 100, 2)] if li is not None else [None, None, None]
+    return [round(tl[-1], 3), st, sig[-1]] + last, sig
 
 
 def tech_due():
@@ -296,13 +327,22 @@ def refresh_tech():
     t0 = dt.datetime.now()
     with ThreadPoolExecutor(8) as ex:
         ks = list(ex.map(lambda r: tx_daily(a_sym(r[I["code"]]), count=260), rows))
+    asof = (a.get("asof") or "")[:10]                                     # 盘中运行时腾讯会带当天的半日K，裁剪到和行情同一天，保证技术指标和信号与全站一致
+    if asof:
+        ks = [[b for b in (k or []) if b[0] <= asof] for k in ks]
     tech, by_day = {}, {}
+    bt = {1: [], -1: []}                                                   # 全市场历史信号回测：方向 -> [(5日收益%, 10日收益%)]
     for r, bars in zip(rows, ks):
         res = _stats(bars, r[I["board"]], r[I["fsh"]]) if bars else None
         if not res:
             continue
         vals, zt = res
-        tech[r[I["code"]]] = vals
+        cpx, sig = cpx_sig(bars)
+        tech[r[I["code"]]] = vals + cpx
+        c = [b[2] for b in bars]
+        for i in range(len(sig) - 11):                                     # 留出前瞻窗口，不含最近 10 天
+            if sig[i] and c[i]:
+                bt[sig[i]].append(((c[i + 5] / c[i] - 1) * 100, (c[i + 10] / c[i] - 1) * 100))
         lim = LIMIT[r[I["board"]]]
         for i in range(max(1, len(bars) - 11), len(bars)):                 # 最近 11 个交易日逐日统计
             b, pc = bars[i], bars[i - 1][2]
@@ -348,11 +388,20 @@ def refresh_tech():
         for b in (k or [])[-25:]:
             amt_day[b[0]] = amt_day.get(b[0], 0) + b[6] / 1e4
     ad = [amt_day[d] for d in sorted(amt_day)[-21:-1]]
+    def stat(xs):
+        if not xs:
+            return None
+        r5 = [a for a, _ in xs]; r10 = [b for _, b in xs]
+        return {"n": len(xs), "r5": round(sum(r5) / len(r5), 2), "r10": round(sum(r10) / len(r10), 2),
+                "win5": round(100 * sum(1 for a in r5 if a > 0) / len(r5)), "win10": round(100 * sum(1 for b in r10 if b > 0) / len(r10))}
+    bs_stat = {"b": stat(bt[1]), "s": stat(bt[-1]), "asof": days[-1] if days else None}
+    nbs = sum(1 for v in tech.values() if v[TECH_COLS.index("bs")])
     out = load("screen.json", {})
     out.update({"tech": tech, "techCols": TECH_COLS, "techAsof": bj_now().strftime("%Y-%m-%d %H:%M"), "techDate": days[-1] if days else None, "techN": len(rows),
-                "emo": emo, "amt20": round(sum(ad) / len(ad), 0) if ad else None})
+                "emo": emo, "amt20": round(sum(ad) / len(ad), 0) if ad else None, "bsStat": bs_stat})
     save("screen.json", out)
-    log("tech", ok, "/", len(rows), "stocks in", (dt.datetime.now() - t0).seconds, "s | last day", emo[-1] if emo else None)
+    log("tech", ok, "/", len(rows), "stocks in", (dt.datetime.now() - t0).seconds, "s | last day", emo[-1] if emo else None,
+        "| 操盘 B/S 回测", bs_stat, "| 今日信号", nbs, "只")
     return True
 
 
