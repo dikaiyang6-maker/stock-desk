@@ -3179,7 +3179,7 @@ function updateDrawer(){
   }
 }
 function liveRender(stocks){
-  $("#meta").innerHTML = `<span class="live-dot" aria-hidden="true"></span>实时行情 · ${esc(liveTime())} · 沪深京 A 股 ${R.length} 只 · ${trading() ? "交易中" : "已休市"}`;
+  $("#meta").innerHTML = `<span class="live-dot" aria-hidden="true"></span>实时行情 · ${esc(liveTime())} · 沪深京 A 股 ${R.length} 只 · ${trading() ? "交易中" : flNoon() ? "午间休市" : "已休市"}`;
   $("#breadthNote").textContent = `沪深京 A 股（不含 B 股、港股），实时 ${liveTime()}`;
   renderMarket(); renderTechTable();
   if (!$("#v-cp").hidden) { renderCpIdx(); $("#cpMeta").innerHTML = cpMeta(); }
