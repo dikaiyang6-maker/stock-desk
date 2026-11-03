@@ -499,10 +499,19 @@ td.htwhy{white-space:normal;min-width:220px;max-width:380px;line-height:1.45}
 .nwflash{list-style:none;margin:8px 0 0;padding:0;display:grid}
 .nwi{display:grid;grid-template-columns:42px minmax(0,1fr);gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
 .nwi .t{font-family:var(--f-num);font-size:12px;color:var(--faint);padding-top:2px}
-.nwi .tt{color:var(--ink);text-decoration:none;font-weight:500;font-size:14px;line-height:1.5;overflow-wrap:anywhere}
-a.tt:hover{color:var(--accent);text-decoration:underline}
+.nwi .tt{display:block;width:100%;background:none;border:0;padding:0;margin:0;text-align:left;cursor:pointer;font:inherit;color:var(--ink);font-weight:500;font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.nwi .tt:hover{color:var(--accent)}
 .nwi.imp .tt{color:var(--up)}
-.nwi .sm{font-size:12.5px;color:var(--muted);line-height:1.55;margin-top:2px;overflow-wrap:anywhere}
+.nwi .sm{font-size:12.5px;color:var(--muted);line-height:1.55;margin-top:2px;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
+.nwi.open{background:var(--accent-soft);margin:0 -10px;padding:9px 10px;border-radius:4px}
+.nwi.open .sm{display:block;overflow:visible;color:var(--ink);font-size:13.5px;line-height:1.75;cursor:auto;white-space:pre-line}
+.nwi.open .mt .nwsc{display:none}
+.nwdet{display:grid;gap:8px;margin-top:8px}
+.nwdss{display:grid;gap:6px}
+.nwds{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:6px 10px;cursor:pointer;font:inherit;font-size:13px;color:var(--ink)}
+.nwds:hover{border-color:var(--accent)}
+.nwsrc{font-size:12.5px;justify-self:start}
+.nwnew{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:25;background:var(--accent);color:var(--on-accent);border:0;border-radius:999px;padding:9px 18px;font:inherit;font-size:13.5px;box-shadow:0 6px 20px rgba(10,14,20,.25);cursor:pointer;white-space:nowrap}
 .nwi .mt{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:5px;font-size:11.5px;color:var(--faint)}
 .nwi.new{animation:nwnew 2.4s ease-out}
 @keyframes nwnew{from{background:var(--accent-soft)}to{background:transparent}}
@@ -1075,8 +1084,9 @@ td.nwwhy{white-space:normal;min-width:200px;max-width:360px;font-size:12.5px;col
         <div class="phead"><h3>7×24 快讯</h3><span class="note" id="nwFlashNote"></span></div>
         <div class="nwbar"><div class="cg" id="nwFlashTabs"><button type="button" class="chip2" data-f="">全部</button><button type="button" class="chip2" data-f="cn">国内</button><button type="button" class="chip2" data-f="gl">海外</button><button type="button" class="chip2" data-f="imp">要闻</button><button type="button" class="chip2" data-f="lead">龙头相关</button></div><input id="nwQ" class="nwq" type="search" placeholder="搜索快讯" aria-label="搜索快讯"></div>
         <ul id="nwFlash" class="nwflash"></ul>
+        <button type="button" class="nwnew" id="nwNew" hidden></button>
         <button type="button" class="btn" id="nwMore" style="margin-top:10px" hidden>加载更多</button>
-        <p class="note" style="margin:10px 0 0">国内 / 海外：东方财富的快讯按它自己的栏目分（全球股市、美国、欧洲、日本、各国央行等算海外），同花顺和新浪的按标题关键词分。几家都发的同一条消息合并成一条。红色标题是来源标出的要闻。</p>
+        <p class="note" style="margin:10px 0 0">国内 / 海外：东方财富的快讯按它自己的栏目分（全球股市、美国、欧洲、日本、各国央行等算海外），同花顺和新浪的按标题关键词分。几家都发的同一条消息合并成一条。红色标题是来源标出的要闻。点标题或摘要展开全文，下面列出相关个股的实时行情和原文链接（新浪的是文章，这里只有导语，全文看原文）。</p>
       </div>
       <div class="panel">
         <div class="phead"><h3>股吧</h3><span class="note" id="nwGubaNote"></span></div>
@@ -4716,10 +4726,10 @@ const NW_GL = ["美国", "美联储", "美股", "纳指", "纳斯达克", "道�
   "朝鲜", "叙利亚", "黎巴嫩", "也门", "阿联酋", "卡塔尔", "伊拉克", "阿富汗", "巴基斯坦", "斯坦", "阿曼", "新加坡", "马来西亚", "泰国", "印尼", "菲律宾",
   "新西兰", "南非", "埃及", "阿根廷", "智利", "委内瑞拉", "意大利", "西班牙", "荷兰", "瑞士", "瑞典", "挪威", "丹麦", "波兰", "希腊", "比利时",
   "英伟达", "特斯拉", "微软", "谷歌", "亚马逊", "Meta", "奈飞", "台积电", "三星", "英特尔", "高通", "博通", "甲骨文", "OpenAI", "AMD", "苹果公司",
-  "超微电脑", "葡萄牙", "亚太经合", "APEC", "盘前涨", "盘前跌", "盘后涨", "盘后跌"];
+  "超微电脑", "葡萄牙", "亚太经合", "APEC", "盘前涨", "盘前跌", "盘后涨", "盘后跌", "联合国", "北约", "世卫", "世贸", "七国集团", "二十国集团", "G7", "G20"];
 const NWV = {items: new Map(), keys: new Map(), seen: new Set(), gl: new Set(), imp: new Set(), fresh: new Set(), earn: null,
   f: store.get("nwF", ""), q: "", limit: 60, bar: "zssh000001", gs: "hot", et: store.get("nwEt", "res"), ef: "", eLimit: 60,
-  liveAt: 0, glAt: 0, earnAt: 0, busy: false, liveOk: false, liveT: "", leadAll: false};
+  liveAt: 0, glAt: 0, earnAt: 0, busy: false, liveOk: false, liveT: "", leadAll: false, open: new Set(), pending: 0, newN: 0};
 const nwIsGl = t => NW_GL.some(k => t.includes(k));
 const nwKey = t => String(t).replace(/[^\p{L}\p{N}]+/gu, "").slice(0, 12);
 const nwClean = (s, n) => { s = String(s ?? "").replace(/　/g, " ").replace(/\s+/g, " ").trim(); return s.length <= n ? s : s.slice(0, n - 1) + "…"; };
@@ -4730,6 +4740,8 @@ const NW_SRC = ["东方财富", "同花顺", "新浪财经"];
 function nwAdd(x){                     // 加一条快讯；同一条消息几家都发（标题前 12 个字相同、相差 2 小时内）就合并来源。返回是否新增
   if (!x || NWV.seen.has(x[0]) || !/^\d{4}-\d\d-\d\d \d\d:\d\d/.test(x[1])) return false;
   NWV.seen.add(x[0]);
+  const n0 = s => String(s).replace(/[^\p{L}\p{N}]+/gu, "");
+  if (x[6] && n0(x[6]).startsWith(n0(x[5]).slice(0, 20)) && n0(x[6]).length < n0(x[5]).length + 8) x[6] = "";     // 摘要只是把标题重复一遍（标点不同）就不显示
   const k = nwKey(x[5]), j = NWV.keys.get(k), m = j && NWV.items.get(j);
   if (m && Math.abs(nwMs(m[1]) - nwMs(x[1])) < 2 * 3600e3) {
     const s0 = x[4].split(" · ")[0];
@@ -4745,10 +4757,9 @@ function nwAdd(x){                     // 加一条快讯；同一条消息几�
 const nwEmCodes = sl => (sl || []).map(s => String(s).split(".")).filter(([m, c]) => /^\d{6}$/.test(c || "") && ((m === "1" && c[0] === "6") || (m === "0" && "0348".includes(c[0]) && !c.startsWith("399"))))
   .map(([, c]) => c).filter((c, i, a) => BY.has(c) && a.indexOf(c) === i);
 function nwFromEm(x){
-  const id = x?.code; let title = nwClean(x?.title, 90), sum = nwClean(String(x?.summary || "").replace(/^【[^】]*】/, ""), 160);
+  const id = x?.code; let title = nwClean(x?.title, 90), sum = nwClean(String(x?.summary || "").replace(/^【[^】]*】/, ""), 1000);
   if (!title) title = nwClean(sum, 60);
   if (!id || !title) return null;
-  if (sum.startsWith(title.slice(0, 20)) && sum.length < title.length + 8) sum = "";
   return ["em" + id, String(x.showTime || "").slice(0, 19), NWV.gl.has(id) || nwIsGl(title) ? "gl" : "cn", NWV.imp.has(id) || x.titleColor === 3 ? 1 : 0, "东方财富", title, sum,
     `https://finance.eastmoney.com/a/${id}.html`, nwEmCodes(x.stockList)];
 }
@@ -4756,12 +4767,12 @@ function nwFromThs(y){
   const title = nwClean(y?.title, 90); if (!title || !y.id) return null;
   const st = Array.isArray(y.stock) ? y.stock : [], abroad = st.some(s => ["169", "177", "185"].includes(String(s.stockMarket)));
   const cs = st.filter(s => ["17", "33", "151"].includes(String(s.stockMarket)) && /^\d{6}$/.test(s.stockCode || "") && BY.has(s.stockCode)).map(s => s.stockCode);
-  return ["ths" + y.id, nwTs(y.ctime), abroad || nwIsGl(title) ? "gl" : "cn", String(y.import) === "3" || String(y.color) === "2" ? 1 : 0, "同花顺", title, nwClean(y.digest, 160), nwUrl(y.url), cs];
+  return ["ths" + y.id, nwTs(y.ctime), abroad || nwIsGl(title) ? "gl" : "cn", String(y.import) === "3" || String(y.color) === "2" ? 1 : 0, "同花顺", title, nwClean(y.digest, 1000), nwUrl(y.url), cs];
 }
 function nwFromSina(x){
   const title = nwClean(x?.title, 90); if (!title) return null;
   const media = x.media_name || "";
-  return ["sina" + (x.docid || x.url), nwTs(x.ctime), media.includes("环球") || nwIsGl(title) ? "gl" : "cn", 0, "新浪财经" + (media ? " · " + media : ""), title, nwClean(x.intro, 160), nwUrl(x.url), []];
+  return ["sina" + (x.docid || x.url), nwTs(x.ctime), media.includes("环球") || nwIsGl(title) ? "gl" : "cn", 0, "新浪财经" + (media ? " · " + media : ""), title, nwClean(x.intro, 300), nwUrl(x.url), []];
 }
 function jsonpCb(url, param = "callback", ms = 8000){     // JSONP，不发 Referer（东方财富快讯看到别的网站的 Referer 会拒绝）
   const cb = "nw" + Date.now().toString(36) + Math.floor(Math.random() * 1e6);
@@ -4874,19 +4885,34 @@ function renderNwFlash(){
   document.querySelectorAll("#nwFlashTabs [data-f]").forEach(b => b.setAttribute("aria-pressed", b.dataset.f === NWV.f));
   const xs = nwList(); let day = "", h = "";
   for (const x of xs.slice(0, NWV.limit)) {
-    const d = x[1].slice(0, 10), u = nwUrl(x[7]);
+    const d = x[1].slice(0, 10), open = NWV.open.has(x[0]);
     if (d !== day) { day = d; h += `<li class="nwday">${esc(nwDay(d))}</li>`; }
-    h += `<li class="nwi${x[3] ? " imp" : ""}${NWV.fresh.has(x[0]) ? " new" : ""}"><span class="t">${esc(x[1].slice(11, 16))}</span><div>
-      ${u ? `<a class="tt" href="${esc(u)}" target="_blank" rel="noopener">${esc(x[5])}</a>` : `<span class="tt">${esc(x[5])}</span>`}
-      ${x[6] ? `<div class="sm">${esc(x[6])}</div>` : ""}
+    h += `<li class="nwi${x[3] ? " imp" : ""}${NWV.fresh.has(x[0]) ? " new" : ""}${open ? " open" : ""}" data-nid="${esc(x[0])}"><span class="t">${esc(x[1].slice(11, 16))}</span><div>
+      <button type="button" class="tt" data-nid="${esc(x[0])}" aria-expanded="${open}">${esc(x[5])}</button>
+      ${x[6] ? `<div class="sm">${esc(x[6])}</div>` : ""}${open ? nwDetailHtml(x) : ""}
       <div class="mt"><span class="nwg ${x[2]}">${x[2] === "gl" ? "海外" : "国内"}</span>${x[3] ? `<span class="nwg imp">要闻</span>` : ""}<span>${esc(x[4])}</span>${x[8].slice(0, 4).map(nwChip).join("")}</div></div></li>`;
   }
-  NWV.fresh.clear();
+  NWV.fresh.clear(); NWV.pending = 0; $("#nwNew").hidden = true;
   box.innerHTML = h || `<li class="note" style="padding:12px 0">${NW || NWV.items.size ? "没有符合条件的快讯。" : "还没有资讯数据，等下一次自动更新。"}</li>`;
   $("#nwMore").hidden = xs.length <= NWV.limit;
   const all = [...NWV.items.values()], gl = all.filter(x => x[2] === "gl").length;
   $("#nwFlashNote").textContent = `${all.length} 条（国内 ${all.length - gl}，海外 ${gl}）${NWV.f || NWV.q ? ` · 筛出 ${xs.length} 条` : ""}`;
 }
+function nwDetailHtml(x){              // 展开的快讯：完整时间和来源、相关个股（实时行情、今天涨停、龙头标签）、原文链接
+  const u = nwUrl(x[7]), zt = new Map((htD()?.pool?.zt || []).map(z => [z.c, z])), lead = new Map(nwLeaders().map(l => [l.c, l.tags]));
+  const st = x[8].map(c => { const r = BY.get(c), z = zt.get(c), tg = lead.get(c) || [];
+    return `<button type="button" class="nwds" data-code="${c}"><span><b>${esc(nwName(c))}</b> <span class="cd num mut">${c}</span></span><span class="num" data-qp="${c}">${r ? f(r.price) : "—"}</span>${nwQ(c)}${z ? `<span class="nwtag space">今日涨停${z.hd ? " · " + esc(z.hd) : ""}</span>` : ""}${tg.slice(0, 2).map(t => `<span class="nwtag ${t.k}">${esc(t.t)}</span>`).join("")}<span class="mut" style="margin-left:auto">详情 ›</span></button>`; }).join("");
+  return `<div class="nwdet"><div class="note">${esc(x[1])} · ${esc(x[4])}${x[3] ? " · 要闻" : ""} · ${x[2] === "gl" ? "海外" : "国内"}</div>
+    ${st ? `<div class="nwdss">${st}</div>` : ""}${u ? `<a class="nwsrc" href="${esc(u)}" target="_blank" rel="noopener">查看原文 ↗</a>` : ""}</div>`;
+}
+function nwToggle(id){                 // 点标题或摘要：在原地展开 / 收起，不重画整个列表
+  const li = $(`#nwFlash li[data-nid="${CSS.escape(id)}"]`), x = NWV.items.get(id); if (!li || !x) return;
+  const open = !NWV.open.has(id); open ? NWV.open.add(id) : NWV.open.delete(id);
+  li.classList.toggle("open", open); li.querySelector("button.tt").setAttribute("aria-expanded", open);
+  li.querySelector(".nwdet")?.remove();
+  if (open) li.querySelector(".mt").insertAdjacentHTML("beforebegin", nwDetailHtml(x));
+}
+const nwPast = () => $("#nwFlash").getBoundingClientRect().top < 60;     // 已经往下翻到快讯列表里了
 function renderNwGuba(){
   const box = $("#nwGuba"); if (!box) return;
   const G = NW?.guba?.bars || {}, ids = [...new Set(["zssh000001", ...nwLeaders().map(x => x.c), ...(NW?.lead || []).map(x => x[0]), ...Object.keys(G)])].filter(b => G[b]);   // 对象的数字键会被排到前面，按上证指数吧、龙头的顺序排
@@ -4941,8 +4967,8 @@ function renderNwEarn(){
 }
 function renderNwMeta(){
   const m = $("#nwMeta"); if (!m) return;
-  m.innerHTML = NWV.liveOk && LIVE.on ? `<span class="live-dot" aria-hidden="true"></span>实时 · 快讯 ${esc(NWV.liveT)} 刷新（${trading() ? "每 30 秒" : "每 2 分钟"}）`
-    : NW ? `${esc(NW.t)} 自动更新时抓取${window.claude ? " · claude.ai 不允许页面访问外部接口，这里是快照；在浏览器里打开网页版会实时刷新" : ""}` : "";
+  m.innerHTML = NWV.liveOk && LIVE.on ? `<span class="live-dot" aria-hidden="true"></span>实时 · 快讯 ${esc(NWV.liveT)} 刷新（每 30 秒）${NWV.newN ? ` · 打开后新到 ${NWV.newN} 条` : ""}`
+    : NW ? `${esc(NW.t)} 自动更新时抓取${window.claude ? " · claude.ai 不允许页面访问外部接口，这里是快照。实时版：用手机或电脑浏览器打开 dikaiyang6-maker.github.io/stock-desk/#news" : ""}` : "";
 }
 function renderNews(){ renderNwMeta(); renderNwLead(); renderNwFlash(); renderNwGuba(); renderNwEarn(); }
 function nwFocus(){                    // 资讯页打开时实时刷新这些股票的行情：龙头 + 当前显示的快讯里的股票 + 当前股吧
@@ -4961,9 +4987,9 @@ function nwDrawer(code){               // 个股抽屉里的“资讯 · 股吧�
   box.hidden = !parts.length;
   box.innerHTML = parts.length ? `<div class="phead" style="margin-bottom:6px"><h3>资讯 · 股吧</h3><span class="note">东方财富、同花顺、新浪财经</span></div><div class="dfgrid">${parts.join("")}</div>` : "";
 }
-async function nwTick(){               // 资讯页打开时（网页版）：快讯交易时段每 30 秒、其他时间每 2 分钟；财报每 10 分钟
+async function nwTick(){               // 资讯页打开时（网页版）：快讯全天每 30 秒（夜里海外消息也多）；财报每 10 分钟
   try {
-    if (LIVE.on && !$("#v-news").hidden && !document.hidden && !NWV.busy && Date.now() - NWV.liveAt > (trading() ? 30e3 : 120e3)) {
+    if (LIVE.on && !$("#v-news").hidden && !document.hidden && !NWV.busy && Date.now() - NWV.liveAt > 30e3) {
       NWV.busy = true;
       const r = await nwFlashLive();
       if (r.ok) { NWV.liveAt = Date.now(); NWV.liveOk = true; NWV.liveT = new Date(Date.now() + 8 * 3600e3).toISOString().slice(11, 19); }
@@ -4971,7 +4997,12 @@ async function nwTick(){               // 资讯页打开时（网页版）：�
       const er = Date.now() - NWV.earnAt > 600e3 && await nwEarnLive();
       if (er) NWV.earnAt = Date.now();
       NWV.busy = false;
-      if (!$("#v-news").hidden) { if (r.n) renderNwFlash(); if (er) renderNwEarn(); renderNwMeta(); }
+      NWV.newN += r.n;
+      if (!$("#v-news").hidden) {
+        if (r.n && (NWV.open.size || nwPast())) { NWV.pending += r.n; const b = $("#nwNew"); b.textContent = `有 ${NWV.pending} 条新快讯 ↑`; b.hidden = false; }   // 正在看展开的快讯或已经往下翻：不挤动列表，提示一下
+        else if (r.n) renderNwFlash();
+        if (er) renderNwEarn(); renderNwMeta();
+      }
     }
   } catch (e) { NWV.busy = false; }
   finally { setTimeout(nwTick, 5e3); }
@@ -4988,6 +5019,9 @@ function nwInit(){
   $("#nwEarnSub").addEventListener("click", e => { const b = e.target.closest("[data-ef]"); if (b) { NWV.ef = b.dataset.ef; NWV.eLimit = 60; renderNwEarn(); } });
   v.addEventListener("click", e => {
     if (e.target.closest("[data-emore]")) { NWV.eLimit += 60; renderNwEarn(); return; }
+    const tb = e.target.closest("#nwFlash button.tt[data-nid]"), sm = e.target.closest("#nwFlash .nwi:not(.open) .sm");
+    if (tb || sm) { nwToggle((tb || sm.closest("li")).dataset.nid); return; }
+    if (e.target.closest("#nwNew")) { renderNwFlash(); $("#nwFlash").scrollIntoView({block: "start"}); window.scrollBy(0, -120); return; }
     const t = e.target.closest("[data-code]"); if (!t) return;
     e.preventDefault(); openStock(t.dataset.code);
     const box = $("#dNews"), at = $("#drawer .facts"); if (box && at) at.after(box);     // 从资讯页打开：资讯和股吧放在最前面
