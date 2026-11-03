@@ -29,7 +29,7 @@ GL_KW = ("美国", "美联储", "美股", "纳指", "纳斯达克", "道指", "�
          "朝鲜", "叙利亚", "黎巴嫩", "也门", "阿联酋", "卡塔尔", "伊拉克", "阿富汗", "巴基斯坦", "斯坦", "阿曼", "新加坡", "马来西亚", "泰国", "印尼", "菲律宾",
          "新西兰", "南非", "埃及", "阿根廷", "智利", "委内瑞拉", "意大利", "西班牙", "荷兰", "瑞士", "瑞典", "挪威", "丹麦", "波兰", "希腊", "比利时",
          "英伟达", "特斯拉", "微软", "谷歌", "亚马逊", "Meta", "奈飞", "台积电", "三星", "英特尔", "高通", "博通", "甲骨文", "OpenAI", "AMD", "苹果公司",
-         "超微电脑", "葡萄牙", "亚太经合", "APEC", "盘前涨", "盘前跌", "盘后涨", "盘后跌")
+         "超微电脑", "葡萄牙", "亚太经合", "APEC", "盘前涨", "盘前跌", "盘后涨", "盘后跌", "联合国", "北约", "世卫", "世贸", "七国集团", "二十国集团", "G7", "G20")
 CN_ADR = {"BABA": "阿里巴巴", "JD": "京东", "PDD": "拼多多", "BIDU": "百度", "NTES": "网易", "TCOM": "携程", "NIO": "蔚来", "XPEV": "小鹏汽车", "LI": "理想汽车",
           "BILI": "哔哩哔哩", "TME": "腾讯音乐", "BEKE": "贝壳", "YUMC": "百胜中国", "ZTO": "中通快递", "HTHT": "华住", "FUTU": "富途", "TAL": "好未来",
           "EDU": "新东方", "VIPS": "唯品会", "QFIN": "奇富科技", "MNSO": "名创优品", "IQ": "爱奇艺", "WB": "微博", "ATHM": "汽车之家", "BZ": "BOSS直聘",
@@ -53,6 +53,10 @@ def _clean(s, n):
 
 def _key(title):
     return re.sub(r"[\W_]+", "", title)[:12]
+
+
+def _norm(s):
+    return re.sub(r"[\W_]+", "", s or "")
 
 
 def is_gl(title):
@@ -102,13 +106,13 @@ def flash(U):
             continue
         seen.add(i)
         title = _clean(x.get("title"), 90)
-        summ = _clean(re.sub(r"^【[^】]*】", "", x.get("summary") or ""), 160)
+        summ = _clean(re.sub(r"^【[^】]*】", "", x.get("summary") or ""), 1000)        # 快讯全文（网页里点开看）
         if not title:
             title, summ = _clean(summ, 60), summ
         if not title:
             continue
         out.append([f"em{i}", (x.get("showTime") or "")[:19], "gl" if i in gl_ids or is_gl(title) else "cn",
-                    1 if i in imp_ids or x.get("titleColor") == 3 else 0, "东方财富", title, "" if summ.startswith(title[:20]) and len(summ) < len(title) + 8 else summ,
+                    1 if i in imp_ids or x.get("titleColor") == 3 else 0, "东方财富", title, summ,
                     f"https://finance.eastmoney.com/a/{i}.html", em_codes(x.get("stockList"), U)])
     em_n = len(out)
     d = jget(THS_FAST, {"page": 1, "tag": "", "track": "website", "pagesize": 100}, headers={"User-Agent": UA}, tries=2)
@@ -119,15 +123,18 @@ def flash(U):
         cs = [s.get("stockCode") for s in y.get("stock") or [] if s.get("stockMarket") in ("17", "33", "151") and re.fullmatch(r"\d{6}", s.get("stockCode") or "")]
         abroad = any(s.get("stockMarket") in ("169", "177", "185") for s in y.get("stock") or [])      # 美股、港股
         out.append([f"ths{y.get('id')}", _ts(y.get("ctime")), "gl" if abroad or is_gl(title) else "cn", 1 if str(y.get("import")) == "3" or str(y.get("color")) == "2" else 0,
-                    "同花顺", title, _clean(y.get("digest"), 160), y.get("url") or "", [c for c in cs if U is None or c in U]])
+                    "同花顺", title, _clean(y.get("digest"), 1000), y.get("url") or "", [c for c in cs if U is None or c in U]])
     ths_n = len(out) - em_n
     d = jget(SINA_ROLL, {"pageid": 153, "lid": 2516, "k": "", "num": 50, "page": 1})
     for x in ((d or {}).get("result") or {}).get("data") or []:
         title = _clean(x.get("title"), 90)
         if title:
             out.append([f"sina{x.get('docid') or x.get('url')}", _ts(x.get("ctime")), "gl" if "环球" in (x.get("media_name") or "") or is_gl(title) else "cn", 0,
-                        "新浪财经" + (" · " + x["media_name"] if x.get("media_name") else ""), title, _clean(x.get("intro"), 160), x.get("url") or "", []])
+                        "新浪财经" + (" · " + x["media_name"] if x.get("media_name") else ""), title, _clean(x.get("intro"), 300), x.get("url") or "", []])
     out = [x for x in out if x[1]]
+    for x in out:                       # 摘要只是把标题重复一遍（标点不同）就不要
+        if x[6] and _norm(x[6]).startswith(_norm(x[5])[:20]) and len(_norm(x[6])) < len(_norm(x[5])) + 8:
+            x[6] = ""
     out.sort(key=lambda x: x[1], reverse=True)
     # 同一条消息几家都发：标题前 12 个字（去掉标点）相同、时间相差 2 小时以内的合并，来源写在一起
     merged, by = [], {}
