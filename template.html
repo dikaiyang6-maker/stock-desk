@@ -524,6 +524,8 @@ td.htwhy{white-space:normal;min-width:220px;max-width:380px;line-height:1.45}
 .nwg.imp{background:var(--up-soft);color:var(--up)}
 .nwguba{margin-top:10px}
 .nwguba .gm{display:block;font-size:11.5px;color:var(--faint);font-family:var(--f-num)}
+.livebar{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;background:var(--accent-soft);border:1px solid var(--accent);border-radius:var(--r);padding:9px 12px;font-size:13.5px;line-height:1.5;margin-bottom:14px}
+.livebar a{font-weight:600;white-space:nowrap}
 .gtt{display:block;width:100%;background:none;border:0;padding:0;margin:0;text-align:left;cursor:pointer;font:inherit;color:var(--ink);font-size:13px;line-height:1.5;overflow-wrap:anywhere}
 .gtt:hover{color:var(--accent)}
 .nwgp.open{background:var(--accent-soft);border-radius:4px;margin:0 -8px;padding:6px 8px}
@@ -565,6 +567,7 @@ td.nwwhy{white-space:normal;min-width:200px;max-width:360px;font-size:12.5px;col
 </header>
 
 <main class="wrap">
+  <div class="livebar" id="liveBar" hidden><span>这是 <b id="liveBarT"></b> 的快照：claude.ai 不允许网页访问外部行情，这里不会自己刷新。</span><a id="liveBarA" href="https://dikaiyang6-maker.github.io/stock-desk/" target="_blank" rel="noopener">打开实时版 ↗</a><span class="mut">电脑或手机浏览器打开，所有页面自动实时刷新</span></div>
   <p class="warn" id="staleWarn" role="status" hidden></p>
   <!-- MARKET -->
   <section class="view" id="v-market">
@@ -1078,7 +1081,7 @@ td.nwwhy{white-space:normal;min-width:200px;max-width:360px;font-size:12.5px;col
   <section class="view" id="v-news" hidden>
     <div class="panel">
       <div class="phead"><h2>资讯</h2><span class="note" id="nwMeta"></span></div>
-      <p class="note" style="margin:0">今日龙头、7×24 快讯（国内 / 海外）、A 股和美股财报、股吧讨论放在一页。数据全部来自公开接口（东方财富、同花顺、新浪财经、Nasdaq），用 <a href="https://github.com/D4Vinci/Scrapling" target="_blank" rel="noopener">Scrapling</a> 抓取，不需要登录，不含任何付费软件的数据。每次自动更新时刷新；在浏览器里打开网页版时，快讯在交易时段每 30 秒、龙头行情每 10 秒直接从源头刷新。点股票看个股详情，里面也有它的相关快讯、财报和股吧热帖。</p>
+      <p class="note" style="margin:0">今日龙头、7×24 快讯（国内 / 海外）、A 股和美股财报、股吧讨论放在一页。数据全部来自公开接口（东方财富、同花顺、新浪财经、Nasdaq），用 <a href="https://github.com/D4Vinci/Scrapling" target="_blank" rel="noopener">Scrapling</a> 抓取，不需要登录，不含任何付费软件的数据。每次自动更新时刷新；在浏览器里打开网页版时，快讯全天每 30 秒、龙头行情每 10 秒直接从源头刷新。点股票看个股详情，里面也有它的相关快讯、财报和股吧热帖。</p>
     </div>
     <div class="panel">
       <div class="phead"><h3>今日龙头</h3><span class="note" id="nwLeadNote"></span></div>
@@ -3388,6 +3391,8 @@ async function gStockTick(once){
 const gStockTickSoon = () => { if (LIVE.on) gStockTick(true); };
 (async function startLive(){
   const hint = $("#liveHint");
+  if (window.claude) { $("#liveBar").hidden = false; $("#liveBarT").textContent = ASOF;      // claude.ai 里：顶部给实时版的入口，点的时候带上当前页
+    $("#liveBarA").addEventListener("click", e => { e.currentTarget.href = "https://dikaiyang6-maker.github.io/stock-desk/" + (location.hash || ""); }); }
   if (window.claude) { hint.textContent = `当前显示 ${ASOF} 的数据：claude.ai 的安全沙箱不允许页面访问外部行情接口。在浏览器里打开网页版，会自动切换为腾讯实时行情。`; return; }
   try { await loadScript("https://qt.gtimg.cn/q=sh000001&_=" + Date.now(), 5000); }
   catch (e) { hint.textContent = `没能连上实时行情（qt.gtimg.cn），当前显示 ${ASOF} 的数据。检查网络后刷新页面即可重试。`; return; }
@@ -4995,7 +5000,7 @@ function renderNwEarn(){
 function renderNwMeta(){
   const m = $("#nwMeta"); if (!m) return;
   m.innerHTML = NWV.liveOk && LIVE.on ? `<span class="live-dot" aria-hidden="true"></span>实时 · 快讯 ${esc(NWV.liveT)} 刷新（每 30 秒）${NWV.newN ? ` · 打开后新到 ${NWV.newN} 条` : ""}`
-    : NW ? `${esc(NW.t)} 自动更新时抓取${window.claude ? " · claude.ai 不允许页面访问外部接口，这里是快照。实时版：用手机或电脑浏览器打开 dikaiyang6-maker.github.io/stock-desk/#news" : ""}` : "";
+    : NW ? `${esc(NW.t)} 自动更新时抓取${window.claude ? " · claude.ai 不允许页面访问外部接口，这里是快照。实时版：<a href='https://dikaiyang6-maker.github.io/stock-desk/#news' target='_blank' rel='noopener'>dikaiyang6-maker.github.io/stock-desk</a>（电脑或手机浏览器打开）" : ""}` : "";
 }
 function renderNews(){ renderNwMeta(); renderNwLead(); renderNwFlash(); renderNwGuba(); renderNwEarn(); }
 function nwFocus(){                    // 资讯页打开时实时刷新这些股票的行情：龙头 + 当前显示的快讯里的股票 + 当前股吧
