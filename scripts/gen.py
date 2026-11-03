@@ -69,12 +69,15 @@ def build():
     hot = load("hot.json", {})
     if hot.get("date"):
         data["hot"] = hot                                         # 热点：同花顺、东方财富（Scrapling 抓取）
+    nw = load("news.json", {})
+    if nw.get("flash") or nw.get("earn"):
+        data["nw"] = {k: nw.get(k) for k in ("t", "flash", "earn", "guba", "lead")}   # 资讯：7×24 快讯（国内/海外）、财报、股吧、龙头
     data["py"] = pinyin_initials(a, G)                            # 拼音首字母，搜索用（如 拓普集团 → tpjt）
     sc = load("screen.json", {})
     if sc.get("ext") or sc.get("tech"):                       # 选股板块：按列压成数组，减小网页体积
         ext_cols = ["rd", "rdP", "debt", "cash", "eq", "gw", "revT", "lift", "hs", "es"]
         data["sc"] = {"extCols": ext_cols, "ext": {c: [e.get(k) for k in ext_cols] for c, e in sc.get("ext", {}).items()},
-                      **{k: sc.get(k) for k in ("techCols", "tech", "mo", "emo", "amt20", "extAsof", "extFy", "techAsof", "techDate")},
+                      **{k: sc.get(k) for k in ("techCols", "tech", "mo", "emo", "amt20", "extAsof", "extFy", "techAsof", "techDate", "bsStat")},
                       "tracks": screen_data.TRACKS, "themeTrack": screen_data.THEME_TRACK, "trackKw": screen_data.TRACK_KW}   # 赛道配置直接取代码里的，不依赖当天抓取
     ta = json.loads((ROOT / "static" / "ta.json").read_text(encoding="utf-8")) if (ROOT / "static" / "ta.json").exists() else {}
     t = (ROOT / "template.html").read_text(encoding="utf-8")
