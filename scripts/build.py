@@ -50,8 +50,8 @@ TASKS = [  # 名称, 周期（小时）, 函数
     ("us_hk", 0.9, global_mkt.refresh_us_hk),
     ("jp_kr", 0.9, global_mkt.refresh_jp_kr),
     ("others", 6, global_mkt.refresh_others),
+    ("news", 0.9, news.refresh_news),
     ("hot", 0.9, hot.refresh_hot),
-    ("news", 0.9, news.refresh_news),                  # 资讯页的龙头股吧用 hot.json，排在热点后面
 ]
 
 

@@ -1,7 +1,7 @@
-"""用 Scrapling（https://github.com/D4Vinci/Scrapling）抓取东方财富、同花顺和 Nasdaq（美股财报日历）。
+"""用 Scrapling（https://github.com/D4Vinci/Scrapling）抓取东方财富和同花顺。
 
 - 普通请求：Scrapling 的 FetcherSession（curl_cffi 模拟 Chrome 的 TLS 指纹和请求头）。同花顺对普通 HTTP 客户端直接返回 403，
-  东方财富也更不容易限流，Nasdaq 会拦普通爬虫。common.get 对这几个网站的请求都走这里，每个线程一个会话（curl 会话不能多线程共用）。
+  东方财富也更不容易限流。common.get 对这两个网站的请求都走这里，每个线程一个会话（curl 会话不能多线程共用）。
 - 需要先在浏览器里运行网页 JS 生成 cookie 的页面（同花顺资金流向等）：browser() 打开 Scrapling 的 StealthySession，
   用本机已装的 Chrome / Chromium（GitHub Actions 自带 Chrome），不额外下载浏览器。"""
 import glob
@@ -20,8 +20,8 @@ try:
 except ImportError:                                              # 没装 Scrapling 时退回 requests
     FetcherSession = None
 
-HOSTS = ("eastmoney.com", "10jqka.com.cn", "nasdaq.com")
-GAP = {"10jqka.com.cn": 0.3, "guba.eastmoney.com": 2}           # 同一网站两次请求之间至少间隔几秒，避免被封（股吧连续请求会被临时拦住）
+HOSTS = ("eastmoney.com", "10jqka.com.cn")
+GAP = {"10jqka.com.cn": 0.3}                                     # 同一网站两次请求之间至少间隔几秒，避免被封
 _tl = threading.local()
 _last, _lock = {}, threading.Lock()
 
