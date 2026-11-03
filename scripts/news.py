@@ -5,9 +5,11 @@
 - 龙头：按公开公式从同花顺涨停池和人气榜算（leaders），网页里用同一个公式实时算。
 旧的 items 字段（快讯标题）留给 DeepSeek 研判用。"""
 import datetime as dt
+import html
 import json
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor
 from zoneinfo import ZoneInfo
 
 from common import BJ, UA, bj_now, get, jget, load, log, save
@@ -20,6 +22,9 @@ SINA_ROLL = "https://feed.mix.sina.com.cn/api/roll/get"
 DC = "https://datacenter-web.eastmoney.com/api/data/v1/get"
 NQ = "https://api.nasdaq.com/api/calendar/earnings"
 GUBA = "https://guba.eastmoney.com/list,{}.html"
+GBAPI = "https://gbapi.eastmoney.com"                    # 股吧帖子正文、回复（东方财富股吧网页自己用的接口）
+GB_ARGS = {"deviceid": "0", "version": "200", "product": "Guba", "plat": "Web"}
+GB_CALLS = 400                                           # 每轮最多请求多少次正文 / 回复（新帖和评论数变了的才请求）
 INDEX_BAR = ("zssh000001", "上证指数吧")
 # 标题里有这些词的快讯算海外（东方财富的快讯先看它在不在海外栏目里）。网页里的 NW_GL 是同一份
 GL_KW = ("美国", "美联储", "美股", "纳指", "纳斯达克", "道指", "道琼斯", "标普", "美债", "美元", "欧洲", "欧元", "欧盟", "英国", "英镑", "日本", "日元",
@@ -300,10 +305,79 @@ def guba_bar(bar):
           and not re.fullmatch(r"\$[^$]*\$", (x.get("post_title") or "").strip())]
     rows = [[str(x.get("post_id")), _clean(x.get("post_title"), 70), (x.get("post_publish_time") or "")[:16], x.get("post_click_count") or 0, x.get("post_comment_count") or 0]
             for x in xs]
-    new = sorted(rows, key=lambda x: x[2], reverse=True)[:12]
-    hot = [x for x in sorted(rows, key=lambda x: (x[4], x[3]), reverse=True) if x not in new][:12]
+    new = sorted(rows, key=lambda x: x[2], reverse=True)[:10]
+    hot = [x for x in sorted(rows, key=lambda x: (x[4], x[3]), reverse=True) if x not in new][:10]
     return {"n": next((x.get("stockbar_name") for x in xs if x.get("stockbar_name")), ""), "cnt": d.get("count"), "p": new + hot,
             "t": bj_now().strftime("%Y-%m-%d %H:%M")}
+
+
+def post_text(h, n=300):
+    """股吧帖子正文 HTML → 纯文本：去掉隐藏的摘要块、来源头、脚本，段落和换行保留成换行；图片另外标记。"""
+    h = re.sub(r"(?is)<(script|style)\b[^>]*>.*?</\1>", "", h or "")
+    h = re.sub(r'(?is)<div[^>]*data-type="abstract"[^>]*>.*?</div>', "", h)
+    h = re.sub(r"(?is)<div id='zw_header'.*?</div>", "", h)
+    h = re.sub(r"(?i)<br\s*/?>|</p>|</h\d>|</li>|</tr>", "\n", h)
+    t = html.unescape(re.sub(r"<[^>]+>", "", h))
+    t = "\n".join(x.strip(" \t\u3000\xa0") for x in t.split("\n"))
+    t = re.sub(r"[ \t\u3000\xa0]+", " ", t)
+    t = re.sub(r"\n{2,}", "\n", t).strip()
+    return t if len(t) <= n else t[:n - 1] + "…"
+
+
+def gb_post(pid):
+    """一个帖子的正文：[正文, 是否有图]；拿不到返回 None。"""
+    d = jget(f"{GBAPI}/content/api/Post/ArticleContent", {"postid": pid, **GB_ARGS}, headers={"User-Agent": UA, "Referer": "https://guba.eastmoney.com/"}, tries=2)
+    p = (d or {}).get("post")
+    if not p:
+        return None
+    pics = p.get("post_pic_url") or []
+    return [post_text(p.get("post_content")) or _clean(p.get("post_abstract"), 300), 1 if pics or "<img" in (p.get("post_content") or "") else 0]
+
+
+def gb_replies(pid):
+    """点赞最多的 3 条回复：[[内容, 点赞, 时间], ...]，不取回复人的信息；拿不到返回 None。"""
+    d = jget(f"{GBAPI}/reply/api/Reply/ArticleNewReplyList", {"postid": pid, "sort": "1", "sorttype": "0", "p": "1", "ps": "6", **GB_ARGS},
+             headers={"User-Agent": UA, "Referer": "https://guba.eastmoney.com/"}, tries=2)
+    if d is None:
+        return None
+    return [[_clean(x.get("reply_text"), 70), x.get("reply_like_count") or 0, (x.get("reply_time") or "")[5:16]] for x in d.get("re") or []
+            if (x.get("reply_text") or "").strip()][:3]
+
+
+def guba_details(bars, old):
+    """给每个吧的帖子补正文和热门回复，存在 bars[吧]["d"] = {帖子 id: [正文, 有图, [回复...], 抓取时的评论数]}。
+    上一轮抓过的直接用；评论数变了只重抓回复。每轮最多请求 GB_CALLS 次，先上证指数吧、再按龙头顺序，吧里先抓评论多的。"""
+    cache = {pid: v for b in (old or {}).values() for pid, v in (b.get("d") or {}).items()}
+    todo, calls = [], 0
+    for bar, g in bars.items():
+        g["d"] = {}
+        for p in sorted(g.get("p") or [], key=lambda x: (x[4], x[3]), reverse=True):
+            c = cache.get(p[0])
+            if c and c[3] == p[4]:
+                g["d"][p[0]] = c
+                continue
+            need_post, need_rep = not c, p[4] > 0
+            if calls + need_post + need_rep > GB_CALLS:
+                if c:
+                    g["d"][p[0]] = c                     # 超出预算：先用旧的
+                continue
+            calls += need_post + need_rep
+            todo.append((bar, p, c, need_post, need_rep))
+
+    def one(job):
+        bar, p, c, need_post, need_rep = job
+        post = gb_post(p[0]) if need_post else c[:2]
+        rep = gb_replies(p[0]) if need_rep else []
+        if post is None:
+            return bar, p[0], c
+        return bar, p[0], [post[0], post[1], rep if rep is not None else (c[2] if c else []), p[4]]
+
+    with ThreadPoolExecutor(2) as ex:
+        for bar, pid, v in ex.map(one, todo):
+            if v:
+                bars[bar]["d"][pid] = v
+    have = sum(len(g["d"]) for g in bars.values()); allp = sum(len(g.get("p") or []) for g in bars.values())
+    log("news guba 正文", have, "/", allp, "帖 | 本轮请求", calls, "次")
 
 
 def guba(lead, old):
@@ -316,6 +390,8 @@ def guba(lead, old):
         elif (old.get(bar) or {}).get("t", "") >= day:
             bars[bar] = old[bar]
     log("news guba", ok, "/", 1 + len(lead), "（沿用上一轮", len(bars) - ok, "个）")
+    if ok:
+        guba_details(bars, old)
     return bars if ok else None
 
 

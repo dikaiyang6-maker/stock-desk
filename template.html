@@ -524,6 +524,13 @@ td.htwhy{white-space:normal;min-width:220px;max-width:380px;line-height:1.45}
 .nwg.imp{background:var(--up-soft);color:var(--up)}
 .nwguba{margin-top:10px}
 .nwguba .gm{display:block;font-size:11.5px;color:var(--faint);font-family:var(--f-num)}
+.gtt{display:block;width:100%;background:none;border:0;padding:0;margin:0;text-align:left;cursor:pointer;font:inherit;color:var(--ink);font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+.gtt:hover{color:var(--accent)}
+.nwgp.open{background:var(--accent-soft);border-radius:4px;margin:0 -8px;padding:6px 8px}
+.nwpost{display:grid;gap:8px;margin-top:6px}
+.nwpost .pc{font-size:13px;line-height:1.75;white-space:pre-line;overflow-wrap:anywhere;color:var(--ink)}
+.nwpost .pr{display:grid;gap:6px;border-left:2px solid var(--line);padding-left:10px;font-size:12.5px;line-height:1.55;color:var(--ink)}
+.nwpost .pri{overflow-wrap:anywhere}
 .nwguba li.nwgh{display:block}
 td.nwwhy{white-space:normal;min-width:200px;max-width:360px;font-size:12.5px;color:var(--muted);line-height:1.45;text-align:left}
 .nwh4{margin:14px 0 6px;font-size:13.5px}
@@ -1093,7 +1100,7 @@ td.nwwhy{white-space:normal;min-width:200px;max-width:360px;font-size:12.5px;col
         <div class="cg" id="nwGubaBars" style="display:flex"></div>
         <div class="cg" id="nwGubaSort" style="display:flex;margin-top:8px"><span class="mut">排序</span><button type="button" class="chip2" data-s="hot">评论最多</button><button type="button" class="chip2" data-s="new">最新</button></div>
         <ul id="nwGuba" class="dlist nwguba"></ul>
-        <p class="note" style="margin:10px 0 0">东方财富股吧的公开帖子：上证指数吧和今日龙头各自的股吧。只取标题、阅读数、评论数和时间，不取用户信息。帖子是网友观点，不是事实，注意甄别。</p>
+        <p class="note" style="margin:10px 0 0">东方财富股吧的公开帖子：上证指数吧和今日龙头各自的股吧。点标题展开正文和点赞最多的回复（正文最多 300 字，全文点“查看原帖”）。只取标题、正文、回复内容、阅读数、评论数和时间，不取用户信息。帖子是网友观点，不是事实，注意甄别。</p>
       </div>
     </div>
     <div class="panel">
@@ -4729,7 +4736,7 @@ const NW_GL = ["美国", "美联储", "美股", "纳指", "纳斯达克", "道�
   "超微电脑", "葡萄牙", "亚太经合", "APEC", "盘前涨", "盘前跌", "盘后涨", "盘后跌", "联合国", "北约", "世卫", "世贸", "七国集团", "二十国集团", "G7", "G20"];
 const NWV = {items: new Map(), keys: new Map(), seen: new Set(), gl: new Set(), imp: new Set(), fresh: new Set(), earn: null,
   f: store.get("nwF", ""), q: "", limit: 60, bar: "zssh000001", gs: "hot", et: store.get("nwEt", "res"), ef: "", eLimit: 60,
-  liveAt: 0, glAt: 0, earnAt: 0, busy: false, liveOk: false, liveT: "", leadAll: false, open: new Set(), pending: 0, newN: 0};
+  liveAt: 0, glAt: 0, earnAt: 0, busy: false, liveOk: false, liveT: "", leadAll: false, open: new Set(), pending: 0, newN: 0, gopen: new Set()};
 const nwIsGl = t => NW_GL.some(k => t.includes(k));
 const nwKey = t => String(t).replace(/[^\p{L}\p{N}]+/gu, "").slice(0, 12);
 const nwClean = (s, n) => { s = String(s ?? "").replace(/　/g, " ").replace(/\s+/g, " ").trim(); return s.length <= n ? s : s.slice(0, n - 1) + "…"; };
@@ -4924,7 +4931,27 @@ function renderNwGuba(){
   const ps = [...g.p].sort(NWV.gs === "hot" ? (a, b) => b[4] - a[4] || b[3] - a[3] : (a, b) => b[2].localeCompare(a[2])).slice(0, 15);
   const nb = /^\d{6}$/.test(NWV.bar) ? `<button type="button" class="nwsc" data-code="${NWV.bar}">${esc(nwName(NWV.bar))} ${nwQ(NWV.bar)}</button>` : "";
   $("#nwGubaNote").innerHTML = `${esc(g.t || NW.guba.t || "")} 抓取${g.cnt ? ` · 共 ${Number(g.cnt).toLocaleString("zh-CN")} 帖` : ""} · <a href="https://guba.eastmoney.com/list,${esc(NWV.bar)}.html" target="_blank" rel="noopener">去股吧看最新</a>`;
-  box.innerHTML = (nb ? `<li class="nwgh">${nb}</li>` : "") + ps.map(p => `<li><span class="t">${esc(p[2].slice(5))}</span><span><a href="https://guba.eastmoney.com/news,${esc(NWV.bar)},${esc(p[0])}.html" target="_blank" rel="noopener">${esc(p[1])}</a><span class="gm">阅读 ${p[3]} · 评论 ${p[4]}</span></span></li>`).join("");
+  box.innerHTML = (nb ? `<li class="nwgh">${nb}</li>` : "") + ps.map(p => nwPostLi(NWV.bar, p)).join("");
+}
+// 股吧帖子：点标题原地展开正文和热门回复（自动更新时抓的，存在 bars[吧].d[帖子 id] = [正文, 有图, [[回复, 赞, 时间]...], 评论数]）
+function nwPostLi(bar, p){
+  const gid = bar + ":" + p[0], open = NWV.gopen.has(gid);
+  return `<li class="nwgp${open ? " open" : ""}" data-gid="${esc(gid)}"><span class="t">${esc(p[2].slice(5))}</span><div><button type="button" class="gtt" aria-expanded="${open}">${esc(p[1])}</button><span class="gm">阅读 ${p[3]} · 评论 ${p[4]}</span>${open ? nwPostHtml(bar, p) : ""}</div></li>`;
+}
+function nwPostHtml(bar, p){
+  const d = NW?.guba?.bars?.[bar]?.d?.[p[0]], u = `https://guba.eastmoney.com/news,${encodeURIComponent(bar)},${encodeURIComponent(p[0])}.html`;
+  const body = d ? `<div class="pc">${d[0] ? esc(d[0]) : `<span class="mut">（只有标题，没有正文）</span>`}</div>${d[1] ? `<div class="note">原帖里有图片，点“查看原帖”看</div>` : ""}
+    ${d[2]?.length ? `<div class="pr"><b>点赞最多的回复</b>${d[2].map(r => `<div class="pri">${esc(r[0])} <span class="gm" style="display:inline">赞 ${r[1]} · ${esc(r[2])}</span></div>`).join("")}</div>` : p[4] ? "" : `<div class="note">还没有回复</div>`}`
+    : `<div class="note">这条帖子的正文这次没抓到，点“查看原帖”看。</div>`;
+  return `<div class="nwpost">${body}<a class="nwsrc" href="${u}" target="_blank" rel="noopener">查看原帖 ↗</a></div>`;
+}
+function nwPostToggle(btn){
+  const li = btn.closest("li[data-gid]"), gid = li?.dataset.gid || "", i = gid.indexOf(":"); if (i < 0) return;
+  const bar = gid.slice(0, i), pid = gid.slice(i + 1), p = (NW?.guba?.bars?.[bar]?.p || []).find(x => x[0] === pid); if (!p) return;
+  const open = !NWV.gopen.has(gid); open ? NWV.gopen.add(gid) : NWV.gopen.delete(gid);
+  li.classList.toggle("open", open); btn.setAttribute("aria-expanded", open);
+  li.querySelector(".nwpost")?.remove();
+  if (open) btn.parentElement.insertAdjacentHTML("beforeend", nwPostHtml(bar, p));
 }
 const NW_PRE_UP = ["预增", "扭亏", "续盈", "略增", "增加"], NW_PRE_DN = ["预减", "首亏", "续亏", "略减", "减少", "亏损"];
 const nwPreCls = t => NW_PRE_UP.some(k => t.includes(k)) ? "up" : NW_PRE_DN.some(k => t.includes(k)) ? "dn" : "";
@@ -4983,7 +5010,7 @@ function nwDrawer(code){               // 个股抽屉里的“资讯 · 股吧�
   if (rel.length) parts.push(`<div><h4>相关快讯</h4><ul class="dlist">${rel.map(x => { const u = nwUrl(x[7]); return `<li><span class="t">${esc(x[1].slice(5, 16))}</span>${u ? `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(x[5])}</a>` : esc(x[5])}</li>`; }).join("")}</ul></div>`);
   if (er || ep.length) parts.push(`<div><h4>财报</h4><ul class="dlist">${er ? `<li><span class="t">${esc(er[2].slice(5))}</span><span>${esc(er[3])}：营收 ${f(er[4], 2)} 亿（<span class="${cls(er[5])}">${pct(er[5], 1)}</span>），归母净利 ${f(er[6], 2)} 亿（<span class="${cls(er[7])}">${pct(er[7], 1)}</span>）</span></li>` : ""}${
     ep.map(x => `<li><span class="t">${esc(x[2].slice(5))}</span><span>${esc(x[3])}业绩预告 <b class="${nwPreCls(x[4])}">${esc(x[4])}</b>${x[5] != null || x[6] != null ? `：净利同比 ${pct(x[5], 0)} ~ ${pct(x[6], 0)}` : ""}${x[9] ? `<div class="note">${esc(x[9])}</div>` : ""}</span></li>`).join("")}</ul></div>`);
-  if (g?.p?.length) parts.push(`<div><h4>股吧热帖 <span class="note">${esc(g.t || "")} 抓取</span></h4><ul class="dlist">${[...g.p].sort((a, b) => b[4] - a[4] || b[3] - a[3]).slice(0, 6).map(p => `<li><span class="t">${esc(p[2].slice(5))}</span><a href="https://guba.eastmoney.com/news,${code},${esc(p[0])}.html" target="_blank" rel="noopener">${esc(p[1])}</a></li>`).join("")}</ul></div>`);
+  if (g?.p?.length) parts.push(`<div><h4>股吧热帖 <span class="note">${esc(g.t || "")} 抓取</span></h4><ul class="dlist nwguba">${[...g.p].sort((a, b) => b[4] - a[4] || b[3] - a[3]).slice(0, 6).map(p => nwPostLi(code, p)).join("")}</ul></div>`);
   box.hidden = !parts.length;
   box.innerHTML = parts.length ? `<div class="phead" style="margin-bottom:6px"><h3>资讯 · 股吧</h3><span class="note">东方财富、同花顺、新浪财经</span></div><div class="dfgrid">${parts.join("")}</div>` : "";
 }
@@ -5009,6 +5036,7 @@ async function nwTick(){               // 资讯页打开时（网页版）：�
 }
 function nwInit(){
   const v = $("#v-news"); if (!v) return;
+  document.addEventListener("click", e => { const b = e.target.closest("li[data-gid] > div > button.gtt"); if (b) { e.preventDefault(); nwPostToggle(b); } });
   $("#nwFlashTabs").addEventListener("click", e => { const b = e.target.closest("[data-f]"); if (!b) return; NWV.f = b.dataset.f; NWV.limit = 60; store.set("nwF", NWV.f); renderNwFlash(); });
   let qt = 0; $("#nwQ").addEventListener("input", e => { clearTimeout(qt); qt = setTimeout(() => { NWV.q = e.target.value.trim(); NWV.limit = 60; renderNwFlash(); }, 200); });
   $("#nwMore").addEventListener("click", () => { NWV.limit += 60; renderNwFlash(); });

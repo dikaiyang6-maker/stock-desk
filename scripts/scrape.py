@@ -21,7 +21,7 @@ except ImportError:                                              # 没装 Scrapl
     FetcherSession = None
 
 HOSTS = ("eastmoney.com", "10jqka.com.cn", "nasdaq.com")
-GAP = {"10jqka.com.cn": 0.3, "guba.eastmoney.com": 2}           # 同一网站两次请求之间至少间隔几秒，避免被封（股吧连续请求会被临时拦住）
+GAP = {"10jqka.com.cn": 0.3, "guba.eastmoney.com": 2, "gbapi.eastmoney.com": 0.3}           # 同一网站两次请求之间至少间隔几秒，避免被封（股吧连续请求会被临时拦住）
 _tl = threading.local()
 _last, _lock = {}, threading.Lock()
 
