@@ -544,6 +544,17 @@ td.nwwhy{white-space:normal;min-width:200px;max-width:360px;font-size:12.5px;col
 .book,.ticks{width:100%;font-size:12.5px}
 .book td,.ticks td,.ticks th{padding:3px 6px}
 .book tr.sep td{padding:0;border-bottom:1px solid var(--muted)}
+.book th{padding:3px 6px;font-size:11.5px}.ticks th{font-size:11.5px}
+.booksum{display:flex;flex-wrap:wrap;gap:2px 14px;font-size:12px;color:var(--muted);margin-top:6px}
+.ticksbox{max-height:330px;overflow-y:auto;border:1px solid var(--line);border-radius:4px}
+.fjbox{margin-top:14px}.fjbox h4{margin:0 0 6px;font-size:13.5px}
+.fj{display:grid;gap:1px}
+.fjr{display:grid;grid-template-columns:118px minmax(0,1fr) 86px 44px;gap:8px;align-items:center;font-size:12px;padding:2px 4px;border-radius:3px}
+.fjr.here{background:var(--accent-soft)}
+.fjt{display:block;min-width:0}
+.fjbar{display:flex;height:10px;border-radius:2px;overflow:hidden;min-width:2px}
+.fjbar i{display:block;height:100%}.fjbar i.b{background:var(--up)}.fjbar i.n{background:var(--faint)}.fjbar i.s{background:var(--dn)}
+@media (max-width:440px){.fjr{grid-template-columns:96px minmax(0,1fr) 74px 40px;gap:6px;font-size:11.5px}}
 </style>
 
 <header>
@@ -5083,7 +5094,7 @@ function nwInit(){
 nwInit();
 /* ---------- 个股成交：今开、最高、最低、均价、成交量、成交额、换手、量比、振幅、内外盘、委比，五档盘口、成交明细（腾讯行情） ---------- */
 function kcbDiv(sym){ return /^sh68[89]\d{3}$/.test(sym || "") ? 100 : 1; }     // 科创板个股：腾讯行情的成交量和内外盘、日K、分时的量是股，换算成手要除以 100（指数、五档、成交明细本来就是手）
-const DEAL = {code: null, rows: null, at: 0, busy: false, err: false};
+const DEAL = {code: null, rows: null, at: 0, busy: false, err: false, fjCode: null, fj: null, fjAt: 0, fjBusy: false, fjErr: false};
 const nInt = v => v == null || !isFinite(v) ? "—" : Math.round(v).toLocaleString("zh-CN");
 function dealFacts(r){
   const vol = r.vol, amtY = r.amtW ? r.amtW / 1e4 : r.amt, avg = vol > 0 && amtY > 0 ? amtY * 1e6 / vol : null, h = r.h ?? r.hi;
@@ -5098,40 +5109,79 @@ function dealFacts(r){
     + k("内盘", r.nb != null ? `${nInt(r.nb)} 手` : "—", "dn", "主动卖出（按买入价成交）") + k("委比", wb != null ? pct(wb, 2) : "—", cls(wb), "五档买量减卖量，除以两者之和");
 }
 const dealWhy = () => window.claude ? "实时行情才有：claude.ai 不允许网页访问外部行情，在浏览器里打开网页版就有。" : LIVE.on ? "正在获取…" : "连上实时行情后显示。";
-function bookHtml(r){
+function bookHtml(r){                  // 五档：价格、手数、金额（价格 × 手数 × 100 股），下面是买卖盘合计
   if (!r.ak || !r.bk) return `<p class="note" style="margin:0">${dealWhy()}</p>`;
-  const row = (t, x) => `<tr class="nohov"><td class="l mut">${t}</td><td class="num ${x[0] ? cls(x[0] - r.prev) : ""}">${x[0] ? f(x[0]) : "—"}</td><td class="num">${x[1] ? nInt(x[1]) : "—"}</td></tr>`, cn = "一二三四五";
-  return `<table class="book"><tbody>${[4, 3, 2, 1, 0].map(i => row("卖" + cn[i], r.ak[i])).join("")}<tr class="sep nohov"><td colspan="3"></td></tr>${[0, 1, 2, 3, 4].map(i => row("买" + cn[i], r.bk[i])).join("")}</tbody></table>`;
+  const amt = x => x[0] && x[1] ? x[0] * x[1] * 100 : 0, cn = "一二三四五";
+  const row = (t, x) => `<tr class="nohov"><td class="l mut">${t}</td><td class="num ${x[0] ? cls(x[0] - r.prev) : ""}">${x[0] ? f(x[0]) : "—"}</td><td class="num">${x[1] ? nInt(x[1]) : "—"}</td><td class="num mut">${amt(x) ? fmtYuan(amt(x)) : "—"}</td></tr>`;
+  const sum = xs => [xs.reduce((s, x) => s + (x[1] || 0), 0), xs.reduce((s, x) => s + amt(x), 0)], [sv, sa] = sum(r.ak), [bv, ba] = sum(r.bk);
+  return `<table class="book"><thead><tr><th class="l">档位</th><th>价格</th><th>手数</th><th>金额</th></tr></thead><tbody>${[4, 3, 2, 1, 0].map(i => row("卖" + cn[i], r.ak[i])).join("")}<tr class="sep nohov"><td colspan="4"></td></tr>${[0, 1, 2, 3, 4].map(i => row("买" + cn[i], r.bk[i])).join("")}</tbody></table>
+    <div class="booksum"><span>卖盘合计 <b class="dn">${nInt(sv)} 手</b> · ${fmtYuan(sa)}</span><span>买盘合计 <b class="up">${nInt(bv)} 手</b> · ${fmtYuan(ba)}</span></div>`;
 }
 function ticksHtml(r){
   if (!DEAL.rows || DEAL.code !== r.code) return `<p class="note" style="margin:0">${DEAL.err && LIVE.on ? "暂时取不到成交明细，稍后自动重试。" : dealWhy()}</p>`;
   if (!DEAL.rows.length) return `<p class="note" style="margin:0">今天还没有成交。</p>`;
-  return `<table class="ticks"><thead><tr><th class="l">时间</th><th>价格</th><th>手数</th><th class="l">方向</th></tr></thead><tbody>${DEAL.rows.map(x => `<tr class="nohov"><td class="l num mut">${esc(x.t)}</td><td class="num ${cls(x.p - r.prev)}">${f(x.p)}</td><td class="num">${nInt(x.v)}</td><td class="l ${x.s === "B" ? "up" : x.s === "S" ? "dn" : "mut"}">${x.s === "B" ? "买" : x.s === "S" ? "卖" : "中性"}</td></tr>`).join("")}</tbody></table>`;
+  return `<div class="ticksbox"><table class="ticks"><thead><tr><th class="l">时间</th><th>价格</th><th>手数</th><th>金额</th><th class="l">方向</th></tr></thead><tbody>${DEAL.rows.map(x => `<tr class="nohov"><td class="l num mut">${esc(x.t)}</td><td class="num ${cls(x.p - r.prev)}">${f(x.p)}</td><td class="num">${nInt(x.v)}</td><td class="num mut">${fmtYuan(x.a)}</td><td class="l ${x.s === "B" ? "up" : x.s === "S" ? "dn" : "mut"}">${x.s === "B" ? "买" : x.s === "S" ? "卖" : "中性"}</td></tr>`).join("")}</tbody></table></div>`;
+}
+function fenjiaHtml(r){                 // 分价表：今天每个价位成交了多少手。价位多时按价格分成 20 段；条形里红 = 主动买、灰 = 中性、绿 = 主动卖
+  const F = DEAL.fjCode === r.code ? DEAL.fj : null;
+  if (!F) return `<p class="note" style="margin:0">${DEAL.fjErr && LIVE.on ? "暂时取不到分价表，稍后自动重试。" : dealWhy()}</p>`;
+  if (!F.length) return `<p class="note" style="margin:0">今天还没有成交。</p>`;
+  const tot = F.reduce((s, x) => s + x.v, 0) || 1, lo = Math.min(...F.map(x => x.p)), hi = Math.max(...F.map(x => x.p));
+  let B;
+  if (F.length <= 24) B = F.map(x => ({lo: x.p, hi: x.p, v: x.v, b: x.b, s: x.s, n: x.n}));
+  else {
+    const step = Math.max(0.01, Math.ceil((hi - lo) / 20 * 100 - 1e-9) / 100), m = {};
+    F.forEach(x => { const i = Math.min(19, Math.floor((x.p - lo) / step + 1e-9)), k = m[i] || (m[i] = {lo: x.p, hi: x.p, v: 0, b: 0, s: 0, n: 0});   // 每段标这一段里实际成交过的最低到最高价
+      k.lo = Math.min(k.lo, x.p); k.hi = Math.max(k.hi, x.p); k.v += x.v; k.b += x.b; k.s += x.s; k.n += x.n; });
+    B = Object.values(m);
+  }
+  B.sort((a, b) => b.lo - a.lo);
+  const mx = Math.max(...B.map(x => x.v)) || 1, top = F.reduce((a, x) => x.v > a.v ? x : a, F[0]), bs = F.reduce((s, x) => s + x.b, 0), ss = F.reduce((s, x) => s + x.s, 0);
+  const pc = v => (v * 100).toFixed(1) + "%";
+  return `<p class="note" style="margin:0 0 6px">成交最多的价位 <b class="${cls(top.p - r.prev)}">${f(top.p)}</b>（${nInt(top.v)} 手，占 ${f(top.v / tot * 100, 2)}%）· 主动买 <b class="up">${f(bs / tot * 100, 1)}%</b> · 主动卖 <b class="dn">${f(ss / tot * 100, 1)}%</b> · 共 ${F.length} 个成交价位</p>
+    <div class="fj">${B.map(k => { const here = r.price >= k.lo - 1e-6 && r.price <= k.hi + 1e-6;
+      return `<div class="fjr${here ? " here" : ""}"${here ? ` title="现价所在区间"` : ""}><span class="num ${cls((k.lo + k.hi) / 2 - r.prev)}">${Math.abs(k.hi - k.lo) < 1e-9 ? f(k.lo) : `${f(k.lo)}–${f(k.hi)}`}</span><span class="fjt"><span class="fjbar" style="width:${pc(k.v / mx)}"><i class="b" style="width:${pc(k.b / k.v)}"></i><i class="n" style="width:${pc(k.n / k.v)}"></i><i class="s" style="width:${pc(k.s / k.v)}"></i></span></span><span class="num">${nInt(k.v)} 手</span><span class="num mut">${f(k.v / tot * 100, 1)}%</span></div>`; }).join("")}</div>`;
 }
 function renderDeal(code){
   const box = $("#dDeal"), r = BY.get(code); if (!box || !r) return;
-  const live = LIVE.on && r.qd;
+  const live = LIVE.on && r.qd, hm = t => new Date(t + 8 * 3600e3).toISOString().slice(11, 19);
+  const keep = box.querySelector(".ticksbox")?.scrollTop || 0;            // 刷新时不把正在看的明细滚回顶部
   box.innerHTML = `<div class="phead" style="margin-bottom:8px"><h3>成交</h3><span class="note">${live ? `腾讯行情 · 实时 ${esc(liveTime())}` : `${esc(ASOF)} 数据`}</span></div>
     <div class="facts dealf">${dealFacts(r)}</div>
-    <div class="dealgrid"><div><h4>五档盘口 <span class="note">单位：手</span></h4>${bookHtml(r)}</div><div><h4>成交明细 <span class="note">最近 20 笔${DEAL.at && DEAL.code === code ? ` · ${new Date(DEAL.at + 8 * 3600e3).toISOString().slice(11, 19)} 更新` : ""}</span></h4>${ticksHtml(r)}</div></div>`;
+    <div class="dealgrid"><div><h4>五档盘口 <span class="note">免费行情最多五档</span></h4>${bookHtml(r)}</div><div><h4>成交明细 <span class="note">最近 ${DEAL.code === code && DEAL.rows ? DEAL.rows.length : 100} 笔${DEAL.at && DEAL.code === code ? ` · ${hm(DEAL.at)} 更新` : ""}</span></h4>${ticksHtml(r)}</div></div>
+    <div class="fjbox"><h4>分价表 <span class="note">今天在各价位已经成交的量，不是挂单${DEAL.fjAt && DEAL.fjCode === code ? ` · ${hm(DEAL.fjAt)} 更新` : ""}</span></h4>${fenjiaHtml(r)}</div>`;
+  const tb = box.querySelector(".ticksbox"); if (tb && keep) tb.scrollTop = keep;
 }
-async function fetchDeals(code){         // 腾讯逐笔成交：序号/时间/价格/变动/手数/金额/方向（B 主动买、S 主动卖、M 中性）
+async function fetchDeals(code){         // 腾讯逐笔成交：序号/时间/价格/变动/手数/金额（元）/方向（B 主动买、S 主动卖、M 中性）；一次最多 100 笔
   const v = "mx_" + code + "_" + (Date.now() % 1e6);
-  try { await loadScript(`https://web.ifzq.gtimg.cn/appstock/app/dealinfo/getMingxiV2?code=${txSym(code)}&limit=20&direction=1&_var=${v}`, 8000, "utf-8"); } catch (e) { return null; }
+  try { await loadScript(`https://web.ifzq.gtimg.cn/appstock/app/dealinfo/getMingxiV2?code=${txSym(code)}&limit=100&direction=1&_var=${v}`, 8000, "utf-8"); } catch (e) { return null; }
   const d = window[v]; try { delete window[v]; } catch (e) { window[v] = undefined; }
   const xs = d?.data?.data; if (!Array.isArray(xs)) return null;
-  return xs.map(s => { const f = String(s).split("/"); return {t: f[1] || "", p: +f[2] || 0, v: +f[4] || 0, s: f[6] || ""}; }).filter(x => x.p > 0);
+  return xs.map(s => { const f = String(s).split("/"), p = +f[2] || 0, v = +f[4] || 0; return {t: f[1] || "", p, v, a: +f[5] || p * v * 100, s: f[6] || ""}; }).filter(x => x.p > 0);
 }
-async function dealTick(){               // 个股详情开着：交易时段每 5 秒取一次成交明细，休市时打开取一次
+async function fetchFenjia(code){        // 腾讯分价表：[价格, 成交量, -, 占比%, 主动卖, 主动买, 中性]；科创板的量是股
+  const sym = txSym(code), v = "fj_" + code + "_" + (Date.now() % 1e6), lot = kcbDiv(sym);
+  try { await loadScript(`https://web.ifzq.gtimg.cn/appstock/app/dealinfo/getFenjia?code=${sym}&_var=${v}`, 10000, "utf-8"); } catch (e) { return null; }
+  const d = window[v]; try { delete window[v]; } catch (e) { window[v] = undefined; }
+  const xs = d?.data?.[6]; if (!Array.isArray(xs)) return null;
+  return xs.map(x => ({p: +x[0] || 0, v: (+x[1] || 0) / lot, s: (+x[4] || 0) / lot, b: (+x[5] || 0) / lot, n: (+x[6] || 0) / lot})).filter(x => x.p > 0 && x.v > 0);
+}
+async function dealTick(){               // 个股详情开着：交易时段成交明细每 5 秒、分价表每 30 秒；休市时打开取一次
   try {
-    const code = openState?.type === "stock" && !$("#drawer").hidden ? openState.code : null;
-    if (code && LIVE.on && !DEAL.busy && !document.hidden && (DEAL.code !== code || (trading() && Date.now() - DEAL.at > 5e3))) {
+    const code = openState?.type === "stock" && !$("#drawer").hidden ? openState.code : null, go = code && LIVE.on && !document.hidden;
+    if (go && !DEAL.busy && (DEAL.code !== code || (trading() && Date.now() - DEAL.at > 5e3))) {
       DEAL.busy = true; if (DEAL.code !== code) { DEAL.code = code; DEAL.rows = null; DEAL.at = 0; }
       const rows = await fetchDeals(code);
       DEAL.busy = false; DEAL.err = !rows; if (rows) { DEAL.rows = rows; DEAL.at = Date.now(); }
       if (openState?.code === code && !$("#drawer").hidden) renderDeal(code);
     }
-  } catch (e) { DEAL.busy = false; }
+    if (go && !DEAL.fjBusy && (DEAL.fjCode !== code || (trading() && Date.now() - DEAL.fjAt > 30e3))) {
+      DEAL.fjBusy = true; if (DEAL.fjCode !== code) { DEAL.fjCode = code; DEAL.fj = null; DEAL.fjAt = 0; }
+      const fj = await fetchFenjia(code);
+      DEAL.fjBusy = false; DEAL.fjErr = !fj; if (fj) { DEAL.fj = fj; DEAL.fjAt = Date.now(); }
+      if (openState?.code === code && !$("#drawer").hidden) renderDeal(code);
+    }
+  } catch (e) { DEAL.busy = false; DEAL.fjBusy = false; }
   finally { setTimeout(dealTick, 1500); }
 }
 dealTick();
