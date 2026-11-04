@@ -1578,7 +1578,7 @@ function renderMarket(){
   const sig = [
     ["跌停家数少于 30 只", ld < 30, `${ld} 只`],
     ["上涨家数占比超过 40%", up / tot > .4, `${(up / tot * 100).toFixed(0)}%`],
-    ["创业板指收在 20 日均线上方", cyc > ma20, `${cyc.toFixed(0)} / 均线 ${ma20.toFixed(0)}`],
+    ["创业板指收在 20 日均线上方", cyc > ma20, `${cyc.toFixed(2)} / 均线 ${ma20.toFixed(2)}`],
     ["科技题材跑赢防御板块", techAvg > def, `${pct(techAvg, 2)} vs ${pct(def, 2)}`],
     ["10 年期美债收益率回落到 5% 以下", null, "需自行观察"],
     ["放量长下影线、地量后止跌", null, "需看盘面"],
@@ -1781,7 +1781,7 @@ function renderStockTech(rows, monthly){
   box.hidden = !narr.length; if (!narr.length) return;
   const at = allTime(rows, monthly);
   box.innerHTML = `<h3 style="margin-bottom:8px">技术指标</h3>${tfTable(rows, monthly)}${narr.map(([k, v]) => `<p class="tline"><b>${k}</b>${esc(v)}</p>`).join("")}` +
-    (at ? `<p class="note" style="margin:6px 0 0">上市以来（前复权）最高 ${fmtAxis(at.hi)}（${esc(at.hiD)}），最低 ${fmtAxis(at.lo)}（${esc(at.loD)}），数据起点 ${esc(at.first)}。指标是对历史价格的统计描述，不预示未来走势。</p>` : "");
+    (at ? `<p class="note" style="margin:6px 0 0">上市以来（前复权）最高 ${fmt2(at.hi)}（${esc(at.hiD)}），最低 ${fmt2(at.lo)}（${esc(at.loD)}），数据起点 ${esc(at.first)}。指标是对历史价格的统计描述，不预示未来走势。</p>` : "");
 }
 async function loadStockLive(code, panel, hasStatic){
   const sym = txSym(code), alive = () => activeChart === panel && openState?.type === "stock" && openState.code === code;
@@ -1796,7 +1796,7 @@ async function loadStockLive(code, panel, hasStatic){
   openState.rows = full; panel.setDaily(full); renderStockTech(full, null);
 }
 function marketBrief(){
-  return Object.values(D.idx).map(ix => { const k = ix.k, c = k[k.length - 1][1]; return `${ix.name} ${c.toFixed(0)}（今日 ${pct((c / k[k.length - 2][1] - 1) * 100, 2)}，距一年高点 ${pct((c / Math.max(...k.map(x => x[1])) - 1) * 100)}）`; }).join("；");
+  return Object.values(D.idx).map(ix => { const k = ix.k, c = k[k.length - 1][1]; return `${ix.name} ${c.toFixed(2)}（今日 ${pct((c / k[k.length - 2][1] - 1) * 100, 2)}，距一年高点 ${pct((c / Math.max(...k.map(x => x[1])) - 1) * 100)}）`; }).join("；");
 }
 function md(s){
   const lines = esc(s).split(/\n/); let out = "", inList = false, tbl = null;
@@ -1925,7 +1925,8 @@ function chartColors(){
 }
 function niceStep(x){ const p = Math.pow(10, Math.floor(Math.log10(x || 1))); for (const m of [1, 2, 2.5, 5, 10]) if (m * p >= x) return m * p; return 10 * p; }
 const fmtAxis = v => v == null || !isFinite(v) ? "—" : Math.abs(v) >= 1000 ? v.toFixed(0) : Math.abs(v) >= 100 ? v.toFixed(1) : v.toFixed(2);
-const fmt2 = v => v == null || !isFinite(v) ? "—" : v.toFixed(2);   // 全球指数：一律保留两位小数
+const fmt2 = v => v == null || !isFinite(v) ? "—" : v.toFixed(2);   // 股价、指数：一律保留两位小数，和行情软件一样
+const fmtP = v => v == null || !isFinite(v) ? "—" : Math.abs(v) < 1 && Math.round(v * 1000) % 10 ? v.toFixed(3) : v.toFixed(2);   // 海外个股：两位小数；港股 1 元以下按 0.005 跳动，有第三位小数时显示三位
 const fmtAmt = v => v == null ? "—" : v >= 1e8 ? (v / 1e8).toFixed(2) + "万亿" : v >= 1e4 ? (v / 1e4).toFixed(v >= 1e6 ? 0 : 1) + "亿" : v.toFixed(0) + "万";   // 输入单位：万元
 const fmtVol = v => v == null ? "—" : v >= 1e8 ? (v / 1e8).toFixed(2) + "亿手" : v >= 1e4 ? (v / 1e4).toFixed(v >= 1e6 ? 0 : 1) + "万手" : v.toFixed(0) + "手";
 function smaArr(a, p){ const out = new Array(a.length).fill(null); let s = 0; for (let i = 0; i < a.length; i++) { s += a[i]; if (i >= p) s -= a[i - p]; if (i >= p - 1) out[i] = s / p; } return out; }
@@ -1961,7 +1962,7 @@ function watchTheme(redraw){
   return () => { mq.removeEventListener("change", redraw); mo.disconnect(); };
 }
 function makeKChart(host, rows, opt = {}){
-  const vfmt = opt.vfmt || fmtVol, fp = opt.pfmt || fmtAxis;   // fp：价格提示（全球指数传入两位小数），坐标轴刻度仍用 fmtAxis
+  const vfmt = opt.vfmt || fmtVol, fp = opt.pfmt || fmt2;   // 价格（提示、均线、价格坐标）一律两位小数
   let n = rows.length, ind = calcInd(rows), main = opt.main || "ma", subs = (opt.subs || ["vol", "macd"]).slice(0, 3);
   const cv = document.createElement("canvas"), tip = document.createElement("div");
   cv.className = "kcv"; tip.className = "ktip"; tip.hidden = true; host.textContent = ""; host.append(cv, tip);
@@ -2004,7 +2005,7 @@ function makeKChart(host, rows, opt = {}){
           for (const v of extra) if (v != null) { lo = Math.min(lo, v); hi = Math.max(hi, v); } }
         const pad = (hi - lo) * 0.06 || 1; hi += pad; lo -= pad;
         const y = v => P.top + (hi - v) / (hi - lo) * P.h; P.y = y; P.lo = lo; P.hi = hi;
-        axis(y, lo, hi, P.top, P.h);
+        axis(y, lo, hi, P.top, P.h, fp);
         ctx.save(); ctx.beginPath(); ctx.rect(0, P.top - 2, L.plotW, P.h + 4); ctx.clip();
         if (main === "boll") {
           ctx.beginPath(); let st = -1;
@@ -2161,7 +2162,7 @@ function sessOf(days){
   return keep.length ? keep : null;
 }
 function makeMinuteChart(host, days, opt = {}){
-  const fp = opt.pfmt || fmtAxis;
+  const fp = opt.pfmt || fmt2;
   const cv = document.createElement("canvas"), tip = document.createElement("div");
   cv.className = "kcv mincv"; tip.className = "ktip"; tip.hidden = true; host.textContent = ""; host.append(cv, tip);
   cv.setAttribute("role", "img"); cv.setAttribute("aria-label", opt.title || "分时图");
@@ -2184,7 +2185,7 @@ function makeMinuteChart(host, days, opt = {}){
     const lo = base - dev, hi = base + dev, y = v => padT + (hi - v) / (hi - lo) * mainH, vmax = Math.max(1, ...pts.map(q => q.v)), vtop = padT + mainH + gap;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H); ctx.font = "11px 'IBM Plex Mono', ui-monospace, monospace"; ctx.lineWidth = 1;
     [hi, (hi + base) / 2, base, (lo + base) / 2, lo].forEach((v, i) => { const yy = Math.round(y(v)) + 0.5; ctx.strokeStyle = col.line; ctx.setLineDash(i === 2 ? [] : [2, 3]); ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(plotW, yy); ctx.stroke(); ctx.setLineDash([]);
-      const c = v > base + 1e-9 ? col.up : v < base - 1e-9 ? col.dn : col.muted; ctx.fillStyle = c; ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText(fmtAxis(v), plotW + 6, yy);
+      const c = v > base + 1e-9 ? col.up : v < base - 1e-9 ? col.dn : col.muted; ctx.fillStyle = c; ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText(fp(v), plotW + 6, yy);
       ctx.textAlign = "left"; ctx.fillText(pct((v / base - 1) * 100, 2), 4, Math.min(Math.max(yy, padT + 6), padT + mainH - 6)); });
     for (let di = 1; di < days.length; di++) { const xx = Math.round(di * PER * xw) + 0.5; ctx.strokeStyle = col.line; ctx.beginPath(); ctx.moveTo(xx, padT); ctx.lineTo(xx, H - padB); ctx.stroke(); }
     ctx.fillStyle = col.muted; ctx.textBaseline = "alphabetic";
@@ -2260,7 +2261,7 @@ function chartPanel(box, src){
   function pick(row){
     if (hasMinute(row.d)) { pickDate = row.d; mode = "min"; render(); return; }
     const i = src.daily.indexOf(row), prev = i > 0 ? src.daily[i - 1].c : row.o, days = minuteDays();
-    const fp = src.pfmt || fmtAxis;
+    const fp = src.pfmt || fmt2;
     hint.innerHTML = `<b>${esc(row.d)}</b> 开 ${fp(row.o)} · 高 ${fp(row.h)} · 低 ${fp(row.l)} · 收 ${fp(row.c)} · <span class="${cls(row.c - prev)}">${pct((row.c / prev - 1) * 100, 2)}</span>${row.v ? " · 量 " + fmtVol(row.v) : ""}${row.a ? " · 额 " + fmtAmt(row.a) : ""}。这一天没有分时数据：${days.length ? `本页只有最近 ${days.length} 个交易日（${days[0].d.slice(5)} 起）的分时，` : ""}免费行情接口不提供更早的分钟数据。`;
   }
   function render(){
@@ -2336,7 +2337,7 @@ function tfVerdict(d, w, m){
   if (!d && w) return "日线有所修复，但周线仍在 MA20 之下，反弹要等周线重新站上 MA20 才算确认。";
   return "日线和周线都在 MA20 上方，趋势偏强。";
 }
-function indNarrative(daily, monthly, fp = fmtAxis){
+function indNarrative(daily, monthly, fp = fmt2){
   const [[, s], [, w], [, m]] = tfSets(daily, monthly); if (!s) return [];
   const out = [];
   out.push(["布林线", s.pb == null ? "数据不足。" : `收盘 ${fp(s.c)}，布林带 ${fp(s.dn)}–${fp(s.up)}（中轨 ${fp(s.mid)}），%B 为 ${s.pb.toFixed(0)}%，${s.pb < 0 ? "已跌破下轨，属超跌，但破轨后常沿下轨运行，重新站回下轨之上才算止跌信号" : s.pb > 100 ? "已突破上轨，短线过热" : s.pb < 20 ? "贴近下轨，偏弱" : s.pb > 80 ? "贴近上轨，偏强" : "在带内中部"}；带宽 ${s.bw.toFixed(1)}%${s.bw > 15 ? "，波动明显放大" : ""}。`]);
@@ -2418,7 +2419,7 @@ function idxStats(code, rows){
   return {last, chg: ret(1), r5: ret(5), r20: ret(20), r60: ret(60), r250: ret(250), mas, rsi, dif: dif[n - 1], dea: dea[n - 1], difPrev: dif[n - 2], deaPrev: dea[n - 2],
     hi250, lo250, dd: (last / hi250 - 1) * 100, fromLow: (last / lo250 - 1) * 100, amt: A[n - 1], amt5: avg(5), amt20: avg(20), amt60: avg(60), useA, sup, res, date: rows[n - 1].d};
 }
-function idxNarrative(st, fp = fmtAxis){
+function idxNarrative(st, fp = fmt2){
   const m = st.mas, out = [];
   const bear = st.last < m[5] && m[5] < m[10] && m[10] < m[20] && m[20] < m[60], bull = st.last > m[5] && m[5] > m[10] && m[10] > m[20] && m[20] > m[60];
   out.push(["趋势", bear ? `均线空头排列（收盘 ${fp(st.last)} < MA5 ${fp(m[5])} < MA10 < MA20 ${fp(m[20])} < MA60 ${fp(m[60])}），短中期趋势向下。`
@@ -2435,7 +2436,7 @@ function idxNarrative(st, fp = fmtAxis){
 const IDX_ORDER = ["sh000001", "sz399001", "sz399006", "sh000688", "bj899050", "sh000300"];
 function renderTechTable(){
   const rows = IDX_ORDER.map(code => { const st = idxStats(code, idxRows(code, 640)), nm = D.idxk[code].name;
-    return `<tr data-idx="${code}" tabindex="0"><td class="l"><b>${esc(nm)}</b></td><td class="num">${fmtAxis(st.last)}</td><td class="num ${cls(st.chg)}">${pct(st.chg, 2)}</td><td class="num ${cls(st.r20)}">${pct(st.r20)}</td><td class="num dn">${st.dd.toFixed(1)}%</td><td class="num">${fmtAxis(st.mas[20])}</td><td class="num">${st.rsi.toFixed(1)}</td><td class="num">${(st.amt / st.amt20).toFixed(2)}</td><td class="num">${st.sup.map(fmtAxis).join(" / ") || "—"}</td><td class="num">${st.res.map(fmtAxis).join(" / ") || "—"}</td></tr>`; }).join("");
+    return `<tr data-idx="${code}" tabindex="0"><td class="l"><b>${esc(nm)}</b></td><td class="num">${fmt2(st.last)}</td><td class="num ${cls(st.chg)}">${pct(st.chg, 2)}</td><td class="num ${cls(st.r20)}">${pct(st.r20)}</td><td class="num dn">${st.dd.toFixed(1)}%</td><td class="num">${fmt2(st.mas[20])}</td><td class="num">${st.rsi.toFixed(1)}</td><td class="num">${(st.amt / st.amt20).toFixed(2)}</td><td class="num">${st.sup.map(fmt2).join(" / ") || "—"}</td><td class="num">${st.res.map(fmt2).join(" / ") || "—"}</td></tr>`; }).join("");
   $("#techTbl").innerHTML = `<thead><tr><th class="l">指数</th><th>收盘</th><th>当日</th><th>20 日</th><th>距一年高点</th><th>MA20</th><th>RSI14</th><th>量比(20日)</th><th>支撑</th><th>压力</th></tr></thead><tbody>${rows}</tbody>`;
 }
 renderTechTable();
@@ -2457,13 +2458,13 @@ function openIndex(code){
   const drawer = $("#drawer"); drawer.classList.add("wide");
   drawer.innerHTML = `
     <div class="dh"><div><span class="eyebrow">指数 · ${LIVE.on ? "实时 " + esc(liveTime()) : esc(st.date) + " 收盘"}</span><h2>${esc(ix.name)}</h2></div><button class="close" id="dClose" aria-label="关闭">×</button></div>
-    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span class="big num" id="ixPrice">${fmtAxis(st.last)}</span><span class="num ${cls(st.chg)}" id="ixChg" style="font-size:16px">${pct(st.chg, 2)}</span>
-      <span class="note">一年高点 ${fmtAxis(st.hi250)} · 回撤 ${st.dd.toFixed(1)}% · 成交额 ${fmtAmt(st.amt)}</span></div>
+    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span class="big num" id="ixPrice">${fmt2(st.last)}</span><span class="num ${cls(st.chg)}" id="ixChg" style="font-size:16px">${pct(st.chg, 2)}</span>
+      <span class="note">一年高点 ${fmt2(st.hi250)} · 回撤 ${st.dd.toFixed(1)}% · 成交额 ${fmtAmt(st.amt)}</span></div>
     <div id="ixPanel"></div>
     <div class="facts">
       <div><small>近 5 日</small><b class="${cls(st.r5)}">${pct(st.r5)}</b></div><div><small>近 20 日</small><b class="${cls(st.r20)}">${pct(st.r20)}</b></div><div><small>近 60 日</small><b class="${cls(st.r60)}">${pct(st.r60)}</b></div>
-      <div><small>RSI14</small><b>${st.rsi.toFixed(1)}</b></div><div><small>MA20 / MA60</small><b>${fmtAxis(st.mas[20])} / ${fmtAxis(st.mas[60])}</b></div><div><small>量比（20 日）</small><b>${(st.amt / st.amt20).toFixed(2)}</b></div>
-      <div><small>数据起点</small><b>${esc(at.first)}</b></div><div><small>历史最高</small><b>${fmtAxis(at.hi)} <span class="mut" style="font-size:12px">${esc(at.hiD)}</span></b></div><div><small>历史最低</small><b>${fmtAxis(at.lo)} <span class="mut" style="font-size:12px">${esc(at.loD)}</span></b></div>
+      <div><small>RSI14</small><b>${st.rsi.toFixed(1)}</b></div><div><small>MA20 / MA60</small><b>${fmt2(st.mas[20])} / ${fmt2(st.mas[60])}</b></div><div><small>量比（20 日）</small><b>${(st.amt / st.amt20).toFixed(2)}</b></div>
+      <div><small>数据起点</small><b>${esc(at.first)}</b></div><div><small>历史最高</small><b>${fmt2(at.hi)} <span class="mut" style="font-size:12px">${esc(at.hiD)}</span></b></div><div><small>历史最低</small><b>${fmt2(at.lo)} <span class="mut" style="font-size:12px">${esc(at.loD)}</span></b></div>
     </div>
     <div class="panel" style="padding:12px 14px"><h3 style="margin-bottom:6px">技术面</h3>${narr.map(([k, v]) => `<p class="tline"><b>${k}</b>${esc(v)}</p>`).join("")}</div>
     <div class="panel" style="padding:12px 14px"><h3 style="margin-bottom:8px">多周期指标：日线 · 周线 · 月线</h3>${tfTable(rows, null)}${tn.map(([k, v]) => `<p class="tline"><b>${k}</b>${esc(v)}</p>`).join("")}</div>
@@ -2474,7 +2475,7 @@ function openIndex(code){
       <div class="ai" id="ixOut">${!IN_CLAUDE && !dsKey() ? aiNoKey() : `<span class="note">${AI_NAME} 会按宏观、政策、资金、技术、板块、情绪六个维度，结合本页数据给出多空逻辑和短中期展望，并标出还缺哪些数据。${AI_QUOTA}</span>`}</div>
     </div>`;
   drawer.hidden = false; $("#scrim").hidden = false; drawer.scrollTop = 0;
-  const levels = [...st.sup.map(v => ({v, kind: "s", label: "支撑 " + fmtAxis(v)})), ...st.res.map(v => ({v, kind: "r", label: "压力 " + fmtAxis(v)}))];
+  const levels = [...st.sup.map(v => ({v, kind: "s", label: "支撑 " + fmt2(v)})), ...st.res.map(v => ({v, kind: "r", label: "压力 " + fmt2(v)}))];
   openState = {type: "index", code, rows};
   const panel = mountPanel($("#ixPanel"), {daily: rows, minute: idxMinute(code), isIndex: true, name: ix.name, levels, minuteNote: LIVE.on ? "正在加载分时…" : "暂无分时数据。"});
   if (LIVE.on) fetchFiveDay(code).then(days => { if (days?.length && activeChart === panel) { lastMin = Date.now(); panel.setMinute(days); } });
@@ -2489,7 +2490,7 @@ function openIndex(code){
       btn.disabled = true; $("#ixStop").hidden = false; $("#ixStop").onclick = () => my.abort(); $("#ixOut").innerHTML = `<span class="note">思考中…</span>`;
       const data = {指数: ix.name, 日期: st.date, 收盘: +st.last.toFixed(2), 当日涨跌pct: +st.chg.toFixed(2), 近5日pct: +st.r5.toFixed(1), 近20日pct: +st.r20.toFixed(1), 近60日pct: +st.r60.toFixed(1),
         均线: Object.fromEntries(Object.entries(st.mas).map(([k, v]) => ["MA" + k, +v.toFixed(1)])), RSI14: +st.rsi.toFixed(1), MACD: {DIF: +st.dif.toFixed(1), DEA: +st.dea.toFixed(1)},
-        一年高点: +st.hi250.toFixed(1), 一年低点: +st.lo250.toFixed(1), 成交额亿: +(st.amt / 1e4).toFixed(0), 量比20日: +(st.amt / st.amt20).toFixed(2), 支撑: st.sup.map(v => +v.toFixed(0)), 压力: st.res.map(v => +v.toFixed(0)),
+        一年高点: +st.hi250.toFixed(2), 一年低点: +st.lo250.toFixed(2), 成交额亿: +(st.amt / 1e4).toFixed(0), 量比20日: +(st.amt / st.amt20).toFixed(2), 支撑: st.sup.map(v => +v.toFixed(2)), 压力: st.res.map(v => +v.toFixed(2)),
         多周期指标: techBrief(rows, null), 历史极值: at, 指数特点: IDX_NOTE[code]};
       const prompt = `你是严谨的A股策略研究员。请基于【${ix.name}，${st.date} 收盘】，按下面框架用中文分析。只使用给出的数据，数据里没有的不要编造，在相应位置写明“还需要：……数据”。
 
@@ -2648,9 +2649,9 @@ function renderGStocks(){
   $("#gBreadth").innerHTML = `<span>上涨 <b class="up">${up}</b></span><span>下跌 <b class="dn">${dn}</b></span><span>平/无报价 <b>${all.length - up - dn}</b></span><span class="note">价格单位：${esc(CUR[cur] || cur || "—")}${cur === "GBp" ? "（英镑的百分之一）" : ""} · ${live ? (LIVE.on ? "实时，每 10 秒刷新" : "快照") : "快照（该市场没有浏览器可直接访问的免费实时行情）"} · 数据时间 ${bjTime(ts)}</span>`;
   const rows = a.slice(0, GV.limit).map(s => {
     const pos = s.h52 > s.l52 && s.p != null ? Math.max(0, Math.min(1, (s.p - s.l52) / (s.h52 - s.l52))) : null;
-    return `<tr data-y="${esc(s.y)}" tabindex="0"><td class="l"><span class="nm">${esc(s.n || s.en)}</span><span class="cd">${esc(s.t)}</span></td><td class="num${flash("s" + s.y, s.p)}">${s.p == null ? "—" : fmtAxis(s.p)}</td><td class="num ${cls(s.pct)}">${pct(s.pct, 2)}</td><td class="num ${cls(s.chg)}">${s.chg == null ? "—" : (s.chg > 0 ? "+" : "") + fmtAxis(s.chg)}</td>
+    return `<tr data-y="${esc(s.y)}" tabindex="0"><td class="l"><span class="nm">${esc(s.n || s.en)}</span><span class="cd">${esc(s.t)}</span></td><td class="num${flash("s" + s.y, s.p)}">${s.p == null ? "—" : fmtP(s.p)}</td><td class="num ${cls(s.pct)}">${pct(s.pct, 2)}</td><td class="num ${cls(s.chg)}">${s.chg == null ? "—" : (s.chg > 0 ? "+" : "") + fmtP(s.chg)}</td>
       <td class="num">${fmtShares(s.vol)}</td><td class="num">${fmtCap(s.mcap)}</td><td class="num">${s.pe > 0 ? f(s.pe, 1) : "—"}</td>
-      <td class="l">${pos == null ? "—" : `<span class="r52" title="52周 ${fmtAxis(s.l52)} – ${fmtAxis(s.h52)}"><span class="num mut">${fmtAxis(s.l52)}</span><span class="r52b"><i style="left:${(pos * 100).toFixed(0)}%"></i></span><span class="num mut">${fmtAxis(s.h52)}</span></span>`}</td><td class="l mut">${esc(s.sec || "—")}</td></tr>`; }).join("");
+      <td class="l">${pos == null ? "—" : `<span class="r52" title="52周 ${fmtP(s.l52)} – ${fmtP(s.h52)}"><span class="num mut">${fmtP(s.l52)}</span><span class="r52b"><i style="left:${(pos * 100).toFixed(0)}%"></i></span><span class="num mut">${fmtP(s.h52)}</span></span>`}</td><td class="l mut">${esc(s.sec || "—")}</td></tr>`; }).join("");
   $("#gsTbl").innerHTML = `<thead><tr>${SCOLS.map(([c, t, al]) => `<th data-sk="${c}" class="${al || ""}${k === c ? " sorted" : ""}" aria-sort="${k === c ? (dir > 0 ? "ascending" : "descending") : "none"}">${t}${k === c ? (dir > 0 ? " ↑" : " ↓") : ""}</th>`).join("")}</tr></thead><tbody>${rows || `<tr><td colspan="${SCOLS.length}" class="l note">没有符合条件的股票。</td></tr>`}</tbody>`;
   $("#gsMore").hidden = a.length <= GV.limit; $("#gsCount").textContent = `共 ${a.length} 只，显示 ${Math.min(a.length, GV.limit)} 只`;
 }
@@ -2760,7 +2761,7 @@ function openGIndex(key){
   gAiButton({kind: "gindex", key, title: ix.n, q: "AI 技术面分析"}, $("#gxAi"), $("#gxStop"), $("#gxOut"), () => {
     const data = {指数: ix.n, 地区: ix.r, 交易所时区: ix.tz, 计价: s.cur, 最新: s.p, 涨跌pct: s.pct == null ? null : +s.pct.toFixed(2), 年初至今pct: s.ytd == null ? null : +s.ytd.toFixed(1), 状态: s.st.t,
       近5日pct: st && +st.r5.toFixed(1), 近20日pct: st && +st.r20.toFixed(1), 近60日pct: st && +st.r60.toFixed(1), 一年高点: st && +st.hi250.toFixed(1), 一年低点: st && +st.lo250.toFixed(1),
-      支撑: st?.sup.map(v => +v.toFixed(0)), 压力: st?.res.map(v => +v.toFixed(0)), 多周期指标: has ? techBrief(gRows(ix), gMonthly(ix)) : null, 历史极值: at};
+      支撑: st?.sup.map(v => +v.toFixed(2)), 压力: st?.res.map(v => +v.toFixed(2)), 多周期指标: has ? techBrief(gRows(ix), gMonthly(ix)) : null, 历史极值: at};
     return `你是严谨的全球市场策略研究员。请用中文分析【${ix.n}】的技术面。只使用给出的数据，数据里没有的宏观、政策、资金信息不要编造，需要时写明“还需要：……数据”。
 按以下结构输出，总长度不超过700字，用小标题和列表：
 ## 一句话结论
@@ -2800,7 +2801,7 @@ function openGStock(y){
   drawer.innerHTML = `
     <div class="dh"><div><span class="eyebrow">${esc(mks.join(" · "))}${s.ex ? " · " + esc(s.ex) : ""}${s.sec ? " · " + esc(s.sec) : ""}</span><h2>${esc(s.n || s.en)} <span class="num mut" style="font-size:15px">${esc(s.t)}</span></h2>
       ${s.en && s.en !== s.n ? `<div class="note">${esc(s.en)}</div>` : ""}</div><button class="close" id="dClose" aria-label="关闭">×</button></div>
-    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span class="big num" id="gsPrice">${s.p == null ? "—" : fmtAxis(s.p)}</span><span class="num ${cls(s.pct)}" id="gsChg" style="font-size:16px">${pct(s.pct, 2)}</span>
+    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span class="big num" id="gsPrice">${s.p == null ? "—" : fmtP(s.p)}</span><span class="num ${cls(s.pct)}" id="gsChg" style="font-size:16px">${pct(s.pct, 2)}</span>
       <span class="note" id="gsTime">${LIVE.on && s.tx ? "实时 " : "快照 "}${bjTime(s.ts)}（北京时间） · ${esc(CUR[s.cur] || s.cur || "")}</span></div>
     <div class="facts" id="gsFacts"></div>
     ${chartable ? `<div id="gsPanel"></div>` : `<p class="note">${s.tx ? "在浏览器里直接打开实时版 HTML，可以查看这只股票上市以来的 K 线、最近五个交易日的分时和技术指标。" : "这个市场没有浏览器可直接访问的免费行情接口，本页只提供快照报价；美股和港股可在实时版里看 K 线和分时。"}</p>`}
@@ -2837,8 +2838,8 @@ function openGStock(y){
 }
 function gStockFacts(s){
   const box = $("#gsFacts"); if (!box) return;
-  box.innerHTML = [["开盘", fmtAxis(s.o)], ["最高", fmtAxis(s.h)], ["最低", fmtAxis(s.l)], ["昨收", fmtAxis(s.prev)], ["成交量", fmtShares(s.vol)], ["成交额", s.amt ? fmtCap(s.amt) : "—"],
-    ["市值", fmtCap(s.mcap)], ["市盈率", s.pe > 0 ? f(s.pe, 1) : "—"], ["52 周最高", fmtAxis(s.h52)], ["52 周最低", fmtAxis(s.l52)], ["货币", CUR[s.cur] || s.cur || "—"], ["代码", s.t]]
+  box.innerHTML = [["开盘", fmtP(s.o)], ["最高", fmtP(s.h)], ["最低", fmtP(s.l)], ["昨收", fmtP(s.prev)], ["成交量", fmtShares(s.vol)], ["成交额", s.amt ? fmtCap(s.amt) : "—"],
+    ["市值", fmtCap(s.mcap)], ["市盈率", s.pe > 0 ? f(s.pe, 1) : "—"], ["52 周最高", fmtP(s.h52)], ["52 周最低", fmtP(s.l52)], ["货币", CUR[s.cur] || s.cur || "—"], ["代码", s.t]]
     .map(([k, v]) => `<div><small>${k}</small><b>${esc(v)}</b></div>`).join("");
 }
 function renderGStockTech(rows){
@@ -2847,7 +2848,7 @@ function renderGStockTech(rows){
   box.hidden = !narr.length; if (!narr.length) return;
   const at = allTime(rows, null);
   box.innerHTML = `<h3 style="margin-bottom:8px">技术指标</h3>${tfTable(rows, null)}${narr.map(([k, v]) => `<p class="tline"><b>${k}</b>${esc(v)}</p>`).join("")}` +
-    (at ? `<p class="note" style="margin:6px 0 0">数据起点 ${esc(at.first)}（前复权），区间最高 ${fmtAxis(at.hi)}（${esc(at.hiD)}），最低 ${fmtAxis(at.lo)}（${esc(at.loD)}）。指标是对历史价格的统计描述，不预示未来走势。</p>` : "");
+    (at ? `<p class="note" style="margin:6px 0 0">数据起点 ${esc(at.first)}（前复权），区间最高 ${fmtP(at.hi)}（${esc(at.hiD)}），最低 ${fmtP(at.lo)}（${esc(at.loD)}）。指标是对历史价格的统计描述，不预示未来走势。</p>` : "");
 }
 
 // ----- 全球视图事件 -----
@@ -3174,7 +3175,7 @@ function updateDrawer(){
     const bar = {d: b[0], o: b[1], c: b[2], h: b[3], l: b[4], v: b[5], a: b[6]};
     if (lr.d === bar.d) Object.assign(lr, bar); else if (bar.d > lr.d) rows.push(bar);
     const ch = (bar.c / rows[rows.length - 2].c - 1) * 100, ip = $("#ixPrice"), ic = $("#ixChg");
-    if (ip) ip.textContent = fmtAxis(bar.c); if (ic) { ic.textContent = pct(ch, 2); ic.className = "num " + cls(ch); }
+    if (ip) ip.textContent = fmt2(bar.c); if (ic) { ic.textContent = pct(ch, 2); ic.className = "num " + cls(ch); }
     activeChart?.refresh();
   }
 }
@@ -3328,7 +3329,7 @@ function gUpdateDrawer(){
   } else if (openState.type === "gstock") {
     const s = G.st[openState.key]; if (!s) return;
     const p = $("#gsPrice"), c = $("#gsChg"), t = $("#gsTime");
-    if (p) p.textContent = s.p == null ? "—" : fmtAxis(s.p); if (c) { c.textContent = pct(s.pct, 2); c.className = "num " + cls(s.pct); }
+    if (p) p.textContent = s.p == null ? "—" : fmtP(s.p); if (c) { c.textContent = pct(s.pct, 2); c.className = "num " + cls(s.pct); }
     if (t) t.textContent = `实时 ${bjTime(s.ts)}（北京时间） · ${CUR[s.cur] || s.cur || ""}`;
     gStockFacts(s);
     if (openState.rows?.length) { gStockBar(s, openState.rows); if (activeChart && activeChart.mode !== "min" && activeChart.mode !== "five") activeChart.refresh(); }
@@ -3750,7 +3751,7 @@ function xgSearchInit(){
     const {a, g} = find(q);
     res.innerHTML = (a.length ? `<div class="xgrh">A 股</div>` + a.map(r => `<button type="button" data-a="${r.code}"><span><b>${esc(r.name)}</b> <span class="cd num">${r.code}</span> <span class="mut">${BOARD[r.board]} · ${esc(r.ind || "")}</span></span><span class="num">${f(r.price)} <span class="${cls(r.chg)}">${pct(r.chg, 2)}</span> ${badge(r.code)}</span></button>`).join("") : "")
       + (g.length ? `<div class="xgrh">全球市场</div>` + g.map(([y, st]) => { const mk = GMK.filter(([m]) => (G.mk[m] || []).includes(y)).map(([, t]) => t).slice(0, 2).join("、");
-          return `<button type="button" data-g="${esc(y)}"><span><b>${esc(st.n || st.en)}</b> <span class="cd num">${esc(st.t)}</span> <span class="mut">${esc(mk)}</span></span><span class="num">${st.p == null ? "—" : fmtAxis(st.p)} <span class="${cls(st.pct)}">${pct(st.pct, 2)}</span></span></button>`; }).join("") : "")
+          return `<button type="button" data-g="${esc(y)}"><span><b>${esc(st.n || st.en)}</b> <span class="cd num">${esc(st.t)}</span> <span class="mut">${esc(mk)}</span></span><span class="num">${st.p == null ? "—" : fmtP(st.p)} <span class="${cls(st.pct)}">${pct(st.pct, 2)}</span></span></button>`; }).join("") : "")
       || `<p class="note" style="margin:8px 10px">没有找到。可以输入代码、名称或拼音首字母，比如 tpjt（拓普集团）、pg（苹果）。</p>`;
     res.hidden = false;
   };
