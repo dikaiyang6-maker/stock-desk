@@ -536,6 +536,14 @@ td.htwhy{white-space:normal;min-width:220px;max-width:380px;line-height:1.45}
 .nwguba li.nwgh{display:block}
 td.nwwhy{white-space:normal;min-width:200px;max-width:360px;font-size:12.5px;color:var(--muted);line-height:1.45;text-align:left}
 .nwh4{margin:14px 0 6px;font-size:13.5px}
+.facts.dealf{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:480px){.facts.dealf{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.dealgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:14px;margin-top:12px}
+@media (max-width:440px){.dealgrid{grid-template-columns:minmax(0,1fr)}}
+.dealgrid h4{margin:0 0 6px;font-size:13.5px}
+.book,.ticks{width:100%;font-size:12.5px}
+.book td,.ticks td,.ticks th{padding:3px 6px}
+.book tr.sep td{padding:0;border-bottom:1px solid var(--muted)}
 </style>
 
 <header>
@@ -1347,6 +1355,7 @@ const f = (v, d = 2) => v == null || isNaN(v) ? "—" : Number(v).toFixed(d);
 const pct = (v, d = 1) => v == null || isNaN(v) ? "—" : (v > 0 ? "+" : "") + Number(v).toFixed(d) + "%";
 const cls = v => v > 0 ? "up" : v < 0 ? "dn" : "";
 const yi = v => v == null ? "—" : Math.abs(v) >= 10000 ? (v / 10000).toFixed(2) + "万亿" : Number(v).toFixed(v >= 100 ? 0 : 1) + "亿";
+const amtYi = v => v == null || !isFinite(v) ? "—" : Math.abs(v) >= 1 ? Number(v).toFixed(2) + "亿" : (v * 1e4).toFixed(2) + "万";   // 成交额（输入亿元）：两位小数，过万亿也写成亿
 function score(r){
   const g = r.np <= 0 || r.npY == null ? 0 : (clamp(r.npY, -50, 200) + 50) / 250 * 100;
   const q = r.roeA == null ? 0 : (clamp(r.roeA, -5, 30) + 5) / 35 * 100;
@@ -1557,7 +1566,7 @@ function renderMarket(){
   const amt = R.reduce((s, r) => s + (r.amt || 0), 0);
   const tot = up + dn + fl;
   $("#breadth").innerHTML = `<i style="width:${up/tot*100}%;background:var(--up)"></i><i style="width:${fl/tot*100}%;background:var(--faint)"></i><i style="width:${dn/tot*100}%;background:var(--dn)"></i>`;
-  $("#breadthKv").innerHTML = `<span>上涨<b class="up">${up}</b></span><span>平盘<b>${fl}</b></span><span>下跌<b class="dn">${dn}</b></span><span>涨停<b class="up">${lu}</b></span><span>跌停<b class="dn">${ld}</b></span><span>中位涨跌<b class="${cls(med)}">${pct(med, 2)}</b></span><span>成交额<b>${(amt/10000).toFixed(2)}万亿</b></span>`;
+  $("#breadthKv").innerHTML = `<span>上涨<b class="up">${up}</b></span><span>平盘<b>${fl}</b></span><span>下跌<b class="dn">${dn}</b></span><span>涨停<b class="up">${lu}</b></span><span>跌停<b class="dn">${ld}</b></span><span>中位涨跌<b class="${cls(med)}">${pct(med, 2)}</b></span><span>成交额<b>${amtYi(amt)}</b></span>`;
   const edges = [-Infinity,-9,-7,-5,-3,-1,0,1,3,5,7,9,Infinity], labels = ["≤-9","-8","-6","-4","-2","-1~0","0~1","+2","+4","+6","+8","≥9"];
   const bins = labels.map(() => 0);
   R.forEach(r => { for (let i = 0; i < 12; i++) if (r.chg > edges[i] && r.chg <= edges[i+1] || (i === 0 && r.chg <= -9)) { bins[i]++; break; } });
@@ -1844,6 +1853,7 @@ function openStock(code){
       <div><small>毛利率</small><b>${f(r.gm, 1)}%</b></div><div><small>评分</small><b>${r.sc} / 100</b></div><div><small>每股经营现金流</small><b class="${r.cfo < 0 ? "dn" : ""}">${f(r.cfo, 2)}</b></div>
       <div><small>涨停价</small><b class="up">${f(r.lu)}</b></div><div><small>跌停价</small><b class="dn">${f(r.ld)}</b></div><div><small>昨收</small><b>${f(r.prev)}</b></div>
     </div>
+    <div class="panel" id="dDeal" style="padding:12px 14px"></div>
     ${chartable ? `<div id="dPanel"></div>` : `<p class="note">本页只缓存了 ${Object.keys(D.sk).length} 只题材股的 K 线和分时。在浏览器里直接打开独立版 HTML（实时行情），可以加载任意股票上市以来的 K 线和最近五个交易日的分时。</p>`}
     <div class="panel" id="dTech" style="padding:12px 14px" hidden></div>
     <div class="panel" id="dCp" style="padding:12px 14px" hidden></div>
@@ -1862,7 +1872,7 @@ function openStock(code){
     </div>`;
   $("#drawer").hidden = false; $("#scrim").hidden = false; $("#drawer").scrollTop = 0;
   openState = {type: "stock", code, rows: srows};
-  flowDrawer(code); hotDrawer(code); nwDrawer(code);
+  flowDrawer(code); hotDrawer(code); nwDrawer(code); renderDeal(code);
   if (chartable) {
     if (srows && LIVE.on) liveStockBar(r, srows);
     const panel = mountPanel($("#dPanel"), {daily: srows || [], monthly: smon, minute: stockMinute(code), name: r.name, isIndex: false,
@@ -1927,8 +1937,10 @@ function niceStep(x){ const p = Math.pow(10, Math.floor(Math.log10(x || 1))); fo
 const fmtAxis = v => v == null || !isFinite(v) ? "—" : Math.abs(v) >= 1000 ? v.toFixed(0) : Math.abs(v) >= 100 ? v.toFixed(1) : v.toFixed(2);
 const fmt2 = v => v == null || !isFinite(v) ? "—" : v.toFixed(2);   // 股价、指数：一律保留两位小数，和行情软件一样
 const fmtP = v => v == null || !isFinite(v) ? "—" : Math.abs(v) < 1 && Math.round(v * 1000) % 10 ? v.toFixed(3) : v.toFixed(2);   // 海外个股：两位小数；港股 1 元以下按 0.005 跳动，有第三位小数时显示三位
-const fmtAmt = v => v == null ? "—" : v >= 1e8 ? (v / 1e8).toFixed(2) + "万亿" : v >= 1e4 ? (v / 1e4).toFixed(v >= 1e6 ? 0 : 1) + "亿" : v.toFixed(0) + "万";   // 输入单位：万元
-const fmtVol = v => v == null ? "—" : v >= 1e8 ? (v / 1e8).toFixed(2) + "亿手" : v >= 1e4 ? (v / 1e4).toFixed(v >= 1e6 ? 0 : 1) + "万手" : v.toFixed(0) + "手";
+const fmtAmt = v => v == null || !isFinite(v) ? "—" : Math.abs(v) >= 1e4 ? (v / 1e4).toFixed(2) + "亿" : v.toFixed(2) + "万";   // 输入单位：万元。成交额两位小数，过万亿也写成亿（如 10248.43亿）
+const fmtAmtC = v => v == null ? "—" : v >= 1e8 ? (v / 1e8).toFixed(2) + "万亿" : v >= 1e4 ? (v / 1e4).toFixed(v >= 1e6 ? 0 : 1) + "亿" : v.toFixed(0) + "万";   // 坐标轴用的短格式
+const fmtVol = v => v == null || !isFinite(v) ? "—" : v >= 1e8 ? (v / 1e8).toFixed(2) + "亿手" : v >= 1e4 ? (v / 1e4).toFixed(2) + "万手" : Math.round(v) + "手";   // 成交量两位小数
+const fmtVolC = v => v == null ? "—" : v >= 1e8 ? (v / 1e8).toFixed(2) + "亿手" : v >= 1e4 ? (v / 1e4).toFixed(v >= 1e6 ? 0 : 1) + "万手" : v.toFixed(0) + "手";   // 坐标轴用的短格式
 function smaArr(a, p){ const out = new Array(a.length).fill(null); let s = 0; for (let i = 0; i < a.length; i++) { s += a[i]; if (i >= p) s -= a[i - p]; if (i >= p - 1) out[i] = s / p; } return out; }
 function emaArr(a, p){ const k = 2 / (p + 1); let e = a[0]; return a.map(x => (e = x * k + e * (1 - k))); }
 function calcInd(rows){
@@ -1962,7 +1974,7 @@ function watchTheme(redraw){
   return () => { mq.removeEventListener("change", redraw); mo.disconnect(); };
 }
 function makeKChart(host, rows, opt = {}){
-  const vfmt = opt.vfmt || fmtVol, fp = opt.pfmt || fmt2;   // 价格（提示、均线、价格坐标）一律两位小数
+  const vfmt = opt.vfmt || fmtVol, vfmtC = vfmt === fmtShares ? fmtSharesC : fmtVolC, fp = opt.pfmt || fmt2;   // 价格（提示、均线、价格坐标）一律两位小数
   let n = rows.length, ind = calcInd(rows), main = opt.main || "ma", subs = (opt.subs || ["vol", "macd"]).slice(0, 3);
   const cv = document.createElement("canvas"), tip = document.createElement("div");
   cv.className = "kcv"; tip.className = "ktip"; tip.hidden = true; host.textContent = ""; host.append(cv, tip);
@@ -2040,9 +2052,9 @@ function makeKChart(host, rows, opt = {}){
       if (P.type === "vol" || P.type === "amt") {
         const key = P.type === "vol" ? "v" : "a"; bars = i => rows[i][key] || 0; barColor = i => rows[i].c >= rows[i].o ? col.up : col.dn; lo = 0; hi = 0;
         for (let i = s; i <= e; i++) hi = Math.max(hi, bars(i));
-        if (P.type === "vol") { series = [[ind.vma[5], col.ma[5]], [ind.vma[10], col.ma[10]]]; fmt = vfmt;
+        if (P.type === "vol") { series = [[ind.vma[5], col.ma[5]], [ind.vma[10], col.ma[10]]]; fmt = vfmtC;
           items = [["成交量 " + vfmt(rows[at].v), col.ink], ["MA5 " + vfmt(ind.vma[5][at]), col.ma[5]], ["MA10 " + vfmt(ind.vma[10][at]), col.ma[10]]]; }
-        else { fmt = fmtAmt; items = [["成交额 " + fmtAmt(rows[at].a), col.ink]]; }
+        else { fmt = fmtAmtC; items = [["成交额 " + fmtAmt(rows[at].a), col.ink]]; }
         hi = hi * 1.1 || 1;
       } else if (P.type === "macd") {
         bars = i => ind.macd.bar[i]; barColor = i => ind.macd.bar[i] >= 0 ? col.up : col.dn; series = [[ind.macd.dif, col.ma[5]], [ind.macd.dea, col.ma[10]]];
@@ -2369,7 +2381,7 @@ async function fetchDailyAll(sym, onPage, kind){
     try { await loadScript(`https://web.ifzq.gtimg.cn/appstock/app/${api}/get?_var=${v}&param=${sym},day,,${end},640,qfq`, 12000); } catch (e) { break; }
     const d = window[v]; try { delete window[v]; } catch (e) { window[v] = undefined; }
     const k = ((d && d.data && d.data[sym]) || {}).qfqday || ((d && d.data && d.data[sym]) || {}).day || [];
-    const rows = k.map(r => ({d: r[0], o: +r[1], c: +r[2], h: +r[3], l: +r[4], v: +r[5] || 0, a: +r[8] || 0})).filter(r => !out.length || r.d < out[0].d);
+    const lot = kind ? 1 : kcbDiv(sym), rows = k.map(r => ({d: r[0], o: +r[1], c: +r[2], h: +r[3], l: +r[4], v: (+r[5] || 0) / lot, a: +r[8] || 0})).filter(r => !out.length || r.d < out[0].d);
     if (!rows.length) break; out = rows.concat(out); onPage?.(out, pg);
     const t = new Date(rows[0].d + "T00:00:00Z"); t.setUTCDate(t.getUTCDate() - 1); end = t.toISOString().slice(0, 10);
   }
@@ -2381,7 +2393,7 @@ async function fetchFiveDay(sym, kind){
   const d = window[v]; try { delete window[v]; } catch (e) { window[v] = undefined; }
   const days = (((d || {}).data || {})[sym] || {}).data; if (!Array.isArray(days)) return null;
   const out = days.map(x => ({d: `${x.date.slice(0, 4)}-${x.date.slice(4, 6)}-${x.date.slice(6)}`, prec: +x.prec || 0,
-    p: (x.data || []).map(s => { const f = s.split(" "); return [+f[0], +f[1], +(f[2] || 0), +(f[3] || 0)]; }).filter(q => q[1] > 0 && (kind || q[0] <= 1500))})).filter(x => x.p.length).sort((a, b) => a.d < b.d ? -1 : 1);
+    p: (x.data || []).map(s => { const f = s.split(" "); return [+f[0], +f[1], +(f[2] || 0) / (kind ? 1 : kcbDiv(sym)), +(f[3] || 0)]; }).filter(q => q[1] > 0 && (kind || q[0] <= 1500))})).filter(x => x.p.length).sort((a, b) => a.d < b.d ? -1 : 1);
   out.forEach((x, i) => { if (!x.prec) x.prec = i ? out[i - 1].p[out[i - 1].p.length - 1][1] : x.p[0][1]; });   // 美股接口不给昨收时用前一日最后价
   return out;
 }
@@ -2490,7 +2502,7 @@ function openIndex(code){
       btn.disabled = true; $("#ixStop").hidden = false; $("#ixStop").onclick = () => my.abort(); $("#ixOut").innerHTML = `<span class="note">思考中…</span>`;
       const data = {指数: ix.name, 日期: st.date, 收盘: +st.last.toFixed(2), 当日涨跌pct: +st.chg.toFixed(2), 近5日pct: +st.r5.toFixed(1), 近20日pct: +st.r20.toFixed(1), 近60日pct: +st.r60.toFixed(1),
         均线: Object.fromEntries(Object.entries(st.mas).map(([k, v]) => ["MA" + k, +v.toFixed(1)])), RSI14: +st.rsi.toFixed(1), MACD: {DIF: +st.dif.toFixed(1), DEA: +st.dea.toFixed(1)},
-        一年高点: +st.hi250.toFixed(2), 一年低点: +st.lo250.toFixed(2), 成交额亿: +(st.amt / 1e4).toFixed(0), 量比20日: +(st.amt / st.amt20).toFixed(2), 支撑: st.sup.map(v => +v.toFixed(2)), 压力: st.res.map(v => +v.toFixed(2)),
+        一年高点: +st.hi250.toFixed(2), 一年低点: +st.lo250.toFixed(2), 成交额亿: +(st.amt / 1e4).toFixed(2), 量比20日: +(st.amt / st.amt20).toFixed(2), 支撑: st.sup.map(v => +v.toFixed(2)), 压力: st.res.map(v => +v.toFixed(2)),
         多周期指标: techBrief(rows, null), 历史极值: at, 指数特点: IDX_NOTE[code]};
       const prompt = `你是严谨的A股策略研究员。请基于【${ix.name}，${st.date} 收盘】，按下面框架用中文分析。只使用给出的数据，数据里没有的不要编造，在相应位置写明“还需要：……数据”。
 
@@ -2628,7 +2640,9 @@ function renderGTable(){
 }
 // ----- 个股表 -----
 const fmtCap = v => v == null || !(v > 0) ? "—" : v >= 1e12 ? (v / 1e12).toFixed(2) + "万亿" : v >= 1e8 ? (v / 1e8).toFixed(v >= 1e10 ? 0 : 1) + "亿" : (v / 1e4).toFixed(0) + "万";
-const fmtShares = v => v == null || !(v > 0) ? "—" : v >= 1e8 ? (v / 1e8).toFixed(2) + "亿股" : v >= 1e4 ? (v / 1e4).toFixed(v >= 1e6 ? 0 : 1) + "万股" : v.toFixed(0) + "股";
+const fmtShares = v => v == null || !(v > 0) ? "—" : v >= 1e8 ? (v / 1e8).toFixed(2) + "亿股" : v >= 1e4 ? (v / 1e4).toFixed(2) + "万股" : Math.round(v) + "股";
+const fmtSharesC = v => v == null || !(v > 0) ? "—" : v >= 1e8 ? (v / 1e8).toFixed(2) + "亿股" : v >= 1e4 ? (v / 1e4).toFixed(v >= 1e6 ? 0 : 1) + "万股" : v.toFixed(0) + "股";
+const fmtYuan = v => v == null || !(v > 0) ? "—" : v >= 1e8 ? (v / 1e8).toFixed(2) + "亿" : v >= 1e4 ? (v / 1e4).toFixed(2) + "万" : v.toFixed(2);   // 海外成交额（当地货币），两位小数
 const SCOLS = [["n", "名称", "l"], ["p", "最新价"], ["pct", "涨跌幅"], ["chg", "涨跌额"], ["vol", "成交量"], ["mcap", "市值"], ["pe", "市盈率"], ["r52", "52周区间", "l"], ["sec", "行业", "l"]];
 function gStocks(){
   const q = GV.q.trim().toLowerCase();
@@ -2838,7 +2852,7 @@ function openGStock(y){
 }
 function gStockFacts(s){
   const box = $("#gsFacts"); if (!box) return;
-  box.innerHTML = [["开盘", fmtP(s.o)], ["最高", fmtP(s.h)], ["最低", fmtP(s.l)], ["昨收", fmtP(s.prev)], ["成交量", fmtShares(s.vol)], ["成交额", s.amt ? fmtCap(s.amt) : "—"],
+  box.innerHTML = [["开盘", fmtP(s.o)], ["最高", fmtP(s.h)], ["最低", fmtP(s.l)], ["昨收", fmtP(s.prev)], ["成交量", fmtShares(s.vol)], ["成交额", fmtYuan(s.amt)],
     ["市值", fmtCap(s.mcap)], ["市盈率", s.pe > 0 ? f(s.pe, 1) : "—"], ["52 周最高", fmtP(s.h52)], ["52 周最低", fmtP(s.l52)], ["货币", CUR[s.cur] || s.cur || "—"], ["代码", s.t]]
     .map(([k, v]) => `<div><small>${k}</small><b>${esc(v)}</b></div>`).join("");
 }
@@ -3127,7 +3141,10 @@ function applyStock(r, q){
   r.mcap = qnum(q[45]) ?? r.mcap; r.amt = (qnum(q[37]) || 0) / 1e4;
   const lu = qnum(q[47]), ld = qnum(q[48]); r.lu = lu > 0 ? lu : null; r.ld = ld > 0 ? ld : null;
   r.tr = qnum(q[38]) ?? r.tr; r.qr = qnum(q[49]) ?? r.qr; r.fmc = qnum(q[44]) ?? r.fmc;
-  r.o = qnum(q[5]) || price; r.h = qnum(q[33]) || price; r.hi = r.h; r.l = qnum(q[34]) || price; r.vol = qnum(q[36]) || 0; r.amtW = qnum(q[37]) || 0; r.qd = qDate(q[30]); r.sc = score(r);
+  const lot = kcbDiv(txSym(r.code));        // 科创板的量是股
+  r.o = qnum(q[5]) || price; r.h = qnum(q[33]) || price; r.hi = r.h; r.l = qnum(q[34]) || price; r.vol = (qnum(q[36]) || 0) / lot; r.amtW = qnum(q[37]) || 0; r.qd = qDate(q[30]); r.sc = score(r);
+  r.wp = (qnum(q[7]) || 0) / lot; r.nb = (qnum(q[8]) || 0) / lot;                                  // 外盘、内盘（手）
+  r.bk = [9, 11, 13, 15, 17].map(i => [qnum(q[i]) || 0, qnum(q[i + 1]) || 0]); r.ak = [19, 21, 23, 25, 27].map(i => [qnum(q[i]) || 0, qnum(q[i + 1]) || 0]);   // 五档：买一到买五、卖一到卖五 [价, 手]（科创板的五档也是手，不用换算）
 }
 function applyIndex(code, q){
   const c = qnum(q[3]), d = qDate(q[30]); if (!c || !d) return;
@@ -3169,6 +3186,7 @@ function updateDrawer(){
     const r = BY.get(openState.code); if (!r) return;
     const p = $("#dPrice"), c = $("#dChg"), tm = $("#dTime");
     if (p) p.textContent = f(r.price); if (c) { c.textContent = pct(r.chg, 2); c.className = "num " + cls(r.chg); } if (tm) tm.textContent = "实时 " + liveTime();
+    renderDeal(openState.code);
     if (openState.rows?.length) { liveStockBar(r, openState.rows); activeChart?.refresh(); }
   } else {
     const kk = D.idxk[openState.code].k, b = kk[kk.length - 1], rows = openState.rows, lr = rows[rows.length - 1];
@@ -3587,7 +3605,7 @@ function renderF(){
   const now = fToday(), series = now.live ? [...SC.emo, now] : SC.emo.map((x, i, a) => i === a.length - 1 ? {...x, ...now, live: false, nx: x.nx, lb: x.lb} : x);
   const e = series.at(-1), P = fPhase(series), zbr = e.zt + e.zb ? e.zb / (e.zt + e.zb) * 100 : 0, amtR = SC.amt20 ? e.amt / SC.amt20 : null;
   box.querySelector(".xgemo").innerHTML = `
-    <div class="kpis"><div><small>全市场成交额</small><b>${yi(e.amt)}</b><span class="${cls((amtR ?? 1) - 1)}">${amtR ? `较 20 日均值 ${pct((amtR - 1) * 100)}` : ""}</span></div>
+    <div class="kpis"><div><small>全市场成交额</small><b>${amtYi(e.amt)}</b><span class="${cls((amtR ?? 1) - 1)}">${amtR ? `较 20 日均值 ${pct((amtR - 1) * 100)}` : ""}</span></div>
       <div><small>上涨 / 下跌</small><b><span class="up">${e.up}</span> / <span class="dn">${e.dn}</span></b><span>跌超 5%：${e.dn5} 只</span></div>
       <div><small>涨停 / 跌停</small><b><span class="up">${e.zt}</span> / <span class="dn">${e.dt}</span></b><span>沪深主板 10%（含 ST），创业板、科创板 20%，北交所 30%</span></div>
       <div><small>连板高度</small><b>${e.lb} 板</b></div><div><small>炸板率</small><b>${zbr.toFixed(0)}%</b><span>炸板 ${e.zb} 只</span></div>
@@ -3595,7 +3613,7 @@ function renderF(){
     <div class="phbox"><span class="phase ph-${P.ph}">${P.ph}</span><span>情绪分 <b>${P.now}</b>（前 3 日平均 ${P.base}，${P.d >= 0 ? "+" : ""}${P.d}）</span>
       <span>对应打法：${PHASE[P.ph][1]}；建议总仓位 <b>${PHASE[P.ph][0]}</b>${P.ph === "退潮" ? "（退潮期建议空仓或轻仓）" : ""}</span></div>
     <div class="tscroll"><table class="tft"><thead><tr><th class="l">日期</th><th>成交额</th><th>上涨</th><th>下跌</th><th>涨停</th><th>跌停</th><th>炸板率</th><th>连板</th><th>昨涨停今均</th><th>情绪分</th></tr></thead><tbody>
-      ${series.slice().reverse().map((x, i) => `<tr class="nohov"><td class="l">${esc(x.d)}${x.live ? " 盘中" : ""}</td><td class="num">${yi(x.amt)}</td><td class="num up">${x.up}</td><td class="num dn">${x.dn}</td><td class="num">${x.zt}</td><td class="num">${x.dt}</td>
+      ${series.slice().reverse().map((x, i) => `<tr class="nohov"><td class="l">${esc(x.d)}${x.live ? " 盘中" : ""}</td><td class="num">${amtYi(x.amt)}</td><td class="num up">${x.up}</td><td class="num dn">${x.dn}</td><td class="num">${x.zt}</td><td class="num">${x.dt}</td>
         <td class="num">${x.zt + x.zb ? (x.zb / (x.zt + x.zb) * 100).toFixed(0) + "%" : "—"}</td><td class="num">${x.lb}</td><td class="num ${cls(x.nx)}">${pct(x.nx, 2)}</td><td class="num">${P.L[P.L.length - 1 - i]}</td></tr>`).join("")}</tbody></table></div>
     <p class="note">日K统计截至 ${esc(SC.techDate)} 收盘（腾讯，前复权），${now.live ? `最后一行是 ${esc(now.d)} 的${LIVE.on ? "实时" : "快照"}行情；` : ""}涨跌停按交易所规则（前收盘 ×（1±涨跌幅）四舍五入到分）判断。情绪分 = 涨停家数 30% + 上涨家数占比 25% + 昨日涨停股今日表现 20% + 封板率 15% + 连板高度 10%；低于 25 为冰点、75 以上为高潮，其余看较前 3 日的变化：明显回升为修复（前期低迷）或发酵，明显回落为退潮。这是规则判断，仅供参考。</p>`;
   const lines = fLines(o); XG.fLines = lines; XG.fPhase = P; XG.fEmo = e;
@@ -4643,7 +4661,7 @@ function renderCpLists(){
     $(note).textContent = `${SC.techDate} 收盘 · 共 ${xs.length} 只 · 按成交额排序`;
     $(el).innerHTML = `<thead><tr><th class="l" style="cursor:default">股票</th><th style="cursor:default">现价</th><th style="cursor:default">涨跌</th><th style="cursor:default">操盘线</th><th style="cursor:default">距操盘线</th><th style="cursor:default">成交额</th><th class="l" style="cursor:default">多空</th></tr></thead><tbody>`
       + (xs.slice(0, 40).map(r => { const t = xTech(r.code), dp = t.cpx ? (r.price / t.cpx - 1) * 100 : null;
-        return `<tr data-code="${r.code}"><td class="l"><span class="nm">${esc(r.name)}</span><span class="cd">${r.code}</span></td><td class="num">${f(r.price)}</td><td class="num ${cls(r.chg)}">${pct(r.chg, 2)}</td><td class="num">${f(t.cpx)}</td><td class="num ${cls(dp)}">${dp == null ? "—" : pct(dp, 1)}</td><td class="num">${yi(r.amt)}</td><td class="l">${cpStateHtml(t.cst)}</td></tr>`; }).join("")
+        return `<tr data-code="${r.code}"><td class="l"><span class="nm">${esc(r.name)}</span><span class="cd">${r.code}</span></td><td class="num">${f(r.price)}</td><td class="num ${cls(r.chg)}">${pct(r.chg, 2)}</td><td class="num">${f(t.cpx)}</td><td class="num ${cls(dp)}">${dp == null ? "—" : pct(dp, 1)}</td><td class="num">${amtYi(r.amt)}</td><td class="l">${cpStateHtml(t.cst)}</td></tr>`; }).join("")
         || `<tr class="nohov"><td colspan="7" class="l note">${SC.techDate} 收盘没有${dir === 1 ? "B" : "S"}点。</td></tr>`) + `</tbody>`;
   };
   one(1, "#cpB", "#cpBNote"); one(-1, "#cpS", "#cpSNote");
@@ -5063,6 +5081,60 @@ function nwInit(){
   nwTick();
 }
 nwInit();
+/* ---------- 个股成交：今开、最高、最低、均价、成交量、成交额、换手、量比、振幅、内外盘、委比，五档盘口、成交明细（腾讯行情） ---------- */
+function kcbDiv(sym){ return /^sh68[89]\d{3}$/.test(sym || "") ? 100 : 1; }     // 科创板个股：腾讯行情的成交量和内外盘、日K、分时的量是股，换算成手要除以 100（指数、五档、成交明细本来就是手）
+const DEAL = {code: null, rows: null, at: 0, busy: false, err: false};
+const nInt = v => v == null || !isFinite(v) ? "—" : Math.round(v).toLocaleString("zh-CN");
+function dealFacts(r){
+  const vol = r.vol, amtY = r.amtW ? r.amtW / 1e4 : r.amt, avg = vol > 0 && amtY > 0 ? amtY * 1e6 / vol : null, h = r.h ?? r.hi;
+  const amp = r.prev && h != null && r.l != null ? (h - r.l) / r.prev * 100 : null;
+  const sb = r.bk ? r.bk.reduce((s, x) => s + (x[1] || 0), 0) : null, sa = r.ak ? r.ak.reduce((s, x) => s + (x[1] || 0), 0) : null;
+  const wb = sb != null && sa != null && sb + sa > 0 ? (sb - sa) / (sb + sa) * 100 : null;
+  const k = (t, v, c = "", tip = "") => `<div${tip ? ` title="${esc(tip)}"` : ""}><small>${t}</small><b class="${c}">${v}</b></div>`;
+  return k("今开", f(r.o), cls((r.o ?? r.prev) - r.prev)) + k("最高", f(h), cls(h - r.prev)) + k("最低", f(r.l), cls(r.l - r.prev)) + k("均价", f(avg), cls((avg ?? r.prev) - r.prev), "成交额 ÷ 成交股数")
+    + k("成交量", vol != null ? `${nInt(vol)} 手` : "—", "", vol != null ? `${nInt(vol * 100)} 股` : "") + k("成交额", amtYi(amtY), "", amtY != null ? `${nInt(amtY * 1e4)} 万元` : "")
+    + k("换手率", r.tr != null ? f(r.tr, 2) + "%" : "—") + k("量比", f(r.qr, 2), "", "当前每分钟平均成交量 ÷ 过去 5 日每分钟平均成交量")
+    + k("振幅", amp != null ? f(amp, 2) + "%" : "—") + k("外盘", r.wp != null ? `${nInt(r.wp)} 手` : "—", "up", "主动买入（按卖出价成交）")
+    + k("内盘", r.nb != null ? `${nInt(r.nb)} 手` : "—", "dn", "主动卖出（按买入价成交）") + k("委比", wb != null ? pct(wb, 2) : "—", cls(wb), "五档买量减卖量，除以两者之和");
+}
+const dealWhy = () => window.claude ? "实时行情才有：claude.ai 不允许网页访问外部行情，在浏览器里打开网页版就有。" : LIVE.on ? "正在获取…" : "连上实时行情后显示。";
+function bookHtml(r){
+  if (!r.ak || !r.bk) return `<p class="note" style="margin:0">${dealWhy()}</p>`;
+  const row = (t, x) => `<tr class="nohov"><td class="l mut">${t}</td><td class="num ${x[0] ? cls(x[0] - r.prev) : ""}">${x[0] ? f(x[0]) : "—"}</td><td class="num">${x[1] ? nInt(x[1]) : "—"}</td></tr>`, cn = "一二三四五";
+  return `<table class="book"><tbody>${[4, 3, 2, 1, 0].map(i => row("卖" + cn[i], r.ak[i])).join("")}<tr class="sep nohov"><td colspan="3"></td></tr>${[0, 1, 2, 3, 4].map(i => row("买" + cn[i], r.bk[i])).join("")}</tbody></table>`;
+}
+function ticksHtml(r){
+  if (!DEAL.rows || DEAL.code !== r.code) return `<p class="note" style="margin:0">${DEAL.err && LIVE.on ? "暂时取不到成交明细，稍后自动重试。" : dealWhy()}</p>`;
+  if (!DEAL.rows.length) return `<p class="note" style="margin:0">今天还没有成交。</p>`;
+  return `<table class="ticks"><thead><tr><th class="l">时间</th><th>价格</th><th>手数</th><th class="l">方向</th></tr></thead><tbody>${DEAL.rows.map(x => `<tr class="nohov"><td class="l num mut">${esc(x.t)}</td><td class="num ${cls(x.p - r.prev)}">${f(x.p)}</td><td class="num">${nInt(x.v)}</td><td class="l ${x.s === "B" ? "up" : x.s === "S" ? "dn" : "mut"}">${x.s === "B" ? "买" : x.s === "S" ? "卖" : "中性"}</td></tr>`).join("")}</tbody></table>`;
+}
+function renderDeal(code){
+  const box = $("#dDeal"), r = BY.get(code); if (!box || !r) return;
+  const live = LIVE.on && r.qd;
+  box.innerHTML = `<div class="phead" style="margin-bottom:8px"><h3>成交</h3><span class="note">${live ? `腾讯行情 · 实时 ${esc(liveTime())}` : `${esc(ASOF)} 数据`}</span></div>
+    <div class="facts dealf">${dealFacts(r)}</div>
+    <div class="dealgrid"><div><h4>五档盘口 <span class="note">单位：手</span></h4>${bookHtml(r)}</div><div><h4>成交明细 <span class="note">最近 20 笔${DEAL.at && DEAL.code === code ? ` · ${new Date(DEAL.at + 8 * 3600e3).toISOString().slice(11, 19)} 更新` : ""}</span></h4>${ticksHtml(r)}</div></div>`;
+}
+async function fetchDeals(code){         // 腾讯逐笔成交：序号/时间/价格/变动/手数/金额/方向（B 主动买、S 主动卖、M 中性）
+  const v = "mx_" + code + "_" + (Date.now() % 1e6);
+  try { await loadScript(`https://web.ifzq.gtimg.cn/appstock/app/dealinfo/getMingxiV2?code=${txSym(code)}&limit=20&direction=1&_var=${v}`, 8000, "utf-8"); } catch (e) { return null; }
+  const d = window[v]; try { delete window[v]; } catch (e) { window[v] = undefined; }
+  const xs = d?.data?.data; if (!Array.isArray(xs)) return null;
+  return xs.map(s => { const f = String(s).split("/"); return {t: f[1] || "", p: +f[2] || 0, v: +f[4] || 0, s: f[6] || ""}; }).filter(x => x.p > 0);
+}
+async function dealTick(){               // 个股详情开着：交易时段每 5 秒取一次成交明细，休市时打开取一次
+  try {
+    const code = openState?.type === "stock" && !$("#drawer").hidden ? openState.code : null;
+    if (code && LIVE.on && !DEAL.busy && !document.hidden && (DEAL.code !== code || (trading() && Date.now() - DEAL.at > 5e3))) {
+      DEAL.busy = true; if (DEAL.code !== code) { DEAL.code = code; DEAL.rows = null; DEAL.at = 0; }
+      const rows = await fetchDeals(code);
+      DEAL.busy = false; DEAL.err = !rows; if (rows) { DEAL.rows = rows; DEAL.at = Date.now(); }
+      if (openState?.code === code && !$("#drawer").hidden) renderDeal(code);
+    }
+  } catch (e) { DEAL.busy = false; }
+  finally { setTimeout(dealTick, 1500); }
+}
+dealTick();
 show((location.hash || "").slice(1) || "market");
 })();
 </script>

@@ -180,6 +180,11 @@ def bj_ms(s):
     return int(dt.datetime(*map(int, m.groups(default="0")), tzinfo=BJ).timestamp() * 1000)
 
 
+def kcb_div(sym):
+    """科创板（688/689）个股：腾讯行情、日K、分时的成交量单位是股，其他 A 股是手。返回换算成手要除的数。指数（sh000688 等）不算。"""
+    return 100 if re.fullmatch(r"sh68[89]\d{3}", sym or "") else 1
+
+
 def tx_daily(sym, kind="newfqkline", count=640, pages=1, adj="qfq"):
     """腾讯日K，按截止日期向前翻页；返回 [[日期, 开, 收, 高, 低, 量, 额], ...]。"""
     out, end = [], ""
@@ -193,7 +198,8 @@ def tx_daily(sym, kind="newfqkline", count=640, pages=1, adj="qfq"):
         k = [r for r in k if not out or r[0] < out[0][0]]
         if not k:
             break
-        out = [[r[0], r2(r[1]), r2(r[2]), r2(r[3]), r2(r[4]), round(num(r[5]) or 0), round(num(r[8]) or 0) if len(r) > 8 else 0] for r in k] + out
+        lot = kcb_div(sym)
+        out = [[r[0], r2(r[1]), r2(r[2]), r2(r[3]), r2(r[4]), round((num(r[5]) or 0) / lot), round(num(r[8]) or 0) if len(r) > 8 else 0] for r in k] + out
         if len(k) < count - 10:
             break
         end = (dt.date.fromisoformat(k[0][0]) - dt.timedelta(days=1)).isoformat()
