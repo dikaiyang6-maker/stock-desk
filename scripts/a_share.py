@@ -2,7 +2,7 @@
 import datetime as dt
 from concurrent.futures import ThreadPoolExecutor
 
-from common import (a_sym, bj_now, get, jget, load, log, merge_bars, num, r2, save, tx_daily, tx_quotes)
+from common import (a_sym, bj_now, get, jget, kcb_div, load, log, merge_bars, num, r2, save, tx_daily, tx_quotes)
 
 MARKETS = ("上交所主板", "深交所主板", "深交所创业板", "上交所科创板", "北京证券交易所", "深交所风险警示板", "上交所风险警示板")
 COLS = "SECURITY_CODE,SECURITY_NAME_ABBR,TRADE_MARKET,SECURITY_TYPE_CODE,BOARD_NAME,TOTAL_OPERATE_INCOME,YSTZ,PARENT_NETPROFIT,SJLTZ,WEIGHTAVG_ROE,XSMLL,MGJYXJJE,REPORTDATE"
@@ -110,14 +110,15 @@ def refresh_market():
         if price <= 0:
             continue                                     # 停牌等无成交
         r = by_date[d][c]; tss.append(f[30])
-        lu, ld = num(f[47]), num(f[48])
+        lu, ld = num(f[47]), num(f[48]); lot = kcb_div(a_sym(c))           # 科创板的量是股，换成手
         rows.append([c, f[1], board(c), r.get("BOARD_NAME") or "", price, num(f[32]) or 0.0, num(f[39]), num(f[46]), round(num(f[45]) or 0, 1),
                      RPT[d[5:]], round((r["TOTAL_OPERATE_INCOME"] or 0) / 1e8, 2), None if r["YSTZ"] is None else round(r["YSTZ"], 1),
                      round((r["PARENT_NETPROFIT"] or 0) / 1e8, 2), None if r["SJLTZ"] is None else round(r["SJLTZ"], 1),
                      None if r["WEIGHTAVG_ROE"] is None else round(r["WEIGHTAVG_ROE"], 2), None if r["XSMLL"] is None else round(r["XSMLL"], 1),
-                     round((num(f[37]) or 0) / 1e4, 2), TAG.get(c, []), 1 if "ST" in f[1] else 0,
+                     round((num(f[37]) or 0) / 1e4, 4), TAG.get(c, []), 1 if "ST" in f[1] else 0,                   # 成交额（亿元），四位小数 = 精确到万元
                      None if r.get("MGJYXJJE") is None else round(r["MGJYXJJE"], 2), num(f[4]), lu if lu and lu > 0 else None, ld if ld and ld > 0 else None,
-                     num(f[33]), num(f[38]), num(f[44]), num(f[72]) if len(f) > 72 else None, num(f[49])])   # 最高、换手率%、流通市值亿、流通股本、量比
+                     num(f[33]), num(f[38]), num(f[44]), num(f[72]) if len(f) > 72 else None, num(f[49]),   # 最高、换手率%、流通市值亿、流通股本、量比
+                     num(f[5]), num(f[34]), *[round((num(f[i]) or 0) / lot) for i in (36, 7, 8)]])                                   # 今开、最低、成交量（手）、外盘（手）、内盘（手）
     prev = len((load("a.json") or {}).get("rows") or [])
     if len(rows) < 0.97 * max(prev, 5000):              # 腾讯限流时会少一大批，不完整就不覆盖上一次的完整行情
         log("market: 行情只拿到", len(rows), "只（上一次", prev, "只），不完整，沿用缓存"); return False
@@ -129,7 +130,7 @@ def refresh_market():
     hist = load("hist.json", {})
     ik = {c: {"name": n, "k": [[r[0], r[2]] for r in (hist.get("idxk", {}).get(c, {}).get("k") or [])[-260:]]} for c, n in IDX.items()}
     asof = f"{ts[:4]}-{ts[4:6]}-{ts[6:8]} {ts[8:10]}:{ts[10:12]}" if len(ts) >= 12 else bj_now().strftime("%Y-%m-%d %H:%M")
-    cols = ["code", "name", "board", "ind", "price", "chg", "pe", "pb", "mcap", "rpt", "rev", "revY", "np", "npY", "roe", "gm", "amt", "tags", "st", "cfo", "prev", "lu", "ld", "hi", "tr", "fmc", "fsh", "qr"]
+    cols = ["code", "name", "board", "ind", "price", "chg", "pe", "pb", "mcap", "rpt", "rev", "revY", "np", "npY", "roe", "gm", "amt", "tags", "st", "cfo", "prev", "lu", "ld", "hi", "tr", "fmc", "fsh", "qr", "o", "l", "vol", "wp", "nb"]
     save("a.json", {"asof": asof, "reports": rep["dates"], "cols": cols, "rows": rows, "themes": list(THEMES), "idx": ik})
     log("market rows", len(rows), "asof", asof)
     return True
@@ -142,13 +143,13 @@ def fiveday(sym, compact=False):
         days = d["data"][sym]["data"]
     except (TypeError, KeyError):
         return []
-    out = []
+    out, lot = [], kcb_div(sym)
     for x in sorted(days, key=lambda z: z["date"]):
         pts = []
         for s in x["data"]:
             f = s.split()
             if len(f) >= 2 and int(f[0]) <= 1500:
-                pts.append([int(f[0]), float(f[1]), float(f[2]) if len(f) > 2 else 0.0, float(f[3]) if len(f) > 3 else None])
+                pts.append([int(f[0]), float(f[1]), float(f[2]) / lot if len(f) > 2 else 0.0, float(f[3]) if len(f) > 3 else None])
         if not pts:
             continue
         day = f'{x["date"][:4]}-{x["date"][4:6]}-{x["date"][6:]}'
@@ -168,10 +169,26 @@ def fiveday(sym, compact=False):
     return out
 
 
+def fix_kcb_units(hist):
+    """科创板个股以前缓存的日K、月K 成交量是股：按 成交额 ÷ 量 算出的均价不到收盘价的 1/20 就除以 100（可以重复运行）。"""
+    n = 0
+    for key in ("sk", "skm"):
+        for c, k in (hist.get(key) or {}).items():
+            if not c.startswith(("688", "689")):
+                continue
+            for r in k:
+                if r[5] and r[6] and r[2] and r[6] * 1e4 / (r[5] * 100) < r[2] / 20:
+                    r[5] = round(r[5] / 100); n += 1
+    if n:
+        log("hist: 科创板缓存的成交量从股换成手", n, "根")
+
+
 def refresh_hist(full_monthly=False):
     """指数：首次拉上市以来全部日K，之后每次补最近 40 根；题材股：保留近 500 根日K（除权时整段重拉）。"""
     hist = load("hist.json", {"idxk": {}, "idxm": {}, "sk": {}})
+    fix_kcb_units(hist)
     extra = load("extra.json", {"skm": {}, "sm": {}})
+    fix_kcb_units(extra)
 
     def idx_one(c):
         old = (hist["idxk"].get(c) or {}).get("k") or []
@@ -211,7 +228,8 @@ def refresh_hist(full_monthly=False):
                 k = k.get("qfqmonth") or k.get("month") or []
             except (TypeError, KeyError):
                 return c, []
-            return c, [[r[0], r2(r[1]), r2(r[2]), r2(r[3]), r2(r[4]), round(num(r[5]) or 0), round(num(r[8]) or 0) if len(r) > 8 else 0] for r in k]
+            lot = kcb_div(a_sym(c))
+            return c, [[r[0], r2(r[1]), r2(r[2]), r2(r[3]), r2(r[4]), round((num(r[5]) or 0) / lot), round(num(r[8]) or 0) if len(r) > 8 else 0] for r in k]
         with ThreadPoolExecutor(6) as ex:
             for c, k in ex.map(month_one, TAG):
                 if k:
