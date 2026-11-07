@@ -16,6 +16,7 @@
 | 富时100、DAX、CAC40、斯托克50、Nifty50 成分股 | 每 6 小时 | Yahoo Finance |
 | 财报（自动选择最新披露期）、两融、北向成交 | 每天 | 东方财富数据中心 |
 | 六维研判、今日市场解读、精选个股点评 | 每个交易日 A 股收盘后（北京 15:37 那一轮，节假日休市不生成） | DeepSeek，依据本页数据和东方财富、新浪财经快讯标题 |
+| A 股盘前分析（市场页指数条下面） | 每个 A 股交易日开盘前（北京 07:33 起多排了几轮，见 `update.yml`），休市日不生成 | DeepSeek，依据运行时现抓的同花顺、东方财富快讯（上一交易日 15:00 以来，周一含周末），全球指数（腾讯），A50、汇率、商品、VIX、费城半导体（新浪），美债收益率（美国财政部）和 A 股收盘数据 |
 | 成分股名单 | 每周 | 维基百科、Nasdaq、FinanceDataReader |
 | 选股（D 型）：研发投入、资产负债率、货币资金、商誉、TTM 营收、未来 90 天解禁、近 180 天大股东和高管减持 | 每天 | 东方财富数据中心 |
 | 选股（D 型）：科技赛道股票的主营产品构成 | 每周 | 东方财富数据中心 |
@@ -90,12 +91,13 @@ export DEEPSEEK_API_KEY=...        # 可选
 python scripts/build.py            # 生成 site/index.html
 FORCE=1 python scripts/build.py    # 全部重新抓取
 ONLY=market,news python scripts/build.py   # 只跑指定任务
+ONLY=premarket python scripts/build.py     # 立刻写一份盘前分析，不看时间和交易日，面向下一个交易日
 ```
 
 ## 目录
 
 - `scripts/build.py`：排程入口，按各任务周期决定刷新什么，任何一项失败都沿用缓存
-- `scripts/a_share.py`、`global_mkt.py`、`lists.py`、`news.py`、`flow.py`、`hot.py`、`ai_commentary.py`、`gen.py`：各数据模块与网页生成
+- `scripts/a_share.py`、`global_mkt.py`、`lists.py`、`news.py`、`flow.py`、`hot.py`、`ai_commentary.py`、`premarket.py`、`gen.py`：各数据模块与网页生成
 - `scripts/scrape.py`：用 Scrapling 抓东方财富和同花顺（模拟浏览器的请求；需要运行 JS 的页面用真实浏览器）
 - `template.html`：网页模板（图表引擎、指标、分时、全球市场、AI 助手）
 - `seed/`：全球指数历史种子，缓存为空且 Yahoo 访问不到时使用
@@ -107,3 +109,4 @@ ONLY=market,news python scripts/build.py   # 只跑指定任务
 - 日本、欧洲、印度、韩国个股没有浏览器可直接访问的免费实时接口，网页里显示最近一次更新的快照。
 - 俄罗斯、泰国、越南指数没有免费历史数据，只有报价。
 - AI 研判由模型自动生成，只引用页面提供的数据和快讯标题，可能有误；请以原始公告和数据为准。
+- 盘前分析的交易日以深交所的交易日历为准。日历抓不到又没有缓存时，那个月按周一到周五算，休市日也可能生成，日志里会写明。
