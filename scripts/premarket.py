@@ -4,7 +4,7 @@
 - 新闻：运行时现抓上一交易日 15:00 以来的同花顺、东方财富快讯。流水线周末不跑，周一盘前全靠这一步拿到周末的新闻；
 - 全球指数：现抓腾讯报价，没有报价的用日K；
 - A50 期货、离岸人民币、美元指数、原油、黄金、VIX、费城半导体：新浪行情；美债收益率：美国财政部每日数据；
-- A 股收盘数据：data/a.json，算法和网页一样；两融和北向成交：data/funds.json；当天披露财报：资讯页的预约披露日历。
+- A 股收盘数据：data/a.json，算法和网页一样；两市成交额对比：data/hist.json；两融和北向成交：data/funds.json；当天披露财报：资讯页的预约披露日历。
 
 交易日以深交所的交易日历为准（data/calendar.json 缓存），休市日不生成。
 新闻是不可信资料：模型没有任何工具，输出只进网页，网页用会转义的 md() 显示；数字和买卖建议再用程序查一遍，不合格的不发布。"""
@@ -244,6 +244,17 @@ def a_share_facts(a):
     return out + ["行业跌幅最大：" + show(ind[:5]), "行业涨幅最大：" + show(ind[-5:][::-1]), "题材（从强到弱）：" + show(th[::-1])]
 
 
+def turnover(day):
+    """到 day 为止最近两个交易日的沪深两市成交额（上证指数 + 深证成指的日K），让模型说放量缩量时有依据。"""
+    k = load("hist.json", {}).get("idxk") or {}
+    try:
+        sh, sz = ([r for r in k[c]["k"] if r[0] <= day][-2:] for c in ("sh000001", "sz399001"))
+        new, old = (sh[1][6] + sz[1][6]) / 1e4, (sh[0][6] + sz[0][6]) / 1e4
+        return [f"沪深两市成交额 {new:.0f} 亿元，前一交易日 {old:.0f} 亿元（{(new / old - 1) * 100:+.1f}%）。"]
+    except (KeyError, IndexError, TypeError, ZeroDivisionError):
+        return []
+
+
 def fund_lines():
     f, out = load("funds.json", {}), []
     m = (f.get("margin") or [{}])[0]
@@ -281,7 +292,7 @@ def gather(now):
     out += [line(over[n]) if n in over else f"{n}：缺失" for n in ("VIX", "费城半导体")]
     if a.get("rows") and asof[:10] <= str(last):                                    # 已经进入今天的竞价或交易时，a.json 不再是收盘数据
         whole = asof[:10] == str(last) and asof[11:] >= "15:00"
-        out += ["", f"【A 股上一交易日（{last}）】" if whole else f"【A 股最近一份行情（截至 {asof}，不是 {last} 的收盘数据）】", *a_share_facts(a)]
+        out += ["", f"【A 股上一交易日（{last}）】" if whole else f"【A 股最近一份行情（截至 {asof}，不是 {last} 的收盘数据）】", *a_share_facts(a), *turnover(asof[:10])]
         if not whole:
             miss.append(f"A 股 {str(last)[5:]} 收盘数据")
     else:
