@@ -408,14 +408,65 @@ WENCAI_HELP = """问财（pywencai）需要你自己的问财登录 cookie，gp 
 cookie 过期后重新复制一次即可。"""
 
 
+WC_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+
+
+def wencai_cookie():
+    """环境变量 WENCAI_COOKIE；连着“cookie:”一起复制、带了换行也能用。"""
+    c = re.sub(r"^\s*cookie\s*:\s*", "", os.environ.get("WENCAI_COOKIE", ""), flags=re.I)
+    return " ".join(c.split()).strip()
+
+
+def _wc_headers(sync_v):
+    """问财 2026 年 6 月升级后，问句接口要带 Referer / Origin，否则 403（pywencai issue #82）。
+    sync_v：把 cookie 里的 v 换成这次生成的 hexin-v，和浏览器发出的一致。"""
+    from pywencai.headers import get_token
+
+    def headers(cookie=None, user_agent=None):
+        t = get_token()
+        ck = cookie or ""
+        if sync_v:
+            ck = re.sub(r"((?:^|;\s*)v=)[^;]*", lambda m: m.group(1) + t, ck, count=1) if re.search(r"(?:^|;\s*)v=", ck) else (ck + "; " if ck else "") + "v=" + t
+        return {"hexin-v": t, "User-Agent": user_agent or WC_UA, "cookie": ck,
+                "Referer": "https://www.iwencai.com/", "Origin": "https://www.iwencai.com"}
+    return headers
+
+
+def wencai_prepare(cookie, query="今日涨停"):
+    """先发一次问句解析请求，挑能用的请求头装进 pywencai。返回 (能不能用, 说明)。说明里只有状态码，没有 cookie。"""
+    import requests
+    import pywencai.wencai as W
+    data = {"add_info": json.dumps({"urp": {"scene": 1, "company": 1, "business": 1}, "contentType": "json", "searchInfo": True}, separators=(",", ":")),
+            "perpage": "10", "page": 1, "source": "Ths_iwencai_Xuangu", "log_info": json.dumps({"input_type": "click"}, separators=(",", ":")),
+            "version": "2.0", "secondary_intent": "stock", "question": query}
+    notes = []
+    for name, sync in (("加 Referer/Origin", False), ("加 Referer/Origin 并同步 v", True)):
+        try:
+            r = requests.post("http://www.iwencai.com/customized/chart/get-robot-data", json=data, timeout=20, headers=_wc_headers(sync)(cookie, WC_UA))
+            j = None
+            try:
+                j = r.json()
+            except ValueError:
+                pass
+            if r.status_code == 200 and isinstance(j, dict) and j.get("data"):
+                W.headers = _wc_headers(sync)                                  # pywencai 的后续请求都用这套请求头
+                return True, f"{name}：HTTP 200"
+            notes.append(f"{name}：HTTP {r.status_code}" + (f"，status_code={j.get('status_code')}，{str(j.get('status_msg') or '')[:30]}" if isinstance(j, dict) else ""))
+        except Exception as e:
+            notes.append(f"{name}：{type(e).__name__}")
+    return False, "；".join(notes)
+
+
 def cmd_wc(a):
-    cookie = re.sub(r"^\s*cookie\s*:\s*", "", os.environ.get("WENCAI_COOKIE", ""), flags=re.I)   # 连着“cookie:”一起复制、带了换行也能用
-    cookie = " ".join(cookie.split()).strip()
+    cookie = wencai_cookie()
     if not cookie:
         raise GpError(WENCAI_HELP)
     import pandas as pd
     import pywencai
-    res = pywencai.get(query=a.query, cookie=cookie, loop=a.all, query_type=a.type)
+    ok, why = wencai_prepare(cookie, a.query)
+    if not ok:
+        raise GpError(f"问财拒绝了请求（{why}）。cookie 可能过期或复制不完整；也可能问财又改了接口。\n" + WENCAI_HELP)
+    res = pywencai.get(query=a.query, cookie=cookie, loop=a.all, query_type=a.type, user_agent=WC_UA)
     if res is None:
         raise GpError("问财没有返回结果：cookie 可能过期了，或者这句问法没有匹配。\n" + WENCAI_HELP)
     if isinstance(res, pd.DataFrame):

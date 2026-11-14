@@ -317,12 +317,15 @@ def _wc_probe(cookie):
 
 
 def wencai():
-    cookie = re.sub(r"^\s*cookie\s*:\s*", "", os.environ.get("WENCAI_COOKIE", ""), flags=re.I)   # 连着“cookie:”一起复制、带了换行也能用
-    cookie = " ".join(cookie.split()).strip()
+    cookie = gp.wencai_cookie()
     if not cookie:
         return {"on": 0}
     import pandas as pd
     import pywencai
+    ok, why = gp.wencai_prepare(cookie, WC_QUERIES[0])                     # 问财升级后要带 Referer/Origin，先挑能用的请求头
+    log("wencai: 请求头检查", why)
+    if not ok:
+        return {"on": 1, "res": [{"q": q, "err": "问财拒绝了请求"} for q in WC_QUERIES], "diag": why + "；" + _wc_probe(cookie).split("；", 1)[-1]}
     out = []
     for q in WC_QUERIES:
         try:
