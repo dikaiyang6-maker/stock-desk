@@ -47,8 +47,29 @@ def main():
         return dict(stats) if stats.get("up_count") or stats.get("down_count") else orig(self, purpose=purpose)
 
     base.DataFetcherManager.get_market_stats = get_market_stats
+    pin_review_date((asof or "")[:10])
     import main as dsa_main
     return dsa_main.main()
+
+
+def pin_review_date(day):
+    """它把“今天”的日期写进提示词。收盘后当天跑没问题；补跑（第二天早上、周末）时把“今天”固定成行情那一天，
+    免得模型把运行日期当成交易日、在复盘里质疑数据。只改它复盘模块里的 datetime，其他地方不动。"""
+    if not day:
+        return
+    import datetime as _dt
+    import src.market_analyzer as ma
+    real = ma.datetime
+    d = _dt.date.fromisoformat(day)
+
+    class Pinned(real):
+        @classmethod
+        def now(cls, tz=None):
+            t = real.now(tz)
+            return t if t.date() == d else t.replace(year=d.year, month=d.month, day=d.day, hour=15, minute=30, second=0, microsecond=0)
+
+    ma.datetime = Pinned
+    logging.getLogger("dsa_run").info("[ReviewDate] 复盘日期固定为行情日 %s", day)
 
 
 if __name__ == "__main__":

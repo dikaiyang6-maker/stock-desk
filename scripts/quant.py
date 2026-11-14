@@ -77,6 +77,8 @@ def review_due(count=False):
     if not d or not os.environ.get("DEEPSEEK_API_KEY"):
         return False
     q = load("quant.json", {})
+    if os.environ.get("FORCE_REVIEW") == "1":                               # 手动运行工作流时可以要求重新生成
+        return True
     if (q.get("review") or {}).get("date") == d:
         return False
     tries = q.get("reviewTry") if (q.get("reviewTry") or {}).get("date") == d else {"date": d, "n": 0}
