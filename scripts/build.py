@@ -9,6 +9,7 @@
     精选名单（规则选股）、资金监控（资金异动选股、监控池、DeepSeek 调查）与 DeepSeek 研判
                                      （A 股收盘后，北京时间 15:30 之后）  每个交易日一次，节假日跳过
     A 股盘前分析（开盘前，北京时间 07:30–10:00，现抓新闻和隔夜行情）   每个交易日一次，休市日跳过
+    量化页（akquant 回测、akshare 机构调研/大宗/龙虎榜/解禁、行情核对、问财）   交易日收盘后一次
     指数完整历史、题材股月K、成分股名单                             每 7 天
 
 环境变量：FORCE=1 全部重跑；ONLY=任务名,任务名 只跑指定任务；DEEPSEEK_API_KEY 可选。"""
@@ -21,7 +22,7 @@ import traceback
 
 sys.path.insert(0, os.path.dirname(__file__))
 from common import DATA, ROOT, close_date, done, due, load, log, save   # noqa: E402
-import a_share, global_mkt, news, ai_commentary, flow, gen, hot, picks, premarket, screen_data   # noqa: E402
+import a_share, global_mkt, news, ai_commentary, flow, gen, hot, lab, picks, premarket, screen_data   # noqa: E402
 
 
 def seed():
@@ -88,6 +89,11 @@ def main():
             results["flow"] = "ok" if flow.refresh_flow() is not False else "kept-previous"
         except Exception as e:
             traceback.print_exc(); results["flow"] = f"failed: {type(e).__name__}"
+    if (not only and lab.lab_due()) or "lab" in only or (not only and os.environ.get("FORCE") == "1"):   # 量化页：交易日收盘后一次（回测要用当天的 B 点和精选名单）
+        try:
+            results["lab"] = "ok" if lab.refresh_lab() is not False else "partial"
+        except Exception as e:
+            traceback.print_exc(); results["lab"] = f"failed: {type(e).__name__}"
     if (not only or "ai" in only) and (ai_due() or os.environ.get("FORCE") == "1" or "ai" in only):
         try:
             results["ai"] = "ok" if ai_commentary.refresh_ai() else "kept-previous"

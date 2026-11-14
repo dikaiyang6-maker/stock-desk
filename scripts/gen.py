@@ -72,6 +72,9 @@ def build():
     hot = load("hot.json", {})
     if hot.get("date"):
         data["hot"] = hot                                         # 热点：同花顺、东方财富（Scrapling 抓取）
+    lab = load("lab.json", {})
+    if lab.get("date"):
+        data["lab"] = lab                                         # 量化：akquant 回测、akshare 数据、行情核对、问财（scripts/lab.py）
     nw = load("news.json", {})
     if nw.get("flash") or nw.get("earn"):
         data["nw"] = {k: nw.get(k) for k in ("t", "flash", "earn", "guba", "lead")}   # 资讯：7×24 快讯（国内/海外）、财报、股吧、龙头

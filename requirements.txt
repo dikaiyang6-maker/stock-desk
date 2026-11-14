@@ -6,3 +6,9 @@ beautifulsoup4>=4.12
 finance-datareader>=0.9.90
 pypinyin
 scrapling[fetchers]==0.5
+# 量化页和命令行 gp 用到的六个开源库（stock-api 是 Node.js 包，在工作流里用 npm 装）
+akshare
+easyquotation
+mootdx
+pywencai
+akquant

@@ -70,6 +70,16 @@ GitHub 的定时任务是“尽力而为”，高峰期可能晚几分钟到几�
 - 点开任意股票，详情里会显示它的相关快讯、业绩和预告、股吧热帖。
 - 全部来自公开接口，不需要登录，不含任何付费软件的数据。
 
+## 量化页
+
+每个交易日收盘后由 `scripts/lab.py` 生成（GitHub Actions 里运行），把下面六个开源库接进网站：
+
+- **akquant 回测**：操盘线 B/S 策略（收盘上穿 13 日 EMA 且 DIF > DEA 次日开盘买入，下破且 DIF < DEA 次日开盘卖出）在宽基 ETF、当天出 B 点的个股（成交额前 30）和精选名单上的近 500 个交易日表现，对比同期买入持有；T+1、整手、佣金印花税过户费和滑点都算进去。点一行看收益曲线。回测代码和终端命令 `gp bt` 是同一份（`tools/gp.py`）。
+- **akshare**：机构调研（近 30 天按机构家数排）、大宗交易（最近交易日按成交额排，带折溢价）、龙虎榜（按净买额排）、限售解禁（未来 30 天按解禁市值排），来自东方财富数据中心。
+- **行情核对**：easyquotation 取新浪全市场行情、stock-api 取几只大盘股，和本站的腾讯行情逐只核对收盘价；mootdx 检查 GitHub 机房能否连上通达信行情服务器。
+- **问财（pywencai）**：默认不跑。在仓库 Settings → Secrets and variables → Actions 添加 `WENCAI_COOKIE`（你自己登录 www.iwencai.com 后复制的 Cookie）后，每天收盘后显示三条预设问句的结果。
+- 页面最下面列出六个库最近一次的运行状态，以及终端命令的安装和用法。
+
 ## 命令行工具 gp（电脑终端和 Claude 新会话都能用）
 
 `tools/gp.py` 把六个开源库包成一组中文命令：[akshare](https://github.com/akfamily/akshare)、[easyquotation](https://github.com/shidenggui/easyquotation)、[mootdx](https://github.com/mootdx/mootdx)、[pywencai](https://github.com/zsrl/pywencai)、[stock-api](https://github.com/zhangxiangliang/stock-api)、[akquant](https://github.com/akfamily/akquant)。
@@ -134,7 +144,7 @@ ONLY=premarket python scripts/build.py     # 立刻写一份盘前分析，不�
 ## 目录
 
 - `scripts/build.py`：排程入口，按各任务周期决定刷新什么，任何一项失败都沿用缓存
-- `scripts/a_share.py`、`global_mkt.py`、`lists.py`、`news.py`、`flow.py`、`hot.py`、`ai_commentary.py`、`premarket.py`、`gen.py`：各数据模块与网页生成
+- `scripts/a_share.py`、`global_mkt.py`、`lists.py`、`news.py`、`flow.py`、`hot.py`、`lab.py`、`ai_commentary.py`、`premarket.py`、`gen.py`：各数据模块与网页生成
 - `scripts/scrape.py`：用 Scrapling 抓东方财富和同花顺（模拟浏览器的请求；需要运行 JS 的页面用真实浏览器）
 - `template.html`：网页模板（图表引擎、指标、分时、全球市场、AI 助手）
 - `tools/gp.py`、`tools/install.sh`、`tools/install.ps1`：命令行工具 gp 和一键安装脚本；`.claude/skills/a-share-gp/`：给 Claude 的使用说明

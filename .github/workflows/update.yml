@@ -17,7 +17,7 @@ on:
         description: "全部重新抓取（1 = 是）"
         default: "0"
       only:
-        description: "只跑这些任务（逗号分隔，如 picks,flow,ai,premarket；留空 = 按时间表）"
+        description: "只跑这些任务（逗号分隔，如 picks,flow,ai,premarket,lab；留空 = 按时间表）"
         default: ""
 
 permissions:
@@ -41,7 +41,10 @@ jobs:
           python-version: "3.12"
           cache: pip
 
-      - run: pip install -r requirements.txt
+      - run: pip install --use-pep517 -r requirements.txt
+
+      - name: 安装 stock-api（Node.js 行情库，量化页用）
+        run: npm install -g --no-audit --no-fund stock-api || echo "stock-api 安装失败，量化页的这一项会标成失败"
 
       - name: 恢复上一次的数据缓存
         uses: actions/cache/restore@v4
@@ -53,6 +56,7 @@ jobs:
       - name: 抓取数据并生成网页
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          WENCAI_COOKIE: ${{ secrets.WENCAI_COOKIE }}     # 可选：你自己的问财 cookie，设了才跑问财预设选股
           FORCE: ${{ github.event.inputs.force || '0' }}
           ONLY: ${{ github.event.inputs.only || '' }}
         run: python scripts/build.py
