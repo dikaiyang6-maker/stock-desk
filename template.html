@@ -5437,9 +5437,10 @@ dealTick();
 /* ---------- 量化工具快照：OpenBB 外部变量、daily_stock_analysis 大盘复盘、工具状态 ---------- */
 function renderQuant(){
   const X = QD?.rates?.length || QD?.idx?.length ? QD : QT, RV = QD?.review || QT?.review;
+  renderTools();
   if (!X && !RV) return;
   const b = QT?.brief;
-  if (b) {
+  if (b && !(D.pm && D.pm.target > b.target)) {      // 和 renderPremarket 同一规则：快照和每天自动生成的盘前分析只显示较新的一份
     $("#qtBriefT").textContent = `盘前分析 · ${b.target.slice(5)} 开盘`;
     $("#qtBriefB").textContent = `AI 生成 · Claude · ${b.built}`;
     $("#qtGlobal").innerHTML = b.tiles.map(x => `<div><small>${esc(x.n)}</small><b>${esc(x.v)}</b><span class="${cls(x.p)}">${pct(x.p, 2)}</span></div>`).join("");
@@ -5473,9 +5474,28 @@ function renderQuant(){
     $("#qtRev").innerHTML = `<p class="qtlead">${esc(r.lead)}</p>${md(r.head)}<details class="archive"><summary>展开完整复盘</summary>${md(r.body)}</details>`;
     $("#qtRevP").hidden = false;
   }
-  if (!QT?.tools) return;
-  $("#qtToolN").textContent = `快照生成于 ${QT.built}（北京时间），不会自动刷新`;
-  $("#qtTools").innerHTML = (QT.tools || []).map(t => `<div><span><b>${esc(t.n)}</b><span class="qtd">${esc(t.d)}</span></span><span class="pill ${t.on ? "qon" : "na"}">${esc(t.s)}</span></div>`).join("");
+}
+/* 量化工具接入：按每天自动运行的结果列出（外部变量、AI 大盘复盘、盘前分析、量化页六个库）；没有自动数据时才用 claude.ai 快照里的列表 */
+function autoTools(){
+  const L = D.lab?.libs || {}, rv = QD?.review, tr = QD?.reviewTry, out = [];
+  if (QD?.rates?.length || QD?.idx?.length) { const err = QD.extErr || [];
+    out.push({n: "OpenBB", on: !err.length, s: err.length ? "部分没取到" : "已接入", d: `外部变量：美债收益率（美联储 H.15）、美股指数和 VIX（雅虎财经），每 4 小时检查一次，最近 ${QD.extT}${err.length ? `；这次没取到：${err.join("、")}，沿用上一次` : ""}`}); }
+  if (rv) { const failed = tr && tr.date > rv.date && tr.n >= 3;
+    out.push({n: "daily_stock_analysis", on: !failed, s: failed ? "最近一次没生成" : "已接入", d: `AI 大盘复盘，模型 ${rv.model}，每个交易日收盘后生成；当前是 ${rv.date} 收盘的复盘${failed ? `，${tr.date} 试了 ${tr.n} 次没生成成功` : ""}`}); }
+  if (D.pm) out.push({n: "盘前分析", on: true, s: "已接入", d: `本站脚本，模型 ${D.pm.model}，每个交易日开盘前生成；当前是 ${D.pm.target} 开盘的分析`});
+  const names = Object.keys(L);
+  if (names.length) { const ok = names.filter(k => L[k].ok === 1), bad = names.filter(k => L[k].ok !== 1);
+    out.push({n: "akshare 等六个库", on: ok.length >= 4, s: `${ok.length}/${names.length} 正常`, d: `回测、数据和行情核对，详见「量化」页${bad.length ? `；${bad.map(k => `${k} ${L[k].ok === 2 ? "部分正常" : L[k].ok == null ? "未启用" : "失败"}`).join("、")}` : ""}`}); }
+  if (!out.length) return null;
+  out.push({n: "ai-hedge-fund", on: false, s: "待配置", d: "需要 Financial Datasets 和模型 API key，配置前没有数据"},
+           {n: "QuantDinger", on: false, s: "待配置", d: "需要在平台里签发 Agent token，配置前没有数据"});
+  return out;
+}
+function renderTools(){
+  const auto = autoTools(), list = auto || QT?.tools;
+  if (!list) return;
+  $("#qtToolN").textContent = auto ? `按 GitHub 上每天自动运行的结果，生成于 ${D.built}（北京时间）` : `快照生成于 ${QT.built}（北京时间），不会自动刷新`;
+  $("#qtTools").innerHTML = list.map(t => `<div><span><b>${esc(t.n)}</b><span class="qtd">${esc(t.d)}</span></span><span class="pill ${t.on ? "qon" : "na"}">${esc(t.s)}</span></div>`).join("");
   $("#qtToolP").hidden = false;
 }
 renderQuant();
