@@ -4907,7 +4907,8 @@ function renderChk(){
 function renderWc(){
   const w = LAB.wc || {on: 0};
   if (!w.on) { $("#wcBox").innerHTML = `<p class="note" style="margin:0">未启用。问财要用登录后的 cookie，所以默认不跑。想在这里看到预设问句（今日涨停按连板排序、近 5 日主力净流入前 20、低估值高 ROE 高增长）的结果：在 GitHub 仓库 Settings → Secrets and variables → Actions 新建 <code>WENCAI_COOKIE</code>，填你自己登录 www.iwencai.com 后复制的 Cookie；下一个交易日收盘后这里就有结果。cookie 只存在 GitHub Secrets 里，网页上看不到。电脑上可以直接用 <code>gp wc "你的问句"</code>。</p>`; return; }
-  $("#wcBox").innerHTML = (w.res || []).map(x => `<div class="labwc"><h4>${esc(x.q)}${x.n ? ` <span class="note">共 ${x.n} 条，显示前 20</span>` : ""}</h4>`
+  $("#wcBox").innerHTML = (w.diag ? `<p class="warn" style="margin:0 0 10px">三条问句都没有结果，问财服务器返回：${esc(w.diag)}。常见原因是 cookie 复制得不完整或已经过期（重新复制后，在 GitHub 仓库 Settings → Secrets 里更新 WENCAI_COOKIE），也可能是问财不接受来自 GitHub 境外服务器的请求。</p>` : "")
+    + (w.res || []).map(x => `<div class="labwc"><h4>${esc(x.q)}${x.n ? ` <span class="note">共 ${x.n} 条，显示前 20</span>` : ""}</h4>`
     + (x.rows ? `<div class="tscroll"><table class="fltop"><thead><tr>${x.cols.map(c => `<th class="l" style="cursor:default">${esc(c)}</th>`).join("")}</tr></thead><tbody>${x.rows.map(r => `<tr class="nohov">${r.map(v => `<td class="l">${esc(v)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>` : `<p class="note" style="margin:0">${esc(x.err || "没有结果")}</p>`) + `</div>`).join("");
 }
 function renderLibs(){

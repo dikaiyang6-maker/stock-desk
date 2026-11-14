@@ -283,6 +283,31 @@ def chk_tdx(tx):
 
 
 # ---------- pywencai ----------
+WC_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+
+
+def _wc_probe(cookie):
+    """问句都失败时，自己发一次和 pywencai 一样的“问句解析”请求，记下问财返回的状态（只记状态码和提示，不记 cookie）。"""
+    import requests
+    from pywencai.headers import get_token
+    data = {"add_info": "{\"urp\":{\"scene\":1,\"company\":1,\"business\":1},\"contentType\":\"json\",\"searchInfo\":true}", "perpage": "10", "page": 1,
+            "source": "Ths_iwencai_Xuangu", "log_info": "{\"input_type\":\"click\"}", "version": "2.0", "secondary_intent": "stock", "question": WC_QUERIES[0]}
+    try:
+        r = requests.post("http://www.iwencai.com/customized/chart/get-robot-data", json=data, timeout=20,
+                          headers={"hexin-v": get_token(), "User-Agent": WC_UA, "cookie": cookie})
+        info = f"HTTP {r.status_code}"
+        try:
+            j = r.json()
+            if isinstance(j, dict):
+                info += f"，status_code={j.get('status_code')}，{str(j.get('status_msg') or '')[:40]}"
+        except ValueError:
+            m = re.search(r"<title>(.*?)</title>", r.text, re.S)
+            info += f"，{(m.group(1).strip() if m else r.text.strip()[:40])[:40]}"
+        return info
+    except Exception as e:
+        return f"{type(e).__name__}: {str(e)[:80]}"
+
+
 def wencai():
     cookie = re.sub(r"^\s*cookie\s*:\s*", "", os.environ.get("WENCAI_COOKIE", ""), flags=re.I)   # 连着“cookie:”一起复制、带了换行也能用
     cookie = " ".join(cookie.split()).strip()
@@ -293,7 +318,7 @@ def wencai():
     out = []
     for q in WC_QUERIES:
         try:
-            df = pywencai.get(query=q, cookie=cookie, loop=False)
+            df = pywencai.get(query=q, cookie=cookie, loop=False, user_agent=WC_UA, retry=3, sleep=1, request_params={"timeout": 20})
             if isinstance(df, dict):
                 df = next((v for v in df.values() if isinstance(v, pd.DataFrame)), None)
             if not isinstance(df, pd.DataFrame) or not len(df):
@@ -302,9 +327,13 @@ def wencai():
             rows = [[("" if v is None else str(v))[:24] for v in r] for r in df[cols].head(20).values.tolist()]
             out.append({"q": q, "cols": [re.sub(r"\[\d{8}\]", "", str(c)) for c in cols], "rows": rows, "n": len(df)})
         except Exception as e:
-            out.append({"q": q, "err": f"{type(e).__name__}: {str(e)[:80]}"})
+            out.append({"q": q, "err": "问财没有返回结果" if "NoneType" in str(e) else f"{type(e).__name__}: {str(e)[:80]}"})
         time.sleep(2)
-    return {"on": 1, "res": out}
+    res = {"on": 1, "res": out}
+    if not any("rows" in x for x in out):
+        res["diag"] = _wc_probe(cookie)
+        log("wencai: 问句都没有结果，问财返回：", res["diag"])
+    return res
 
 
 def refresh_lab():
@@ -361,7 +390,7 @@ def refresh_lab():
             w = {"on": 0}
         lab["wc"] = w
         stat("pywencai", None if not w["on"] else 1 if any("rows" in x for x in w["res"]) else 0,
-             "未启用：仓库 Secrets 里没有 WENCAI_COOKIE" if not w["on"] else f"{sum(1 for x in w['res'] if 'rows' in x)}/{len(w['res'])} 条问句有结果")
+             "未启用：仓库 Secrets 里没有 WENCAI_COOKIE" if not w["on"] else f"{sum(1 for x in w['res'] if 'rows' in x)}/{len(w['res'])} 条问句有结果" + (f"；问财返回 {w['diag']}" if w.get("diag") else ""))
     except Exception as e:
         stat("pywencai", 0, f"{type(e).__name__}: {str(e)[:80]}")
     save("lab.json", lab)
