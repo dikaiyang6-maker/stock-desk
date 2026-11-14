@@ -535,7 +535,8 @@ def backtest(df, sym, strategy="cpx", cash=1000000.0, start_idx=34, quiet=True):
             h = logging.StreamHandler(sys.stderr)
             h.setLevel(logging.WARNING)
             lg.addHandler(h)
-        lg.setLevel(logging.WARNING)
+        if lg.level < logging.WARNING:
+            lg.setLevel(logging.WARNING)
     close_all = df["close"].astype(float).tolist()
     start_idx = max(0, min(start_idx, len(close_all) - 5))
     if len(close_all) - start_idx < 5 or (strategy != "hold" and len(close_all) < 40):
@@ -545,7 +546,7 @@ def backtest(df, sym, strategy="cpx", cash=1000000.0, start_idx=34, quiet=True):
     close = close_all[start_idx:]
     sig = sig_all[start_idx:] if sig_all else [1] + [0] * (len(close) - 1)
     lot = lot_of(sym)
-    if close[-1] * lot > cash * 0.985:
+    if close[-1] * 1.05 * lot > cash * 0.995:
         raise GpError(f"资金 {cash:,.0f} 买不起一手（最新价 {close[-1]:.2f} × {lot} 股），用 --cash 调大，例如 --cash {math.ceil(close[-1] * lot * 5 / 1e4) * 1e4:.0f}")
     by_day = dict(zip(dfe["date"].astype(str).str[:10], sig))
 
@@ -553,8 +554,8 @@ def backtest(df, sym, strategy="cpx", cash=1000000.0, start_idx=34, quiet=True):
         def on_bar(self, bar):
             s = by_day.get(str(bar.timestamp_iso)[:10], 0)
             pos = self.get_position(bar.symbol)
-            if s == 1 and pos == 0:
-                q = int(self.cash * 0.985 / bar.close / 100) * 100
+            if s == 1 and pos == 0:                                       # 次日开盘才成交：按收盘价预留 5% 高开空间算股数，免得高开时资金不够被拒单
+                q = int(self.cash * 0.995 / (bar.close * 1.05) / 100) * 100
                 if q >= lot:
                     self.buy(symbol=bar.symbol, quantity=q)
             elif s == -1 and pos > 0:

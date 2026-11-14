@@ -393,6 +393,19 @@ tbody tr.greg:hover{background:var(--bg)}
 .cpsig.b{background:var(--up)} .cpsig.s{background:var(--dn)}
 .cpst{font-size:13px;margin:0 0 8px;color:var(--muted)}
 .cpst b{color:var(--ink);font-family:var(--f-num)}
+/* 量化 */
+.btchart{margin-top:12px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);padding:10px 12px}
+.btchart svg{display:block;width:100%;height:auto}
+.btchart .lg{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;font-size:12.5px;margin-bottom:6px}
+.btchart .lg i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:4px}
+#btTbl tr.sel td{background:var(--accent-soft)}
+#btTbl th[data-k]{cursor:pointer}
+.labst{font-size:12px;font-weight:600;padding:1px 8px;border-radius:999px;white-space:nowrap}
+.labst.ok{background:var(--dn-soft);color:var(--dn)} .labst.no{background:var(--up-soft);color:var(--up)} .labst.off{background:var(--sunk);color:var(--muted)} .labst.part{background:var(--warn-soft);color:var(--warn)}
+.labcmd{display:flex;gap:8px;align-items:center;margin:6px 0}
+.labcmd code{flex:1;min-width:0;overflow-x:auto;white-space:nowrap;font:12.5px/1.6 var(--f-num);background:var(--sunk);border:1px solid var(--line);border-radius:4px;padding:6px 10px}
+.labwc{margin:0 0 12px}
+.labwc h4{margin:0 0 6px;font-size:13px}
 /* 资金监控 */
 .falerts{display:grid;gap:8px}
 .falerts:empty{display:none}
@@ -581,6 +594,7 @@ td.nwwhy{white-space:normal;min-width:200px;max-width:360px;font-size:12.5px;col
       <button role="tab" data-v="hot">热点</button>
       <button role="tab" data-v="news">资讯</button>
       <button role="tab" data-v="cp">操盘</button>
+      <button role="tab" data-v="lab">量化</button>
       <button role="tab" data-v="tools">仓位工具</button>
       <button role="tab" data-v="zmz">章盟主视角</button>
       <button role="tab" data-v="watch">自选</button>
@@ -1172,6 +1186,43 @@ td.nwwhy{white-space:normal;min-width:200px;max-width:360px;font-size:12.5px;col
       </ol>
     </details>
   </section>
+  <section class="view" id="v-lab" hidden>
+    <div class="panel">
+      <div class="phead"><h2>量化</h2><span class="note" id="labMeta"></span></div>
+      <p class="note" style="margin:0">接入六个开源库：<b>akquant</b>（回测引擎）、<b>akshare</b>（东方财富数据中心）、<b>easyquotation</b>（新浪行情）、<b>stock-api</b>（Node.js 行情）、<b>mootdx</b>（通达信）、<b>pywencai</b>（问财）。每个交易日收盘后在 GitHub 上跑一次；同一套工具在电脑终端也能用（命令 <code>gp</code>，见本页最下面）。<b class="dn">回测是用历史数据模拟，不预示未来，也不构成投资建议。</b></p>
+      <p class="warn" id="labEmpty" hidden style="margin:10px 0 0">量化数据还没生成：下一个交易日收盘后自动生成。</p>
+    </div>
+    <div class="panel" id="btWrap">
+      <div class="phead"><h3>操盘线 B/S 策略回测（akquant）</h3><span class="note" id="btNote"></span></div>
+      <div class="cctl" style="margin-bottom:10px"><span class="cg" id="btGrp" role="group" aria-label="回测范围"></span></div>
+      <div class="kpis" id="btKpi"></div>
+      <div class="tscroll" style="margin-top:10px"><table class="fltop" id="btTbl"></table></div>
+      <div class="btchart" id="btChart" hidden></div>
+      <p class="note" style="margin:10px 0 0" id="btRule"></p>
+    </div>
+    <div class="panel" id="akWrap">
+      <div class="phead"><h3>市场数据（akshare · 东方财富数据中心）</h3><span class="note" id="akNote"></span></div>
+      <div class="ctabs" id="akTabs" role="tablist"></div>
+      <div class="tscroll" style="margin-top:8px"><table class="fltop" id="akTbl"></table></div>
+    </div>
+    <div class="grid2">
+      <div class="panel"><div class="phead"><h3>行情核对</h3><span class="note" id="chkNote"></span></div><div id="chkBox"></div></div>
+      <div class="panel"><div class="phead"><h3>问财选股（pywencai）</h3></div><div id="wcBox"></div></div>
+    </div>
+    <div class="panel">
+      <div class="phead"><h3>六个库的运行状态</h3><span class="note" id="libNote"></span></div>
+      <div class="tscroll"><table class="fltop" id="libTbl"></table></div>
+    </div>
+    <div class="panel">
+      <div class="phead"><h3>在电脑终端和 Claude 新会话里用</h3><span class="note">命令 gp，源码在 stock-desk 仓库的 tools/gp.py</span></div>
+      <p class="note" style="margin:0 0 4px">Mac / Linux（终端）一键安装，需要 Python 3.11+（装了 Node.js 会顺带装 stock-api；装在独立的 ~/.stock-tools 里，约 900 MB，重复运行就是升级）：</p>
+      <div class="labcmd"><code id="labSh">curl -fsSL https://raw.githubusercontent.com/dikaiyang6-maker/stock-desk/main/tools/install.sh | bash</code><button class="btn" data-copy="labSh">复制</button></div>
+      <p class="note" style="margin:8px 0 4px">Windows（PowerShell）：</p>
+      <div class="labcmd"><code id="labPs">irm https://raw.githubusercontent.com/dikaiyang6-maker/stock-desk/main/tools/install.ps1 | iex</code><button class="btn" data-copy="labPs">复制</button></div>
+      <div class="tscroll" style="margin-top:12px"><table class="fltop" id="labCmds"></table></div>
+      <p class="note" style="margin:10px 0 0">代码可以写 600519、sh600519、名称或拼音首字母；指数带前缀（sh000001 上证指数）；每个命令加 <code>--json</code> 输出 JSON。<b>Claude 新会话</b>：仓库里的 .claude/skills/a-share-gp 是给 Claude 的使用说明，打开 stock-desk 仓库的会话会自动加载，电脑上的安装脚本发现装了 Claude Code 也会把它装上；直接说“用 gp 查一下 600519 的五档”“回测一下宁德时代的操盘线”即可。mootdx 要直连通达信服务器（TCP 7709），只能在自己电脑上用；问财要用你自己登录后的 cookie（环境变量 WENCAI_COOKIE），不要发给别人。</p>
+    </div>
+  </section>
   <section class="view" id="v-tools" hidden>
     <div class="grid2">
       <div class="panel tool">
@@ -1537,7 +1588,7 @@ function stockMinute(code){
 const idxMinute = code => (D.idxm?.[code] || []).map(x => ({d: x.d, prec: x.prec, p: x.p}));
 
 /* ---------- tabs ---------- */
-const VIEWS = ["market","global","research","picks","screen","xg","flow","hot","news","cp","tools","zmz","watch","ai"];
+const VIEWS = ["market","global","research","picks","screen","xg","flow","hot","news","cp","lab","tools","zmz","watch","ai"];
 function show(v){
   if (!VIEWS.includes(v)) v = "market";
   VIEWS.forEach(x => { document.getElementById("v-" + x).hidden = x !== v; });
@@ -1549,6 +1600,7 @@ function show(v){
   if (v === "flow") { renderFlow(); FLV.liveAt = 0; }
   if (v === "hot") { renderHot(); HTV.liveAt = 0; }
   if (v === "cp") renderCp();
+  if (v === "lab") renderLab();
   if (v === "news") { renderNews(); NWV.liveAt = 0; HTV.liveAt = 0; }
   if (v === "ai") resumeChat();
   if (v === "global") { renderGlobal(); gStockTickSoon(); }
@@ -4721,6 +4773,138 @@ function renderCp(){
   if (!st.hidden) st.textContent = `信号按 ${SC.techDate} 收盘计算，当前行情已是更新的交易日；下一个交易日收盘后自动重算。打开个股看到的是实时日K算出的操盘线和信号。`;
   renderCpIdx(); renderCpLists(); renderCpStat();
 }
+// ---- 量化：六个开源库（scripts/lab.py 每个交易日收盘后生成 D.lab）。回测和终端命令 gp bt 用同一份代码（tools/gp.py）----
+const LAB = D.lab || null;
+const LBV = {g: "etf", sort: null, sel: null, ak: "jgdy"};
+const LAB_LIBS = [
+  ["akquant", "https://github.com/akfamily/akquant", "回测引擎：操盘线 B/S 策略回测（次日开盘成交、T+1、手续费、整手）"],
+  ["akshare", "https://github.com/akfamily/akshare", "机构调研、大宗交易、龙虎榜、限售解禁（东方财富数据中心）"],
+  ["easyquotation", "https://github.com/shidenggui/easyquotation", "新浪全市场行情，和本站的腾讯行情逐只核对收盘价"],
+  ["stock-api", "https://github.com/zhangxiangliang/stock-api", "Node.js 行情库：取几只大盘股的行情核对"],
+  ["mootdx", "https://github.com/mootdx/mootdx", "通达信行情（要能直连 TCP 7709）"],
+  ["pywencai", "https://github.com/zsrl/pywencai", "问财自然语言选股（要你自己的问财 cookie）"]];
+const LAB_CMDS = [["gp q 600519 300750 sh000001 --book", "实时行情和五档（easyquotation）"], ["gp k 600519 -n 60", "日K，前复权（akshare；--src tdx 走通达信）"],
+  ["gp zt / gp zt --kind zb", "涨停池 / 炸板 / 跌停 / 强势股（akshare）"], ["gp lhb", "龙虎榜，按净买额排序（akshare）"],
+  ["gp bt 600519 --trades", "操盘线 B/S 回测，对比买入持有（akquant；--strategy ma 均线 5/20）"], ["gp js 宁德", "行情 / 搜索 / 日K（stock-api）"],
+  ["gp tdx 600519 --ticks", "通达信行情、分笔（mootdx，电脑上用）"], ["gp wc \"今日涨停，非ST\"", "问财选股（pywencai，要 WENCAI_COOKIE）"],
+  ["gp ak --search 解禁", "找 / 直接调用任意 akshare 函数"], ["gp doctor", "体检：库是否装好、数据源能否连通"]];
+const labYuan = v => v == null || !isFinite(v) ? "—" : (v < 0 ? "-" : "") + (Math.abs(v) >= 1e8 ? (Math.abs(v) / 1e8).toFixed(2) + "亿" : Math.abs(v) >= 1e4 ? (Math.abs(v) / 1e4).toFixed(2) + "万" : Math.abs(v).toFixed(2));
+const labPx = (v, sym) => v == null ? "—" : Number(v).toFixed(/^(sh5\d|sz1[5-8])/.test(sym || "") ? 3 : 2);
+const labStock = (code, name) => `<span class="nm">${esc(name || code)}</span><span class="cd">${esc(code)}</span>`;
+function labRows(g){
+  const bt = LAB && LAB.bt; if (!bt || !bt[g]) return [];
+  const C = bt.cols, rows = bt[g].map(r => Object.fromEntries(C.map((c, i) => [c, r[i]])));
+  rows.forEach(r => { r.ex = r.ret != null && r.hold != null ? r.ret - r.hold : null; r.code = (r.sym || "").slice(2); });
+  if (LBV.sort) { const [k, dir] = LBV.sort; rows.sort((a, b) => ((a[k] ?? -1e9) - (b[k] ?? -1e9)) * dir); }
+  else if (g !== "etf") rows.sort((a, b) => (b.ret ?? -1e9) - (a.ret ?? -1e9));
+  return rows;
+}
+function renderBt(){
+  const bt = LAB.bt, gs = [["etf", "宽基 ETF"], ["bs", "今日 B 点个股"], ["pk", "精选名单"]].filter(([g]) => (bt[g] || []).length);
+  if (!gs.some(([g]) => g === LBV.g)) LBV.g = gs.length ? gs[0][0] : "etf";
+  $("#btGrp").innerHTML = gs.map(([g, t]) => `<button class="chip2" data-g="${g}" aria-pressed="${g === LBV.g}">${t} · ${bt[g].length}</button>`).join("");
+  const rows = labRows(LBV.g), n = rows.length;
+  if (!n) { $("#btTbl").innerHTML = ""; $("#btKpi").innerHTML = ""; $("#btChart").hidden = true; return; }
+  const avg = k => rows.reduce((s, r) => s + (r[k] || 0), 0) / n, beat = rows.filter(r => r.ex > 0).length, r0 = rows[0];
+  const k = (t, v, sub, c = "") => `<div><small>${t}</small><b class="${c}">${v}</b><span class="mut">${sub}</span></div>`;
+  $("#btKpi").innerHTML = k("回测标的", `${n} 个`, `${r0.d0} ~ ${r0.d1}`) + k("策略平均收益", pct(avg("ret"), 2), "扣除手续费", cls(avg("ret")))
+    + k("同期买入持有", pct(avg("hold"), 2), "平均", cls(avg("hold"))) + k("跑赢买入持有", `${beat} / ${n}`, `${Math.round(beat / n * 100)}%`)
+    + k("平均最大回撤", pct(-avg("mdd"), 2), "策略", "dn") + k("平均交易次数", avg("n").toFixed(1), `平均胜率 ${avg("win").toFixed(0)}%`);
+  const H = [["标的", null], ["策略收益", "ret"], ["买入持有", "hold"], ["超额", "ex"], ["年化", "ann"], ["最大回撤", "mdd"], ["夏普", "sharpe"], ["交易次数", "n"], ["胜率", "win"], ["当前", "pos"], ["最近信号", null]];
+  const arrow = key => LBV.sort && LBV.sort[0] === key ? (LBV.sort[1] > 0 ? " ↑" : " ↓") : "";
+  $("#btTbl").innerHTML = `<thead><tr>${H.map(([t, key], i) => `<th class="${i === 0 || i === 10 ? "l" : ""}"${key ? ` data-k="${key}"` : ` style="cursor:default"`}>${t}${key ? arrow(key) : ""}</th>`).join("")}</tr></thead><tbody>`
+    + rows.map(r => `<tr data-sym="${esc(r.sym)}" class="${r.sym === LBV.sel ? "sel" : ""}"><td class="l">${labStock(r.code, r.name)}</td>
+      <td class="num ${cls(r.ret)}">${pct(r.ret, 2)}</td><td class="num ${cls(r.hold)}">${pct(r.hold, 2)}</td><td class="num ${cls(r.ex)}">${pct(r.ex, 2)}</td>
+      <td class="num ${cls(r.ann)}">${pct(r.ann, 2)}</td><td class="num dn">${r.mdd == null ? "—" : "-" + Number(r.mdd).toFixed(2) + "%"}</td><td class="num">${f(r.sharpe)}</td>
+      <td class="num">${r.n}</td><td class="num">${r.n ? Number(r.win).toFixed(0) + "%" : "—"}</td><td>${r.pos ? `<span class="cpb b">持仓</span>` : `<span class="cpb z">空仓</span>`}</td>
+      <td class="l">${r.today ? `<b class="${r.today === 1 ? "up" : "dn"}">今日 ${r.today === 1 ? "B" : "S"} 点</b>` : r.lastD ? `${cpBS(r.lastS)} <span class="num mut">${r.lastD.slice(5)}</span>` : "—"}</td></tr>`).join("") + `</tbody>`;
+  const note = {etf: "宽基 ETF，近 500 个交易日", bs: `${bt.bsDate || ""} 收盘出 B 点、成交额前 30 的个股，看这条规则在它们过去两年的表现（选样有幸存者偏差）`, pk: "精选名单里的个股，近 500 个交易日"}[LBV.g];
+  $("#btNote").textContent = `${note} · 点表头排序，点一行看收益曲线`;
+  const sel = rows.find(r => r.sym === LBV.sel) || null, box = $("#btChart");
+  box.hidden = !sel; if (sel) box.innerHTML = btChart(sel, Math.max(300, box.clientWidth - 26));
+}
+function btChart(r, W){
+  const H = W < 560 ? 190 : 240, L = 46, Rr = 10, T = 10, B = 24, cs = r.cs || [], ch = r.ch || [], n = Math.max(cs.length, 2);
+  const vals = [...cs, ...ch].map(v => v / 10 - 100), lo = Math.min(0, ...vals), hi = Math.max(0, ...vals), pad = (hi - lo) * 0.08 || 1;
+  const x = i => L + i / (n - 1) * (W - L - Rr), y = v => T + (1 - (v - lo + pad) / (hi - lo + pad * 2)) * (H - T - B);
+  const line = (arr, col, w) => `<polyline points="${arr.map((v, i) => x(i).toFixed(1) + "," + y(v / 10 - 100).toFixed(1)).join(" ")}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linejoin="round"/>`;
+  let grid = "", step = (hi - lo) / 4 || 1; const mag = Math.pow(10, Math.floor(Math.log10(step))); step = Math.ceil(step / mag) * mag;
+  for (let v = Math.ceil((lo - pad) / step) * step; v <= hi + pad; v += step) grid += `<line x1="${L}" x2="${W - Rr}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="var(--line)" stroke-width="${Math.abs(v) < 1e-9 ? 1.4 : .8}"/><text x="${L - 6}" y="${(y(v) + 4).toFixed(1)}" font-size="11" fill="var(--muted)" text-anchor="end">${v > 0 ? "+" : ""}${+v.toFixed(1)}%</text>`;
+  const last = a => a.length ? a[a.length - 1] / 10 - 100 : null, sc = last(cs), hc = last(ch);
+  const code = r.code, open = BY.has(code) ? ` · <button class="btn" data-open="${code}" style="padding:2px 10px">打开个股</button>` : "";
+  return `<div class="lg"><b>${esc(r.name)}</b><span class="num mut">${esc(r.sym)}</span><span><i style="background:var(--accent)"></i>操盘线 B/S 策略 <b class="num ${cls(sc)}">${pct(sc, 2)}</b></span><span><i style="background:var(--faint)"></i>买入持有 <b class="num ${cls(hc)}">${pct(hc, 2)}</b></span>${open}</div>
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(r.name)} 策略与买入持有的收益曲线">${grid}${line(ch, "var(--faint)", 1.4)}${line(cs, "var(--accent)", 2)}
+    <text x="${L}" y="${H - 6}" font-size="11" fill="var(--muted)">${esc(r.d0)}</text><text x="${W - Rr}" y="${H - 6}" font-size="11" fill="var(--muted)" text-anchor="end">${esc(r.d1)}</text></svg>`;
+}
+const AK_TABS = {
+  jgdy: ["机构调研", ["股票", "调研次数", "机构家数", "最近调研", "接待方式", "现价", "涨跌"], r => { const b = BY.get(r[0]);
+    return [labStock(r[0], r[1]), r[2], r[3], esc(r[4]), esc(r[5]), b ? f(b.price) : f(r[6]), b ? `<span class="${cls(b.chg)}">${pct(b.chg, 2)}</span>` : `<span class="${cls(r[7])}">${pct(r[7], 2)}</span>`]; }],
+  dzjy: ["大宗交易", ["股票", "成交价", "收盘价", "折溢价", "成交额", "买方营业部", "卖方营业部"], r => [labStock(r[0], r[1]), labPx(r[2]), labPx(r[3]), `<span class="${cls(r[4])}">${pct(r[4], 2)}</span>`, labYuan(r[5]), esc(r[6]), esc(r[7])]],
+  lhb: ["龙虎榜", ["股票", "收盘", "涨跌幅", "净买额", "龙虎榜成交", "解读", "上榜原因"], r => [labStock(r[0], r[1]), f(r[2]), `<span class="${cls(r[3])}">${pct(r[3], 2)}</span>`, `<span class="${cls(r[4])}">${labYuan(r[4])}</span>`, labYuan(r[5]), esc(r[6]), esc(r[7])]],
+  jj: ["限售解禁", ["股票", "解禁日", "类型", "解禁市值", "占流通市值"], r => [labStock(r[0], r[1]), esc(r[2]), esc(r[3]), labYuan(r[4]), r[5] == null ? "—" : Number(r[5]).toFixed(2) + "%"]]};
+function renderAk(){
+  const ak = LAB.ak || {}, keys = Object.keys(AK_TABS).filter(k => ak[k]);
+  $("#akWrap").hidden = !keys.length; if (!keys.length) return;
+  if (!keys.includes(LBV.ak)) LBV.ak = keys[0];
+  $("#akTabs").innerHTML = keys.map(k => `<button class="ctab" role="tab" data-ak="${k}" aria-selected="${k === LBV.ak}">${AK_TABS[k][0]}</button>`).join("");
+  const [, head, fmt] = AK_TABS[LBV.ak], x = ak[LBV.ak];
+  $("#akNote").textContent = x.t + " · 点股票打开详情";
+  $("#akTbl").innerHTML = `<thead><tr>${head.map((h, i) => `<th class="${i === 0 || /营业部|解读|原因|方式|类型/.test(h) ? "l" : ""}" style="cursor:default">${h}</th>`).join("")}</tr></thead><tbody>`
+    + (x.rows.map(r => `<tr data-code="${esc(r[0])}">${fmt(r).map((c, i) => `<td class="${i === 0 || /营业部|解读|原因|方式|类型/.test(head[i]) ? "l" : "num"}">${c}</td>`).join("")}</tr>`).join("")
+      || `<tr class="nohov"><td class="l note" colspan="${head.length}">没有数据</td></tr>`) + `</tbody>`;
+}
+function renderChk(){
+  const c = LAB.chk || {}, out = [];
+  if (c.sina) { const s = c.sina, r = s.n ? s.same / s.n * 100 : 0;
+    out.push(`<p class="cpst">easyquotation（新浪）核对 <b>${s.n.toLocaleString()}</b> 只，收盘价和本站腾讯行情一致 <b>${s.same.toLocaleString()}</b> 只（${r.toFixed(2)}%）</p>`
+      + (s.diff && s.diff.length ? `<p class="note" style="margin:0 0 8px">不一致的例子：${s.diff.map(d => `${esc(d[1])} 腾讯 ${f(d[2])} / 新浪 ${f(d[3])}`).join("；")}</p>` : "")); }
+  if (c.sa && c.sa.length) out.push(`<p class="cpst" style="margin-top:6px">stock-api（${esc(c.sa[0][4] || "")}）和本站行情：</p><div class="tscroll"><table class="fltop"><thead><tr><th class="l" style="cursor:default">股票</th><th style="cursor:default">stock-api</th><th style="cursor:default">本站</th><th style="cursor:default">一致</th></tr></thead><tbody>`
+    + c.sa.map(r => `<tr data-code="${esc(r[0])}"><td class="l">${labStock(r[0], r[1])}</td><td class="num">${f(r[2])}</td><td class="num">${f(r[3])}</td><td>${r[2] != null && r[3] != null && Math.abs(r[2] - r[3]) < 0.006 ? `<span class="labst ok">一致</span>` : `<span class="labst part">不同</span>`}</td></tr>`).join("") + `</tbody></table></div>`);
+  const t = c.tdx;
+  if (t) out.push(t.ok ? `<p class="cpst" style="margin-top:10px">mootdx：GitHub 机房连上了通达信 ${esc(t.host)}（${t.ms}ms），${(t.rows || []).map(r => `${esc(r[1] || r[0])} ${f(r[2])}`).join("、")}</p>`
+    : `<p class="cpst" style="margin-top:10px">mootdx：GitHub 机房连不上通达信行情服务器（TCP 7709，试了 ${t.tried} 个）。在自己电脑上用 <code>gp tdx 600519</code>。</p>`);
+  $("#chkBox").innerHTML = out.join("") || `<p class="note" style="margin:0">没有核对结果。</p>`;
+  $("#chkNote").textContent = c.asof ? `本站行情 ${c.asof}` : "";
+}
+function renderWc(){
+  const w = LAB.wc || {on: 0};
+  if (!w.on) { $("#wcBox").innerHTML = `<p class="note" style="margin:0">未启用。问财要用登录后的 cookie，所以默认不跑。想在这里看到预设问句（今日涨停按连板排序、近 5 日主力净流入前 20、低估值高 ROE 高增长）的结果：在 GitHub 仓库 Settings → Secrets and variables → Actions 新建 <code>WENCAI_COOKIE</code>，填你自己登录 www.iwencai.com 后复制的 Cookie；下一个交易日收盘后这里就有结果。cookie 只存在 GitHub Secrets 里，网页上看不到。电脑上可以直接用 <code>gp wc "你的问句"</code>。</p>`; return; }
+  $("#wcBox").innerHTML = (w.res || []).map(x => `<div class="labwc"><h4>${esc(x.q)}${x.n ? ` <span class="note">共 ${x.n} 条，显示前 20</span>` : ""}</h4>`
+    + (x.rows ? `<div class="tscroll"><table class="fltop"><thead><tr>${x.cols.map(c => `<th class="l" style="cursor:default">${esc(c)}</th>`).join("")}</tr></thead><tbody>${x.rows.map(r => `<tr class="nohov">${r.map(v => `<td class="l">${esc(v)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>` : `<p class="note" style="margin:0">${esc(x.err || "没有结果")}</p>`) + `</div>`).join("");
+}
+function renderLibs(){
+  const L = LAB.libs || {};
+  $("#libTbl").innerHTML = `<thead><tr><th class="l" style="cursor:default">库</th><th style="cursor:default">版本</th><th class="l" style="cursor:default">在网站上做什么</th><th style="cursor:default">最近一次</th><th class="l" style="cursor:default">说明</th></tr></thead><tbody>`
+    + LAB_LIBS.map(([k, url, what]) => { const x = L[k] || {}, st = x.ok === 1 ? `<span class="labst ok">正常</span>` : x.ok === 2 ? `<span class="labst part">部分正常</span>` : x.ok === 0 ? `<span class="labst no">失败</span>` : `<span class="labst off">未启用</span>`;
+      return `<tr class="nohov"><td class="l"><a href="${url}" target="_blank" rel="noopener"><b>${k}</b></a></td><td class="num">${esc(x.v || "—")}</td><td class="l">${what}</td><td>${st}</td><td class="l note">${esc(x.msg || "")}${x.ms != null ? ` · ${x.ms}s` : ""}</td></tr>`; }).join("") + `</tbody>`;
+  $("#libNote").textContent = `GitHub Actions ${LAB.t || ""}（北京时间）`;
+}
+function renderLab(){
+  $("#labCmds").innerHTML = `<thead><tr><th class="l" style="cursor:default">命令</th><th class="l" style="cursor:default">做什么</th></tr></thead><tbody>` + LAB_CMDS.map(([c, t]) => `<tr class="nohov"><td class="l"><code>${esc(c)}</code></td><td class="l">${t}</td></tr>`).join("") + `</tbody>`;
+  $("#labEmpty").hidden = !!LAB;
+  ["#btWrap", "#akWrap"].forEach(s => { $(s).hidden = !LAB; });
+  if (!LAB) { $("#chkBox").innerHTML = $("#wcBox").innerHTML = $("#libTbl").innerHTML = ""; return; }
+  $("#labMeta").textContent = `按 ${LAB.date} 收盘的数据 · 生成于 ${LAB.t}`;
+  $("#btWrap").hidden = !(LAB.bt && LAB.bt.n);
+  if (LAB.bt && LAB.bt.n) {
+    renderBt();
+    $("#btRule").innerHTML = `规则：收盘价<b>上穿</b>操盘线（13 日 EMA）且 MACD 的 DIF &gt; DEA，<b>次日开盘买入</b>；收盘价<b>下破</b>操盘线且 DIF &lt; DEA，<b>次日开盘卖出</b>。akquant 引擎撮合：A 股 T+1、100 股整手，佣金万 2（最低 3 元）、卖出印花税万 5、过户费十万分之 0.5、滑点万 1（ETF 也按股票费率算，偏保守），按信号日收盘价预留 5% 高开空间算股数（高开超过 5% 那次买不进就跳过）；初始资金 100 万，近 500 个交易日前复权日K（腾讯），指标先用前 60 根预热。没有考虑停牌和涨跌停买不进卖不出。和终端命令 <code>gp bt 代码</code> 是同一份代码，可以自己复算。`;
+  }
+  renderAk(); renderChk(); renderWc(); renderLibs();
+}
+$("#btGrp").addEventListener("click", e => { const b = e.target.closest("[data-g]"); if (!b) return; LBV.g = b.dataset.g; LBV.sort = null; LBV.sel = null; renderBt(); });
+$("#btTbl").addEventListener("click", e => {
+  const th = e.target.closest("th[data-k]");
+  if (th) { const k = th.dataset.k; LBV.sort = LBV.sort && LBV.sort[0] === k ? [k, -LBV.sort[1]] : [k, k === "mdd" ? 1 : -1]; renderBt(); return; }
+  const tr = e.target.closest("tr[data-sym]"); if (!tr) return;
+  LBV.sel = LBV.sel === tr.dataset.sym ? null : tr.dataset.sym; renderBt();
+  if (LBV.sel) $("#btChart").scrollIntoView({block: "nearest", behavior: "smooth"});
+});
+$("#btChart").addEventListener("click", e => { const b = e.target.closest("[data-open]"); if (b) openStock(b.dataset.open); });
+$("#akTabs").addEventListener("click", e => { const b = e.target.closest("[data-ak]"); if (b) { LBV.ak = b.dataset.ak; renderAk(); } });
+$("#akTbl").addEventListener("click", e => { const tr = e.target.closest("tr[data-code]"); if (tr && BY.has(tr.dataset.code)) openStock(tr.dataset.code); });
+$("#chkBox").addEventListener("click", e => { const tr = e.target.closest("tr[data-code]"); if (tr && BY.has(tr.dataset.code)) openStock(tr.dataset.code); });
+$("#v-lab").addEventListener("click", e => { const b = e.target.closest("[data-copy]"); if (b) xgCopy(b, $("#" + b.dataset.copy).textContent); });
 // ---- 个股操盘图：K线叠加操盘线(红多绿空)和 B/S 标记，下方资金分层（新浪特大/大/小/散） ----
 function cpCandles(bars, sg, W, H){
   const n = bars.length, bw = W / n, lo = Math.min(...bars.map(b => b.l)), hi = Math.max(...bars.map(b => b.h)), pad = (hi - lo) * 0.06 || 1;
