@@ -72,6 +72,9 @@ def build():
     hot = load("hot.json", {})
     if hot.get("date"):
         data["hot"] = hot                                         # 热点：同花顺、东方财富（Scrapling 抓取）
+    qt = load("quant.json", {})
+    if qt.get("rates") or qt.get("idx") or qt.get("review"):
+        data["qt"] = {k: qt.get(k) for k in ("extT", "rates", "spread", "idx", "review")}   # 市场页：外部变量（OpenBB）、AI 大盘复盘（daily_stock_analysis）
     lab = load("lab.json", {})
     if lab.get("date"):
         data["lab"] = lab                                         # 量化：akquant 回测、akshare 数据、行情核对、问财（scripts/lab.py）

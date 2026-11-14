@@ -572,6 +572,20 @@ td.nwwhy{white-space:normal;min-width:200px;max-width:360px;font-size:12.5px;col
 .fjbar{display:flex;height:10px;border-radius:2px;overflow:hidden;min-width:2px}
 .fjbar i{display:block;height:100%}.fjbar i.b{background:var(--up)}.fjbar i.n{background:var(--faint)}.fjbar i.s{background:var(--dn)}
 @media (max-width:440px){.fjr{grid-template-columns:96px minmax(0,1fr) 74px 40px;gap:6px;font-size:11.5px}}
+
+/* 量化工具快照 */
+.qti{grid-template-columns:repeat(4,minmax(0,1fr))}
+.qti .c{cursor:default;min-width:0}
+.qti .c:hover{background:var(--surface)}
+.qti .s{flex-wrap:wrap;gap:0 6px}
+.qti .s>span{white-space:nowrap}
+.qtread{margin:10px 0 0}
+.qtlead{font-weight:500}
+.pill.qon{background:var(--accent-soft);color:var(--accent)}
+.qtd{display:block;font-size:12.5px;color:var(--muted)}
+.qtr>div>span:first-child{min-width:0}
+.qtf{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:10px}
+@media (max-width:720px){.qti,.qtf{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 
 <header>
@@ -610,6 +624,12 @@ td.nwwhy{white-space:normal;min-width:200px;max-width:360px;font-size:12.5px;col
   <section class="view" id="v-market">
     <p class="note" id="liveHint" style="margin:0"></p>
     <div class="idx" id="idx"></div>
+    <div class="panel" id="qtBrief" hidden>
+      <div class="phead"><h2 id="qtBriefT">盘前分析</h2><span class="ghead"><span class="aibadge" id="qtBriefB"></span></span></div>
+      <div class="kpis qtf" id="qtGlobal"></div>
+      <div class="ai" id="qtBriefA"></div>
+      <p class="note qtread" id="qtBriefN"></p>
+    </div>
     <div class="panel" id="pmBrief" hidden>
       <div class="phead"><h2 id="pmT">盘前分析</h2><span class="ghead"><span class="aibadge" id="pmB"></span></span></div>
       <div class="kpis pmk" id="pmK"></div>
@@ -627,6 +647,16 @@ td.nwwhy{white-space:normal;min-width:200px;max-width:360px;font-size:12.5px;col
         <div class="phead"><h2>企稳信号</h2><span class="note">满足越多，越接近企稳</span></div>
         <div class="sig" id="signals"></div>
       </div>
+    </div>
+    <div class="panel" id="qtExt" hidden>
+      <div class="phead"><h2>外部变量</h2><span class="note" id="qtExtN"></span></div>
+      <div class="idx qti" id="qtK"></div>
+      <p class="note qtread" id="qtRead"></p>
+    </div>
+    <div class="panel" id="qtRevP" hidden>
+      <div class="phead"><h2>AI 大盘复盘</h2><span class="ghead"><span class="aibadge" id="qtRevB"></span></span></div>
+      <p class="note" style="margin:0 0 8px" id="qtRevNote">这份复盘只用了指数和板块行情，没有用到新闻和市场宽度。AI 生成，不构成投资建议。</p>
+      <div class="ai" id="qtRev"></div>
     </div>
     <div class="panel">
       <div class="phead"><h2>分板块</h2><span class="note">收盘价等于交易所涨跌停价计为涨停/跌停（与部分行情软件口径略有差异）；主板 ±10%（ST 同为 ±10%），创业板、科创板 ±20%，北交所 ±30%</span></div>
@@ -678,6 +708,10 @@ td.nwwhy{white-space:normal;min-width:200px;max-width:360px;font-size:12.5px;col
         <li><div><b>留一块防御仓</b><span>银行、电力、高股息今天收红。组合里放一部分低波动资产，能降低整体回撤，也能留出现金在低位买入科技股。</span></div></li>
         <li><div><b>盯外部变量</b><span>10 年期美债收益率回落到 5% 以下、中东局势降温、美股科技止跌，这三件事通常比国内消息面更能决定这轮成长股杀估值何时结束。</span></div></li>
       </ol>
+    </div>
+    <div class="panel" id="qtToolP" hidden>
+      <div class="phead"><h2>量化工具接入</h2><span class="note" id="qtToolN"></span></div>
+      <div class="sig qtr" id="qtTools"></div>
     </div>
   </section>
 
@@ -1407,6 +1441,9 @@ td.nwwhy{white-space:normal;min-width:200px;max-width:360px;font-size:12.5px;col
 "use strict";
 const D = JSON.parse(document.getElementById("data").textContent);
 const TA = JSON.parse(document.getElementById("tadata").textContent || "{}");
+const QT = JSON.parse(document.getElementById("quant")?.textContent || "null");   // claude.ai 版里的一次性快照（盘前分析、工具状态）
+const QD = D.qt || null;                                                           // 外部变量、AI 大盘复盘：scripts/quant.py 每天自动生成
+const Q10 = ((QD?.rates?.length ? QD : QT)?.rates || []).find(x => x.id === "y10")?.k.at(-1);   // [日期, 收益率%]
 const R = D.rows.map(r => { const o = {}; D.cols.forEach((k, i) => o[k] = r[i]); o.roeA = o.roe == null ? null : +(o.roe * ({Q1: 4, H1: 2, Q3: 4 / 3, FY: 1}[o.rpt] || 1)).toFixed(1); return o; });
 const BY = new Map(R.map(r => [r.code, r]));
 // 拼音首字母（如 拓普集团 → tpjt），由 gen.py 用 pypinyin 生成；输入纯字母时按首字母前缀匹配
@@ -1662,11 +1699,11 @@ function renderMarket(){
     ["上涨家数占比超过 40%", up / tot > .4, `${(up / tot * 100).toFixed(0)}%`],
     ["创业板指收在 20 日均线上方", cyc > ma20, `${cyc.toFixed(2)} / 均线 ${ma20.toFixed(2)}`],
     ["科技题材跑赢防御板块", techAvg > def, `${pct(techAvg, 2)} vs ${pct(def, 2)}`],
-    ["10 年期美债收益率回落到 5% 以下", null, "需自行观察"],
+    ["10 年期美债收益率回落到 5% 以下", Q10 ? Q10[1] < 5 : null, Q10 ? `${Q10[1].toFixed(2)}%（OpenBB ${Q10[0].slice(5)}）` : "需自行观察"],
     ["放量长下影线、地量后止跌", null, "需看盘面"],
   ];
   $("#signals").innerHTML = sig.map(s => `<div><span>${s[0]}</span><span style="display:flex;gap:8px;align-items:center"><span class="num mut" style="font-size:12.5px">${esc(s[2])}</span>${s[1] == null ? '<span class="pill na">待观察</span>' : s[1] ? '<span class="pill yes">已满足</span>' : '<span class="pill no">未满足</span>'}</span></div>`).join("") +
-    `<p class="note" style="margin:6px 0 0">按当前数据，可量化的 4 项满足 ${sig.slice(0,4).filter(s => s[1]).length} 项。</p>`;
+    `<p class="note" style="margin:6px 0 0">按当前数据，可量化的 ${sig.filter(s => s[1] != null).length} 项满足 ${sig.filter(s => s[1]).length} 项。</p>`;
   const brow = Object.keys(BOARD).map(b => {
     const a = R.filter(r => r.board === b), u = a.filter(r => r.chg > 0).length, d = a.filter(r => r.chg < 0).length;
     const m = a.length ? [...a].sort((x, y) => x.chg - y.chg)[a.length >> 1].chg : 0, cap = a.reduce((s, r) => s + r.mcap, 0), w = a.reduce((s, r) => s + r.mcap * r.chg, 0) / (cap || 1);
@@ -5397,6 +5434,51 @@ async function dealTick(){               // 个股详情开着：交易时段成
   finally { setTimeout(dealTick, 1500); }
 }
 dealTick();
+/* ---------- 量化工具快照：OpenBB 外部变量、daily_stock_analysis 大盘复盘、工具状态 ---------- */
+function renderQuant(){
+  const X = QD?.rates?.length || QD?.idx?.length ? QD : QT, RV = QD?.review || QT?.review;
+  if (!X && !RV) return;
+  const b = QT?.brief;
+  if (b) {
+    $("#qtBriefT").textContent = `盘前分析 · ${b.target.slice(5)} 开盘`;
+    $("#qtBriefB").textContent = `AI 生成 · Claude · ${b.built}`;
+    $("#qtGlobal").innerHTML = b.tiles.map(x => `<div><small>${esc(x.n)}</small><b>${esc(x.v)}</b><span class="${cls(x.p)}">${pct(x.p, 2)}</span></div>`).join("");
+    $("#qtBriefA").innerHTML = `<p class="qtlead">${esc(b.lead)}</p>${md(b.body)}`;
+    const late = b.built > `${b.target} 09:30` ? "这份分析在开盘后才生成。" : "";
+    $("#qtBriefN").textContent = `${late}依据：全球指数、A50 期货和汇率商品、美债、A 股收盘数据，以及从 ${b.since} 以来 ${b.total} 条快讯（同花顺、东方财富）中筛选的 ${b.used} 条。AI 生成，不构成投资建议。时间为北京时间。`;
+    $("#qtBrief").hidden = false;
+  }
+  const end = x => x.k[x.k.length - 1], before = x => x.k[x.k.length - 2];
+  const top = x => Math.max(...x.k.map(p => p[1]));
+  const color = v => v >= 0 ? "var(--up)" : "var(--dn)";
+  const tile = (x, value, change, label, mark, delta) => `<div class="c" title="${esc(x.n)}，截至 ${esc(end(x)[0])}"><span class="n">${esc(x.n)}</span><span class="v num">${value}</span><span class="s">${change}<span class="mut">${label}</span><span class="mut num">${mark}</span></span>${spark(x.k, color(delta))}</div>`;
+  const bp = v => `<span class="num ${cls(v)}">${v > 0 ? "+" : ""}${v}bp</span>`;
+  const rate = x => { const d = Math.round((end(x)[1] - before(x)[1]) * 100); return tile(x, end(x)[1].toFixed(2) + "%", bp(d), "60 日高点", top(x).toFixed(2) + "%", d); };
+  const spread = x => { const d = Math.round((end(x)[1] - before(x)[1]) * 100); return tile(x, Math.round(end(x)[1] * 100) + "bp", bp(d), "60 日高点", Math.round(top(x) * 100) + "bp", d); };
+  const chg = x => (end(x)[1] / before(x)[1] - 1) * 100;
+  const index = x => tile(x, end(x)[1].toFixed(2), `<span class="num ${cls(chg(x))}">${pct(chg(x), 2)}</span>`, "距 60 日高点", pct((end(x)[1] / top(x) - 1) * 100), chg(x));
+  const rates = X?.rates || [], idx = X?.idx || [];
+  if (rates.length || idx.length) {
+    $("#qtK").innerHTML = rates.map(rate).join("") + (X.spread ? spread(X.spread) : "") + idx.map(index).join("");
+    const days = [...new Set([...rates, ...idx].map(x => end(x)[0].slice(5)))].sort();
+    $("#qtExtN").textContent = `OpenBB · 最新数据 ${days.join("、")}（美国交易日）${X === QD ? " · 每天自动更新" : ""} · 红涨绿跌`;
+    const y10 = rates.find(x => x.id === "y10"), ndx = idx.find(x => x.id === "NDX"), sox = idx.find(x => x.id === "SOX");
+    if (y10 && ndx && sox) $("#qtRead").textContent = `对照「盯外部变量」：10 年期美债${end(y10)[1] < 5 ? "已回落到 5% 以下" : "仍在 5% 上方"}（${end(y10)[1].toFixed(2)}%）；美股科技${chg(ndx) < 0 ? "仍未止跌" : "最新一日收涨"}，纳指 100 ${pct(chg(ndx), 2)}，费城半导体 ${pct(chg(sox), 2)}（${end(ndx)[0].slice(5)}）。`;
+    $("#qtExt").hidden = false;
+  }
+  const r = RV;
+  if (r) {
+    $("#qtRevB").textContent = `AI 生成 · daily_stock_analysis · ${r.model || "Claude"} · ${r.date}`;
+    if (r === QD?.review) $("#qtRevNote").textContent = `开源项目 daily_stock_analysis 每个交易日收盘后自动生成，用了指数、行业板块排行和本站同一天的市场统计（涨跌家数、涨跌停、成交额），没有接入新闻；某项数据取不到时，复盘里会写明。生成于 ${r.built}。AI 生成，不构成投资建议。`;
+    $("#qtRev").innerHTML = `<p class="qtlead">${esc(r.lead)}</p>${md(r.head)}<details class="archive"><summary>展开完整复盘</summary>${md(r.body)}</details>`;
+    $("#qtRevP").hidden = false;
+  }
+  if (!QT?.tools) return;
+  $("#qtToolN").textContent = `快照生成于 ${QT.built}（北京时间），不会自动刷新`;
+  $("#qtTools").innerHTML = (QT.tools || []).map(t => `<div><span><b>${esc(t.n)}</b><span class="qtd">${esc(t.d)}</span></span><span class="pill ${t.on ? "qon" : "na"}">${esc(t.s)}</span></div>`).join("");
+  $("#qtToolP").hidden = false;
+}
+renderQuant();
 show((location.hash || "").slice(1) || "market");
 })();
 </script>
