@@ -37,11 +37,14 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
+        id: py
         with:
           python-version: "3.12"
           cache: pip
 
-      - run: pip install --use-pep517 -r requirements.txt
+      - run: |
+          pip install --use-pep517 -r requirements.txt
+          pip install --no-deps "openbb==5.0.0"   # OpenBB 主包只提供 obb 入口；扩展只装 requirements.txt 里用到的那几个
 
       - name: 安装 stock-api（Node.js 行情库，量化页用）
         run: npm install -g --no-audit --no-fund stock-api || echo "stock-api 安装失败，量化页的这一项会标成失败"
@@ -60,6 +63,46 @@ jobs:
           FORCE: ${{ github.event.inputs.force || '0' }}
           ONLY: ${{ github.event.inputs.only || '' }}
         run: python scripts/build.py
+
+      # AI 大盘复盘：开源项目 daily_stock_analysis（https://github.com/ZhuLinsen/daily_stock_analysis），模型用 DeepSeek。
+      # 它锁定旧版 akshare（< 1.20），和本仓库冲突，所以单独装在 dsa/.venv（缓存起来，固定在下面这个版本），每个交易日收盘后跑一次。
+      - name: AI 大盘复盘要不要生成
+        id: review
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: echo "due=$(python scripts/quant.py due)" >> "$GITHUB_OUTPUT"
+
+      - name: 恢复 daily_stock_analysis 环境
+        if: steps.review.outputs.due == 'true'
+        uses: actions/cache@v4
+        with:
+          path: dsa
+          key: dsa-${{ runner.os }}-py${{ steps.py.outputs.python-version }}-f044e95f2156d6c53cdeabf4bf27c60df4e366d5
+
+      - name: 安装 daily_stock_analysis
+        if: steps.review.outputs.due == 'true'
+        run: |
+          if [ ! -x dsa/.venv/bin/python ]; then
+            rm -rf dsa && git init -q dsa
+            git -C dsa fetch -q --depth 1 https://github.com/ZhuLinsen/daily_stock_analysis.git f044e95f2156d6c53cdeabf4bf27c60df4e366d5
+            git -C dsa checkout -q FETCH_HEAD
+            python -m venv dsa/.venv && dsa/.venv/bin/pip install -q -r dsa/requirements.txt
+          fi
+
+      - name: 生成 AI 大盘复盘
+        if: steps.review.outputs.due == 'true'
+        continue-on-error: true
+        working-directory: dsa
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          TZ: Asia/Shanghai
+          MARKET_REVIEW_REGION: cn
+          MARKET_REVIEW_COLOR_SCHEME: red_up
+          REPORT_LANGUAGE: zh
+        run: |
+          rm -f reports/market_review_*.md
+          timeout 900 .venv/bin/python ../scripts/dsa_run.py ../data/a.json --market-review --no-notify --force-run
+          cd .. && python scripts/quant.py import "dsa/reports/market_review_*.md" && python scripts/gen.py
 
       - name: 保存数据缓存
         if: always()

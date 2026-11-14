@@ -10,6 +10,8 @@
                                      （A 股收盘后，北京时间 15:30 之后）  每个交易日一次，节假日跳过
     A 股盘前分析（开盘前，北京时间 07:30–10:00，现抓新闻和隔夜行情）   每个交易日一次，休市日跳过
     量化页（akquant 回测、akshare 机构调研/大宗/龙虎榜/解禁、行情核对、问财）   交易日收盘后一次
+    外部变量（OpenBB：美债收益率、标普/纳指 100/费城半导体/VIX）                     每 4 小时
+    AI 大盘复盘（daily_stock_analysis + DeepSeek，工作流里单独的步骤，见 update.yml）   交易日收盘后一次
     指数完整历史、题材股月K、成分股名单                             每 7 天
 
 环境变量：FORCE=1 全部重跑；ONLY=任务名,任务名 只跑指定任务；DEEPSEEK_API_KEY 可选。"""
@@ -22,7 +24,7 @@ import traceback
 
 sys.path.insert(0, os.path.dirname(__file__))
 from common import DATA, ROOT, close_date, done, due, load, log, save   # noqa: E402
-import a_share, global_mkt, news, ai_commentary, flow, gen, hot, lab, picks, premarket, screen_data   # noqa: E402
+import a_share, global_mkt, news, ai_commentary, flow, gen, hot, lab, picks, premarket, quant, screen_data   # noqa: E402
 
 
 def seed():
@@ -54,6 +56,7 @@ TASKS = [  # 名称, 周期（小时）, 函数
     ("others", 6, global_mkt.refresh_others),
     ("hot", 0.9, hot.refresh_hot),
     ("news", 0.9, news.refresh_news),                  # 资讯页的龙头股吧用 hot.json，排在热点后面
+    ("quant_ext", 4, quant.refresh_ext),               # 外部变量（OpenBB）：美债收益率、美股指数、VIX，美国收盘后更新
 ]
 
 
