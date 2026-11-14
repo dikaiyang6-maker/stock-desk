@@ -243,10 +243,11 @@ def chk_stock_api(tx):
 
 
 def chk_tdx(tx):
+    """GitHub 机房一般能连上通达信（TCP 7709）。连上后取几只股票的行情；某个服务器连上却不给数据时换下一个。"""
     from mootdx.consts import HQ_HOSTS
     from mootdx.quotes import Quotes
-    tried = 0
-    for h in HQ_HOSTS[:12]:
+    tried, errs = 0, []
+    for h in HQ_HOSTS[:16]:
         name, ip, port = h if len(h) == 3 else ("", *h)
         tried += 1
         t0 = time.time()
@@ -255,15 +256,30 @@ def chk_tdx(tx):
         except OSError:
             continue
         ms = round((time.time() - t0) * 1000)
-        client = Quotes.factory(market="std", server=(ip, port), timeout=10)
-        df = client.quotes(symbol=[s[2:] for s in BIG])
-        rows = []
-        for r in df.to_dict("records"):
-            c = str(r.get("code"))
-            nm, txp = tx.get(c, ("", None))
-            rows.append([c, nm, round(float(r.get("price") or 0), 2), txp])
-        return {"ok": 1, "host": f"{name} {ip}", "ms": ms, "rows": rows}
-    return {"ok": 0, "tried": tried}
+        try:
+            client = Quotes.factory(market="std", server=(ip, port), timeout=10)
+            df = client.quotes(symbol=[s[2:] for s in BIG])
+            rows = []
+            for r in (df.to_dict("records") if df is not None else []):
+                c = str(r.get("code") or "").zfill(6)
+                nm, txp = tx.get(c, ("", None))
+                if r.get("price"):
+                    rows.append([c, nm, round(float(r["price"]), 2), txp])
+            if not rows:                                                   # 实时行情为空时（休市日有的服务器不给），改取最近一根日K的收盘价
+                for sym in BIG:
+                    k = client.bars(symbol=sym[2:], frequency=9, offset=1)
+                    if k is not None and len(k):
+                        c = sym[2:]
+                        nm, txp = tx.get(c, ("", None))
+                        rows.append([c, nm, round(float(k["close"].iloc[-1]), 2), txp])
+            if rows:
+                return {"ok": 1, "host": f"{name} {ip}", "ms": ms, "rows": rows}
+            errs.append(f"{ip} 没返回数据（行情 {0 if df is None else len(df)} 行）")
+        except Exception as e:
+            errs.append(f"{ip} {type(e).__name__}: {str(e)[:60]}")
+        if len(errs) >= 3:
+            break
+    return {"ok": 2 if errs else 0, "tried": tried, "err": "；".join(errs)[:200]}
 
 
 # ---------- pywencai ----------
@@ -334,7 +350,8 @@ def refresh_lab():
     try:
         r = chk_tdx(tx)
         lab["chk"]["tdx"] = r
-        stat("mootdx", 1 if r["ok"] else 0, f"连上通达信 {r['host']}（{r['ms']}ms）" if r["ok"] else f"GitHub 机房连不上通达信行情服务器（试了 {r['tried']} 个，TCP 7709）", round(time.time() - t0, 1))
+        stat("mootdx", r["ok"], f"连上通达信 {r['host']}（{r['ms']}ms），取到 {len(r['rows'])} 只行情" if r["ok"] == 1
+             else f"能连上通达信服务器，但没取到行情：{r['err']}" if r["ok"] == 2 else f"GitHub 机房连不上通达信行情服务器（试了 {r['tried']} 个，TCP 7709）", round(time.time() - t0, 1))
     except Exception as e:
         stat("mootdx", 0, f"{type(e).__name__}: {str(e)[:80]}")
     try:
