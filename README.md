@@ -16,6 +16,7 @@
 | 富时100、DAX、CAC40、斯托克50、Nifty50 成分股 | 每 6 小时 | Yahoo Finance |
 | 财报（自动选择最新披露期）、两融、北向成交 | 每天 | 东方财富数据中心 |
 | 六维研判、今日市场解读、精选个股点评 | 每个交易日 A 股收盘后（北京 15:37 那一轮，节假日休市不生成） | DeepSeek，依据本页数据和东方财富、新浪财经快讯标题 |
+| A 股盘前分析（市场页指数条下面） | 每个 A 股交易日开盘前（北京 07:33 起多排了几轮，见 `update.yml`），休市日不生成 | DeepSeek，依据运行时现抓的同花顺、东方财富快讯（上一交易日 15:00 以来，周一含周末），全球指数（腾讯），A50、汇率、商品、VIX、费城半导体（新浪），美债收益率（美国财政部）和 A 股收盘数据 |
 | 成分股名单 | 每周 | 维基百科、Nasdaq、FinanceDataReader |
 | 选股（D 型）：研发投入、资产负债率、货币资金、商誉、TTM 营收、未来 90 天解禁、近 180 天大股东和高管减持 | 每天 | 东方财富数据中心 |
 | 选股（D 型）：科技赛道股票的主营产品构成 | 每周 | 东方财富数据中心 |
@@ -69,6 +70,43 @@ GitHub 的定时任务是“尽力而为”，高峰期可能晚几分钟到几�
 - 点开任意股票，详情里会显示它的相关快讯、业绩和预告、股吧热帖。
 - 全部来自公开接口，不需要登录，不含任何付费软件的数据。
 
+## 命令行工具 gp（电脑终端和 Claude 新会话都能用）
+
+`tools/gp.py` 把六个开源库包成一组中文命令：[akshare](https://github.com/akfamily/akshare)、[easyquotation](https://github.com/shidenggui/easyquotation)、[mootdx](https://github.com/mootdx/mootdx)、[pywencai](https://github.com/zsrl/pywencai)、[stock-api](https://github.com/zhangxiangliang/stock-api)、[akquant](https://github.com/akfamily/akquant)。
+
+**电脑上一键安装**（需要 Python 3.11+；装了 Node.js 18+ 会顺带装 stock-api。装在独立的虚拟环境 `~/.stock-tools` 里，不影响电脑上别的 Python，约占 900 MB；重复运行就是升级）：
+
+```bash
+# Mac / Linux（终端）
+curl -fsSL https://raw.githubusercontent.com/dikaiyang6-maker/stock-desk/main/tools/install.sh | bash
+```
+
+```powershell
+# Windows（PowerShell）
+irm https://raw.githubusercontent.com/dikaiyang6-maker/stock-desk/main/tools/install.ps1 | iex
+```
+
+装完新开一个终端窗口：
+
+| 命令 | 做什么（用到的库） |
+|---|---|
+| `gp q 600519 300750 sh000001`，加 `--book` | 实时行情、五档（easyquotation：新浪，失败换腾讯） |
+| `gp k 600519 -n 60` | 日K，默认前复权（akshare：腾讯，失败换新浪）；`--src tdx` 走通达信（mootdx） |
+| `gp tdx 600519`、`--ticks`、`--minute` | 通达信行情、分笔、分时（mootdx，要能直连 TCP 7709） |
+| `gp zt`、`gp zt --kind zb` | 涨停池 / 炸板 / 跌停 / 强势股（akshare：东方财富） |
+| `gp lhb` | 龙虎榜，按净买额排序（akshare：东方财富） |
+| `gp wc "今日涨停，非ST"` | 问财选股（pywencai，需要你自己的问财 cookie，见 `gp wc` 的提示） |
+| `gp js 600519`、`gp js 宁德`、`gp js 510300 --k 20` | 行情 / 搜索 / 日K（stock-api，Node.js） |
+| `gp bt 600519`、`--strategy ma`、`--trades` | 操盘线 B/S 策略回测（akquant：次日开盘成交、T+1、手续费、整手），对比买入持有 |
+| `gp ak --search 解禁`、`gp ak stock_zt_pool_em date=20261113` | 找 / 直接调用任意 akshare 函数 |
+| `gp doctor` | 体检：库是否装好、各数据源能否连通 |
+
+代码可以写 `600519`、`sh600519`、`600519.SH`、名称或拼音首字母；指数带前缀（`sh000001` 上证指数）。所有命令加 `--json` 输出 JSON。
+
+**Claude 新会话**：仓库里的 `.claude/skills/a-share-gp/SKILL.md` 告诉 Claude 怎么用 gp，打开这个仓库的会话会自动加载；电脑上的安装脚本发现装了 Claude Code（有 `~/.claude`）时也会把它复制到 `~/.claude/skills/`。直接对 Claude 说“用 gp 查一下 600519 的五档”“回测一下宁德时代的操盘线”即可。
+
+限制：mootdx 要直连通达信服务器的 TCP 7709 端口，Claude 云端会话不允许，只能在自己电脑上用；pywencai 要用你自己登录问财后的 cookie（设成环境变量 `WENCAI_COOKIE`，不要发给别人）。
+
 ## 第一次配置（约 3 分钟）
 
 1. **开启 Pages**：Settings → Pages → Build and deployment → Source 选 **GitHub Actions**。不要选 Deploy from a branch：那样每次提交时 GitHub 会把 README 发布成网页，盖掉选股台。
@@ -90,14 +128,16 @@ export DEEPSEEK_API_KEY=...        # 可选
 python scripts/build.py            # 生成 site/index.html
 FORCE=1 python scripts/build.py    # 全部重新抓取
 ONLY=market,news python scripts/build.py   # 只跑指定任务
+ONLY=premarket python scripts/build.py     # 立刻写一份盘前分析，不看时间和交易日，面向下一个交易日
 ```
 
 ## 目录
 
 - `scripts/build.py`：排程入口，按各任务周期决定刷新什么，任何一项失败都沿用缓存
-- `scripts/a_share.py`、`global_mkt.py`、`lists.py`、`news.py`、`flow.py`、`hot.py`、`ai_commentary.py`、`gen.py`：各数据模块与网页生成
+- `scripts/a_share.py`、`global_mkt.py`、`lists.py`、`news.py`、`flow.py`、`hot.py`、`ai_commentary.py`、`premarket.py`、`gen.py`：各数据模块与网页生成
 - `scripts/scrape.py`：用 Scrapling 抓东方财富和同花顺（模拟浏览器的请求；需要运行 JS 的页面用真实浏览器）
 - `template.html`：网页模板（图表引擎、指标、分时、全球市场、AI 助手）
+- `tools/gp.py`、`tools/install.sh`、`tools/install.ps1`：命令行工具 gp 和一键安装脚本；`.claude/skills/a-share-gp/`：给 Claude 的使用说明
 - `seed/`：全球指数历史种子，缓存为空且 Yahoo 访问不到时使用
 - `data/`、`site/`：运行时生成，不进 git（数据通过 Actions 缓存在两次运行之间保留）
 
@@ -107,3 +147,4 @@ ONLY=market,news python scripts/build.py   # 只跑指定任务
 - 日本、欧洲、印度、韩国个股没有浏览器可直接访问的免费实时接口，网页里显示最近一次更新的快照。
 - 俄罗斯、泰国、越南指数没有免费历史数据，只有报价。
 - AI 研判由模型自动生成，只引用页面提供的数据和快讯标题，可能有误；请以原始公告和数据为准。
+- 盘前分析的交易日以深交所的交易日历为准。日历抓不到又没有缓存时，那个月按周一到周五算，休市日也可能生成，日志里会写明。

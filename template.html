@@ -430,6 +430,10 @@ tbody tr.greg:hover{background:var(--bg)}
 .tagb.nb{background:var(--accent-soft);color:var(--accent)}
 .kpis.fk{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
 .kpis.fk b{font-size:15px}
+.pmk{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:10px}
+.pmlead{font-weight:500}
+.pmn{margin:10px 0 0}
+@media (max-width:720px){.pmk{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .flfill{display:flex;flex-wrap:wrap;gap:6px;align-items:center;grid-column:1/-1;margin-top:4px}
 .fltbl th[data-k]{cursor:pointer}
 .livev{font-size:11px;color:var(--accent);margin-left:4px}
@@ -592,6 +596,12 @@ td.nwwhy{white-space:normal;min-width:200px;max-width:360px;font-size:12.5px;col
   <section class="view" id="v-market">
     <p class="note" id="liveHint" style="margin:0"></p>
     <div class="idx" id="idx"></div>
+    <div class="panel" id="pmBrief" hidden>
+      <div class="phead"><h2 id="pmT">盘前分析</h2><span class="ghead"><span class="aibadge" id="pmB"></span></span></div>
+      <div class="kpis pmk" id="pmK"></div>
+      <div class="ai" id="pmA"></div>
+      <p class="note pmn" id="pmN"></p>
+    </div>
     <div class="grid2">
       <div class="panel">
         <div class="phead"><h2>市场宽度</h2><span class="note" id="breadthNote">沪深京 A 股（不含 B 股、港股），2026-10-22 收盘</span></div>
@@ -1719,6 +1729,23 @@ function renderAI(){
   const pk = $("#picks"); if (pk && Object.keys(AI.picks).length) pk.insertAdjacentHTML("beforebegin", `<p class="note" id="aiPickNote" style="margin:0">${tag} 个股点评按最新财报和行情自动生成；${D.pk ? `入选名单每个交易日 A 股收盘后按规则自动更新（最近一次：${esc(D.pk.date)} 收盘），节假日沿用上一个交易日` : "入选名单本身为 2026-10-22 人工整理"}。</p>`);
 }
 renderAI();
+/* ---------- 盘前分析：scripts/premarket.py 每个交易日开盘前生成。模型读过新闻，输出按不可信内容处理，一律经 esc / md 转义 ---------- */
+function renderPremarket(){
+  const b = D.pm;
+  let local = null;                                  // claude.ai 快照由本机 quant-refresh 生成，里面有 Claude 写的分析时不重复显示
+  try { local = JSON.parse(document.getElementById("quant")?.textContent || "null")?.brief; } catch (e) {}
+  if (!b || (local && local.target >= b.target)) return;
+  $("#pmT").textContent = `盘前分析 · ${b.target.slice(5)} 开盘`;
+  $("#pmB").textContent = `AI 生成 · ${b.model} · ${b.built}`;
+  $("#pmK").innerHTML = b.tiles.map(x => `<div><small>${esc(x.n)}</small><b>${esc(x.v)}</b><span class="${cls(x.p)}">${pct(x.p, 2)}</span></div>`).join("");
+  $("#pmK").hidden = !b.tiles.length;
+  $("#pmA").innerHTML = `<p class="pmlead">${esc(b.lead)}</p>${md(b.body)}`;
+  const late = b.built > `${b.target} 09:30` ? "这份分析在开盘后才生成。" : "";
+  const miss = b.miss.length ? `资料缺失：${b.miss.join("、")}。` : "";
+  $("#pmN").textContent = `${late}依据：全球指数、期货汇率商品、美债、A 股收盘数据，以及 ${b.since} 以来 ${b.total} 条快讯（${b.srcs}）中筛选的 ${b.used} 条。${miss}AI 生成，可能有误，不构成投资建议。时间为北京时间。`;
+  $("#pmBrief").hidden = false;
+}
+renderPremarket();
 $("#ta").addEventListener("click", e => { const b = e.target.closest("[data-code]"); if (b) openStock(b.dataset.code); });
 
 /* ---------- screener ---------- */

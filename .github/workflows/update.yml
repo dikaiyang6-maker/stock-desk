@@ -6,13 +6,18 @@ on:
     - cron: "37 * * * 1-5"
     # GitHub 高峰期会跳过定时任务：A 股收盘后（北京时间 15:52–17:52）再加几轮，当天已经生成过的不会重复生成
     - cron: "12,52 7-9 * * 1-5"
+    # A 股盘前分析：北京时间周一至周五 07:33–09:13 每 5 分钟排一轮。GitHub 高峰期大部分轮次会被跳过（最近两周只有约六分之一真正运行），所以要多排；
+    # 分析当天只生成一次，休市日不生成，其余轮次就是普通的数据更新。星期按 UTC 算：北京时间周一 07:33 是 UTC 周日 23:33，所以 23 点这一行是 0-4
+    - cron: "33/5 23 * * 0-4"
+    - cron: "3/5 0 * * 1-5"
+    - cron: "3,8,13 1 * * 1-5"
   workflow_dispatch:
     inputs:
       force:
         description: "全部重新抓取（1 = 是）"
         default: "0"
       only:
-        description: "只跑这些任务（逗号分隔，如 picks,flow,ai；留空 = 按时间表）"
+        description: "只跑这些任务（逗号分隔，如 picks,flow,ai,premarket；留空 = 按时间表）"
         default: ""
 
 permissions:

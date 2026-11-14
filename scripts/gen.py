@@ -60,6 +60,9 @@ def build():
     ai = load("ai.json")
     if ai:
         data["ai"] = ai
+    pm = load("premarket.json", {})
+    if pm.get("lead"):
+        data["pm"] = pm                                           # A 股盘前分析
     pk = load("picks.json", {})
     if pk.get("tiers"):
         data["pk"] = pk                                           # 每个交易日收盘后按规则更新的精选名单
