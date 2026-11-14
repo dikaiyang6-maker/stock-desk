@@ -4861,7 +4861,8 @@ function renderChk(){
   if (c.sa && c.sa.length) out.push(`<p class="cpst" style="margin-top:6px">stock-api（${esc(c.sa[0][4] || "")}）和本站行情：</p><div class="tscroll"><table class="fltop"><thead><tr><th class="l" style="cursor:default">股票</th><th style="cursor:default">stock-api</th><th style="cursor:default">本站</th><th style="cursor:default">一致</th></tr></thead><tbody>`
     + c.sa.map(r => `<tr data-code="${esc(r[0])}"><td class="l">${labStock(r[0], r[1])}</td><td class="num">${f(r[2])}</td><td class="num">${f(r[3])}</td><td>${r[2] != null && r[3] != null && Math.abs(r[2] - r[3]) < 0.006 ? `<span class="labst ok">一致</span>` : `<span class="labst part">不同</span>`}</td></tr>`).join("") + `</tbody></table></div>`);
   const t = c.tdx;
-  if (t) out.push(t.ok ? `<p class="cpst" style="margin-top:10px">mootdx：GitHub 机房连上了通达信 ${esc(t.host)}（${t.ms}ms），${(t.rows || []).map(r => `${esc(r[1] || r[0])} ${f(r[2])}`).join("、")}</p>`
+  if (t) out.push(t.ok === 1 && (t.rows || []).length ? `<p class="cpst" style="margin-top:10px">mootdx：GitHub 机房连上了通达信 ${esc(t.host)}（${t.ms}ms），${t.rows.map(r => `${esc(r[1] || r[0])} 通达信 ${f(r[2])}${r[3] != null ? (Math.abs(r[2] - r[3]) < 0.006 ? "（和本站一致）" : `（本站 ${f(r[3])}）`) : ""}`).join("、")}</p>`
+    : t.ok ? `<p class="cpst" style="margin-top:10px">mootdx：GitHub 机房能连上通达信行情服务器，但这次没取到行情${t.err ? `（${esc(t.err)}）` : ""}。在自己电脑上用 <code>gp tdx 600519</code>。</p>`
     : `<p class="cpst" style="margin-top:10px">mootdx：GitHub 机房连不上通达信行情服务器（TCP 7709，试了 ${t.tried} 个）。在自己电脑上用 <code>gp tdx 600519</code>。</p>`);
   $("#chkBox").innerHTML = out.join("") || `<p class="note" style="margin:0">没有核对结果。</p>`;
   $("#chkNote").textContent = c.asof ? `本站行情 ${c.asof}` : "";
