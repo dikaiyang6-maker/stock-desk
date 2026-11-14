@@ -295,7 +295,7 @@ def _wc_probe(cookie):
     try:
         r = requests.post("http://www.iwencai.com/customized/chart/get-robot-data", json=data, timeout=20,
                           headers={"hexin-v": get_token(), "User-Agent": WC_UA, "cookie": cookie})
-        info = f"HTTP {r.status_code}"
+        info = f"问句接口 HTTP {r.status_code}"
         try:
             j = r.json()
             if isinstance(j, dict):
@@ -303,9 +303,17 @@ def _wc_probe(cookie):
         except ValueError:
             m = re.search(r"<title>(.*?)</title>", r.text, re.S)
             info += f"，{(m.group(1).strip() if m else r.text.strip()[:40])[:40]}"
-        return info
     except Exception as e:
-        return f"{type(e).__name__}: {str(e)[:80]}"
+        info = f"{type(e).__name__}: {str(e)[:80]}"
+    try:                                                                    # 首页不用登录：首页也被拒，说明是按服务器地址拦的
+        h = requests.get("https://www.iwencai.com/unifiedwap/home/index", timeout=20, headers={"User-Agent": WC_UA})
+        info += f"；首页 HTTP {h.status_code}"
+    except Exception as e:
+        info += f"；首页 {type(e).__name__}"
+    names = [kv.split("=", 1)[0].strip() for kv in cookie.split(";") if "=" in kv]   # 只看字段名，不碰内容
+    login = [n for n in names if n.lower() in ("userid", "user", "ticket", "u_name", "escapename", "user_status", "utk")]
+    info += f"；cookie 共 {len(names)} 个字段，登录相关字段：{'、'.join(login) if login else '没有'}"
+    return info
 
 
 def wencai():
