@@ -284,7 +284,8 @@ def chk_tdx(tx):
 
 # ---------- pywencai ----------
 def wencai():
-    cookie = os.environ.get("WENCAI_COOKIE", "").strip()
+    cookie = re.sub(r"^\s*cookie\s*:\s*", "", os.environ.get("WENCAI_COOKIE", ""), flags=re.I)   # 连着“cookie:”一起复制、带了换行也能用
+    cookie = " ".join(cookie.split()).strip()
     if not cookie:
         return {"on": 0}
     import pandas as pd

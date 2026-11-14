@@ -409,7 +409,8 @@ cookie 过期后重新复制一次即可。"""
 
 
 def cmd_wc(a):
-    cookie = os.environ.get("WENCAI_COOKIE", "").strip()
+    cookie = re.sub(r"^\s*cookie\s*:\s*", "", os.environ.get("WENCAI_COOKIE", ""), flags=re.I)   # 连着“cookie:”一起复制、带了换行也能用
+    cookie = " ".join(cookie.split()).strip()
     if not cookie:
         raise GpError(WENCAI_HELP)
     import pandas as pd
