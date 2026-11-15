@@ -597,6 +597,7 @@ td.nwwhy{white-space:normal;min-width:200px;max-width:360px;font-size:12.5px;col
         <h1>A股全市场选股台</h1>
         <span class="meta" id="meta"></span>
       </div>
+      <button class="btn" id="pwaBtn" hidden style="margin-left:auto">安装 App</button>
     </div>
     <nav class="tabs" role="tablist" id="tabs">
       <button role="tab" data-v="market" aria-selected="true">市场与下跌</button>
@@ -5506,6 +5507,19 @@ function renderTools(){
   $("#qtToolP").hidden = false;
 }
 renderQuant();
+/* ---------- 安装成 App（PWA）：只在 github.io 实时版；已经装好、在 App 里打开时不显示按钮 ---------- */
+(function(){
+  const btn = $("#pwaBtn"), standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+  if (!btn || standalone || !/\.github\.io$/.test(location.hostname)) return;
+  let ev = null;
+  addEventListener("beforeinstallprompt", e => { e.preventDefault(); ev = e; btn.hidden = false; });   // Chrome、Edge、安卓
+  addEventListener("appinstalled", () => { btn.hidden = true; ev = null; });
+  if (/iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) btn.hidden = false;   // iPhone / iPad
+  btn.addEventListener("click", async () => {
+    if (ev) { ev.prompt(); const r = await ev.userChoice; if (r.outcome === "accepted") btn.hidden = true; ev = null; return; }
+    alert("点浏览器的“分享”按钮（方框加向上箭头），选“添加到主屏幕”，桌面上就会多一个“选股台”图标，点开就是全屏的实时版。");
+  });
+})();
 show((location.hash || "").slice(1) || "market");
 })();
 </script>

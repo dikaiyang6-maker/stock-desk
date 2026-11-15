@@ -1,5 +1,6 @@
 """把 data/ 里的最新数据合进 template.html，生成 site/index.html（网页版，浏览器里打开会自动切到腾讯实时行情）。"""
 import json
+import shutil
 
 from pypinyin import Style, lazy_pinyin
 
@@ -94,10 +95,18 @@ def build():
     t = t.replace("/*__TA__*/", json.dumps(ta, ensure_ascii=False).replace("</", "<\\/"))
     head = ('<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'
             '<meta name="robots" content="noindex"><link rel="icon" href="data:,">'
+            # 实时版可以装成 App（PWA）：主题色、iOS 主屏幕设置；清单、图标和离线缓存只在 github.io 上启用（claude.ai 快照里没有这些文件）
+            '<meta name="theme-color" content="#C8102E"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">'
+            '<meta name="apple-mobile-web-app-title" content="选股台"><meta name="apple-mobile-web-app-status-bar-style" content="default">'
+            '<script>(function(){if(!/(\\.github\\.io|^localhost|^127\\.0\\.0\\.1)$/.test(location.hostname))return;var h=document.head;'
+            '[["manifest","manifest.webmanifest"],["icon","icon-192.png"],["apple-touch-icon","apple-touch-icon.png"]].forEach(function(x){var l=document.createElement("link");l.rel=x[0];l.href=x[1];h.appendChild(l)});'
+            'if("serviceWorker" in navigator)addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})})();</script>'
             '<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}</style></head><body>')
     SITE.mkdir(exist_ok=True)
     (SITE / "index.html").write_text(head + t + "</body></html>", encoding="utf-8")
     (SITE / ".nojekyll").write_text("", encoding="utf-8")
+    for f in (ROOT / "static" / "pwa").glob("*"):                 # App（PWA）的清单、图标和离线缓存脚本
+        shutil.copy(f, SITE / f.name)
     if fl.get("pool") is not None:                                # 完整的监控状态，数据缓存丢了时 flow.py 从这里取回
         (SITE / "flow.json").write_text(json.dumps(fl, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     log("site", (SITE / "index.html").stat().st_size // 1024, "KB | asof", a.get("asof"), "| ai", ai.get("generated") if ai else None,
