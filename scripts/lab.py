@@ -31,7 +31,7 @@ ETFS = [("sh510300", "沪深300ETF"), ("sh510500", "中证500ETF"), ("sh512100",
 BIG = ["sh600519", "sz300750", "sh601318", "sz000858", "sh600036"]          # 行情核对用的几只大盘股
 WC_QUERIES = ["今日涨停，非ST，连续涨停天数从大到小", "近5日主力资金净流入从大到小排名前20，非ST", "市盈率TTM小于25，ROE大于15%，营业收入同比增长大于20%，非ST"]
 BT_DAYS, WARM = 500, 60                                                     # 回测近 500 个交易日（约两年），前面多取 60 根给指标预热
-CURVE_PTS = 90
+CURVE_PTS = 60                                                              # 收益曲线采样点（全部 B 点个股都回测，曲线点数少一点控制网页大小）
 
 
 def lab_due():
@@ -104,8 +104,8 @@ def run_backtests():
             if it[0] not in seen and it[0] in by:
                 seen.add(it[0]); pk.append(it[0])
     groups = {"etf": [(s, n) for s, n in ETFS],
-              "bs": [(gp.norm(c), by[c][I["name"]]) for c in bsl[:30]],
-              "pk": [(gp.norm(c), by[c][I["name"]]) for c in pk[:20]]}
+              "bs": [(gp.norm(c), by[c][I["name"]]) for c in bsl],               # 当天出 B 点的全部个股（按成交额排序）
+              "pk": [(gp.norm(c), by[c][I["name"]]) for c in pk]}                # 精选名单全部
     import logging
     logging.getLogger("akquant").setLevel(logging.ERROR)                   # 网站任务里不打印逐笔的拒单警告
     syms = sorted({s for g in groups.values() for s, _ in g})
@@ -159,16 +159,17 @@ def ak_data(d):
             day = str(r["接待日期"])[:10]
             if day > x["last"]:
                 x["last"], x["how"] = day, "、".join([w for w in str(r["接待方式"] or "").replace("，", ",").split(",") if w.strip()][:3])
-        rows = sorted(g.items(), key=lambda kv: (-kv[1]["org"], -kv[1]["n"]))[:40]
-        return {"t": f"近 30 天（截至 {d}）共 {len(g)} 家公司被调研", "cols": ["code", "name", "n", "org", "last", "how", "p", "chg"],
-                "rows": [[c, x["name"], x["n"], x["org"], x["last"], x["how"], _f(x["p"]), _f(x["chg"])] for c, x in rows]}
+        rows = sorted(g.items(), key=lambda kv: (-kv[1]["org"], -kv[1]["n"]))
+        # 全部列出：上千家公司，为控制网页大小，接待方式只保留机构家数前 300 的，现价涨跌网页上用本站行情
+        return {"t": f"近 30 天（截至 {d}）共 {len(g)} 家公司被调研，全部列出", "cols": ["code", "name", "n", "org", "last", "how"],
+                "rows": [[c, x["name"], x["n"], x["org"], x["last"][5:], x["how"] if k < 300 else ""] for k, (c, x) in enumerate(rows)]}
 
     def dzjy():
         df = ak.stock_dzjy_mrmx(symbol="A股", start_date=d8, end_date=d8)
         df = df.sort_values("成交额", ascending=False)
         return {"t": f"{d} 共 {len(df)} 笔，成交 {df['成交额'].sum() / 1e8:.2f} 亿元", "cols": ["code", "name", "px", "close", "prem", "amt", "buy", "sell"],
                 "rows": [[str(r["证券代码"]), r["证券简称"], _f(r["成交价"], 3), _f(r["收盘价"], 3), _f((r["折溢率"] or 0) * 100), _f(r["成交额"], 0),
-                          str(r["买方营业部"] or "")[:24], str(r["卖方营业部"] or "")[:24]] for r in df.head(40).to_dict("records")]}
+                          str(r["买方营业部"] or "")[:24], str(r["卖方营业部"] or "")[:24]] for r in df.to_dict("records")]}
 
     def lhb():
         df = ak.stock_lhb_detail_em(start_date=d8, end_date=d8)
@@ -177,7 +178,7 @@ def ak_data(d):
         g = g.sort_values("龙虎榜净买额", ascending=False)
         return {"t": f"{d} 共 {len(g)} 只上榜", "cols": ["code", "name", "close", "chg", "net", "amt", "jd", "why"],
                 "rows": [[r["代码"], r["名称"], _f(r["收盘价"]), _f(r["涨跌幅"]), _f(r["龙虎榜净买额"], 0), _f(r["龙虎榜成交额"], 0), str(r["解读"] or "")[:30],
-                          str(r["上榜原因"] or "")[:60]] for r in g.head(40).to_dict("records")]}
+                          str(r["上榜原因"] or "")[:60]] for r in g.to_dict("records")]}
 
     def jj():
         t0 = bj_now().date()
@@ -186,7 +187,7 @@ def ak_data(d):
         return {"t": f"未来 30 天（{t0.isoformat()} 起）共 {len(df)} 批，合计 {df['实际解禁市值'].sum() / 1e8:.2f} 亿元",
                 "cols": ["code", "name", "day", "kind", "mv", "pct"],
                 "rows": [[str(r["股票代码"]), r["股票简称"], str(r["解禁时间"])[:10], str(r["限售股类型"] or "")[:14], _f(r["实际解禁市值"], 0),
-                          _f((r["占解禁前流通市值比例"] or 0) * 100)] for r in df.head(40).to_dict("records")]}
+                          _f((r["占解禁前流通市值比例"] or 0) * 100)] for r in df.to_dict("records")]}
 
     for k, fn in (("jgdy", jgdy), ("dzjy", dzjy), ("lhb", lhb), ("jj", jj)):
         one(k, fn)
@@ -352,8 +353,15 @@ def wencai():
     out, errs = [], []
     for q in WC_QUERIES:
         try:
-            df = (pywencai.get(query=q, cookie=cookie, loop=2, strict=True, log=False) if enh                     # 取前两页（20 条），总条数在 attrs 里
-                  else pywencai.get(query=q, cookie=cookie, loop=False, user_agent=WC_UA, retry=3, sleep=1, request_params={"timeout": 20}))
+            if enh:                                                         # 翻完所有页，取问财选出的全部股票
+                try:
+                    df = pywencai.get(query=q, cookie=cookie, loop=True, strict=True, log=False)
+                except Exception as e:
+                    if type(e).__name__ != "WencaiRowCountMismatchError":
+                        raise
+                    df = pywencai.get(query=q, cookie=cookie, loop=True, strict=False, log=False)   # 有页没取到：保留取到的，网页上注明
+            else:
+                df = pywencai.get(query=q, cookie=cookie, loop=True, user_agent=WC_UA, retry=3, sleep=1, request_params={"timeout": 20})
             if isinstance(df, dict):
                 df = next((v for v in df.values() if isinstance(v, pd.DataFrame)), None)
             if not isinstance(df, pd.DataFrame) or not len(df):
@@ -361,7 +369,7 @@ def wencai():
             cols = [c for c in df.columns if c not in ("market_code", "code")][:8]
             names = [re.sub(r"\[\d{8}(?:-\d{8})?\]", "", str(c)).strip() for c in cols]   # 去掉列名里的日期 [20261113] / [20261109-20261113]
             rows = []
-            for r in df[cols].head(20).values.tolist():
+            for r in df[cols].values.tolist():
                 cells = [_wc_cell(n, v) for n, v in zip(names, r)]
                 if names[:1] == ["股票代码"]:
                     cells[0] = str(r[0]).split(".")[0]                       # 605255.SH -> 605255，网页上点击打开个股
