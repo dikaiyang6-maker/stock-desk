@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gp 一键安装（Mac / Linux）：
 #   curl -fsSL https://raw.githubusercontent.com/dikaiyang6-maker/stock-desk/main/tools/install.sh | bash
-# 装什么：独立的 Python 虚拟环境（~/.stock-tools/venv）里的 akshare、easyquotation、mootdx、pywencai、akquant，
+# 装什么：独立的 Python 虚拟环境（~/.stock-tools/venv）里的 akshare、easyquotation、mootdx、pywencai（增强版 pywencai-enhanced）、akquant，
 #         有 Node.js 时再装 stock-api（~/.stock-tools/node），最后把 gp 命令放进 ~/.local/bin。
 # 重复运行 = 升级到最新版。卸载：rm -rf ~/.stock-tools ~/.local/bin/gp
 set -euo pipefail
@@ -34,8 +34,10 @@ fi
 VPY="$DIR/venv/bin/python"
 say "安装 / 升级 Python 库（第一次要几分钟）"
 "$VPY" -m pip install -q -U pip setuptools wheel
-"$VPY" -m pip install -q -U --use-pep517 PyExecJS easyutils        # 这两个只有源码包，要用新式构建
-"$VPY" -m pip install -q -U akshare easyquotation mootdx pywencai akquant
+"$VPY" -m pip install -q -U --use-pep517 easyutils                 # 只有源码包，要用新式构建
+"$VPY" -m pip install -q -U akshare easyquotation mootdx akquant
+"$VPY" -m pip uninstall -q -y pywencai >/dev/null 2>&1 || true      # 原版 pywencai 已经跟不上问财的新接口，换成增强版（固定在审查过的版本）
+"$VPY" -m pip install -q -U "https://github.com/HeRiki/pywencai-enhanced/archive/883f968ea6e34fd0f68f2a32ad4c21cc2dd15945.zip"
 
 # 3. stock-api（Node.js）
 if command -v npm >/dev/null 2>&1; then

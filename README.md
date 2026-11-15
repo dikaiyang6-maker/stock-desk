@@ -79,7 +79,7 @@ GitHub 的定时任务是“尽力而为”，高峰期可能晚几分钟到几�
 - **akquant 回测**：操盘线 B/S 策略（收盘上穿 13 日 EMA 且 DIF > DEA 次日开盘买入，下破且 DIF < DEA 次日开盘卖出）在宽基 ETF、当天出 B 点的个股（成交额前 30）和精选名单上的近 500 个交易日表现，对比同期买入持有；T+1、整手、佣金印花税过户费和滑点都算进去。点一行看收益曲线。回测代码和终端命令 `gp bt` 是同一份（`tools/gp.py`）。
 - **akshare**：机构调研（近 30 天按机构家数排）、大宗交易（最近交易日按成交额排，带折溢价）、龙虎榜（按净买额排）、限售解禁（未来 30 天按解禁市值排），来自东方财富数据中心。
 - **行情核对**：easyquotation 取新浪全市场行情、stock-api 取几只大盘股，和本站的腾讯行情逐只核对收盘价；mootdx 检查 GitHub 机房能否连上通达信行情服务器。
-- **问财（pywencai）**：默认不跑。在仓库 Settings → Secrets and variables → Actions 添加 `WENCAI_COOKIE`（你自己登录 www.iwencai.com 后复制的 Cookie）后，每天收盘后显示三条预设问句的结果。
+- **问财（pywencai-enhanced）**：默认不跑。原版 pywencai 已被问财新接口拒绝，这里用增强版 [pywencai-enhanced](https://github.com/HeRiki/pywencai-enhanced)（固定在审查过的版本）。在仓库 Settings → Secrets and variables → Actions 添加 `WENCAI_COOKIE`（你自己登录 www.iwencai.com 后复制的 Cookie）后，每天收盘后显示三条预设问句的结果。
 - 页面最下面列出六个库最近一次的运行状态，以及终端命令的安装和用法。
 
 ## 命令行工具 gp（电脑终端和 Claude 新会话都能用）
@@ -107,7 +107,7 @@ irm https://raw.githubusercontent.com/dikaiyang6-maker/stock-desk/main/tools/ins
 | `gp tdx 600519`、`--ticks`、`--minute` | 通达信行情、分笔、分时（mootdx，要能直连 TCP 7709） |
 | `gp zt`、`gp zt --kind zb` | 涨停池 / 炸板 / 跌停 / 强势股（akshare：东方财富） |
 | `gp lhb` | 龙虎榜，按净买额排序（akshare：东方财富） |
-| `gp wc "今日涨停，非ST"` | 问财选股（pywencai，需要你自己的问财 cookie，见 `gp wc` 的提示） |
+| `gp wc "今日涨停，非ST"` | 问财选股（pywencai-enhanced，需要你自己的问财 cookie，见 `gp wc` 的提示） |
 | `gp js 600519`、`gp js 宁德`、`gp js 510300 --k 20` | 行情 / 搜索 / 日K（stock-api，Node.js） |
 | `gp bt 600519`、`--strategy ma`、`--trades` | 操盘线 B/S 策略回测（akquant：次日开盘成交、T+1、手续费、整手），对比买入持有 |
 | `gp ak --search 解禁`、`gp ak stock_zt_pool_em date=20261113` | 找 / 直接调用任意 akshare 函数 |

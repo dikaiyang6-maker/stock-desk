@@ -318,6 +318,25 @@ def _wc_probe(cookie):
     return info
 
 
+def _wc_cell(col, v):
+    """问财给的是原始数字（涨跌幅 9.998509909104445、资金 4013433721.44 元），按列名整理成网页上的写法。"""
+    if v is None or (isinstance(v, float) and v != v):
+        return ""
+    t = str(v).strip()
+    try:
+        x = float(t.replace(",", ""))
+    except ValueError:
+        return t[:24]
+    if re.search(r"涨跌幅|增长率|收益率|roe|ROE|换手率|占比|振幅", col):
+        return f"{x:.2f}%"
+    if re.search(r"资金|金额|成交额|市值|净额", col):
+        a = abs(x)
+        return f"{x / 1e8:.2f}亿" if a >= 1e8 else f"{x / 1e4:.2f}万" if a >= 1e4 else f"{x:.2f}"
+    if re.search(r"天数|家数|次数", col) and x == int(x):
+        return str(int(x))
+    return f"{x:.2f}"
+
+
 def wencai():
     cookie = gp.wencai_cookie()
     if not cookie:
@@ -333,15 +352,22 @@ def wencai():
     out, errs = [], []
     for q in WC_QUERIES:
         try:
-            df = (pywencai.get(query=q, cookie=cookie, loop=False, strict=True, log=False) if enh
+            df = (pywencai.get(query=q, cookie=cookie, loop=2, strict=True, log=False) if enh                     # 取前两页（20 条），总条数在 attrs 里
                   else pywencai.get(query=q, cookie=cookie, loop=False, user_agent=WC_UA, retry=3, sleep=1, request_params={"timeout": 20}))
             if isinstance(df, dict):
                 df = next((v for v in df.values() if isinstance(v, pd.DataFrame)), None)
             if not isinstance(df, pd.DataFrame) or not len(df):
                 out.append({"q": q, "err": "没有结果（cookie 可能过期）"}); continue
             cols = [c for c in df.columns if c not in ("market_code", "code")][:8]
-            rows = [[("" if v is None else str(v))[:24] for v in r] for r in df[cols].head(20).values.tolist()]
-            out.append({"q": q, "cols": [re.sub(r"\[\d{8}\]", "", str(c)) for c in cols], "rows": rows, "n": len(df)})
+            names = [re.sub(r"\[\d{8}(?:-\d{8})?\]", "", str(c)).strip() for c in cols]   # 去掉列名里的日期 [20261113] / [20261109-20261113]
+            rows = []
+            for r in df[cols].head(20).values.tolist():
+                cells = [_wc_cell(n, v) for n, v in zip(names, r)]
+                if names[:1] == ["股票代码"]:
+                    cells[0] = str(r[0]).split(".")[0]                       # 605255.SH -> 605255，网页上点击打开个股
+                rows.append(cells)
+            total = ((getattr(df, "attrs", {}) or {}).get("wencai_query_coverage") or {}).get("expected_row_count") or len(df)
+            out.append({"q": q, "cols": names, "rows": rows, "n": int(total), "shown": len(rows)})
         except Exception as e:
             msg = "问财没有返回结果" if "NoneType" in str(e) else f"{type(e).__name__}: {str(e)[:120]}"
             out.append({"q": q, "err": msg}); errs.append(msg)
