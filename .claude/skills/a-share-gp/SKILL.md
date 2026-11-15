@@ -55,7 +55,7 @@ akshare 改名很频繁：1.20 以后 `stock_zh_a_daily` → `stock_zh_a_daily_s
 ## 3. 限制，照实告诉用户
 
 - **mootdx（通达信）**：要直连通达信服务器 TCP 7709。Claude 云端会话不允许直连 TCP，`gp tdx` 会报连不上——不要想办法绕过，告诉用户在自己电脑上运行。
-- **pywencai（问财）**：需要用户自己登录 www.iwencai.com 后的 cookie，放在环境变量 `WENCAI_COOKIE`。不要让用户把 cookie 贴到聊天里，也不要替用户登录；`gp wc` 不带 cookie 时会打印设置方法。
+- **pywencai（问财）**：用的是增强版 pywencai-enhanced（github.com/HeRiki/pywencai-enhanced，跟上了问财 2026 年 9 月的新接口；原版 pywencai 会被问财拒绝，返回 403 / None）。需要用户自己登录 www.iwencai.com 后的 cookie，放在环境变量 `WENCAI_COOKIE`。不要让用户把 cookie 贴到聊天里，也不要替用户登录；`gp wc` 不带 cookie 时会打印设置方法。
 - **东方财富 push2 行情接口**偶尔对云端 IP 限流（502 / 连接被重置）。日K优先用腾讯 / 新浪（`gp k` 已经这样做），涨停池、龙虎榜走的是东方财富数据中心，一般不受影响。
 - 新浪接口偶尔对云端 IP 重置连接，`gp q` 会自动换腾讯，`gp k` 会自动换新浪 / 腾讯。
 

@@ -1,6 +1,6 @@
 # gp 一键安装（Windows PowerShell）：
 #   irm https://raw.githubusercontent.com/dikaiyang6-maker/stock-desk/main/tools/install.ps1 | iex
-# 装什么：独立的 Python 虚拟环境（%USERPROFILE%\.stock-tools\venv）里的 akshare、easyquotation、mootdx、pywencai、akquant，
+# 装什么：独立的 Python 虚拟环境（%USERPROFILE%\.stock-tools\venv）里的 akshare、easyquotation、mootdx、pywencai（增强版 pywencai-enhanced）、akquant，
 #         有 Node.js 时再装 stock-api（%USERPROFILE%\.stock-tools\node），最后把 gp 命令加进用户 PATH。
 # 重复运行 = 升级到最新版。卸载：删除 %USERPROFILE%\.stock-tools，并从用户环境变量 Path 里去掉 ...\.stock-tools\bin
 
@@ -36,8 +36,10 @@ function Install-StockTools {
     }
     Write-Host "==> 安装 / 升级 Python 库（第一次要几分钟）" -ForegroundColor Cyan
     & $vpy -m pip install -q -U pip setuptools wheel
-    & $vpy -m pip install -q -U --use-pep517 PyExecJS easyutils
-    & $vpy -m pip install -q -U akshare easyquotation mootdx pywencai akquant
+    & $vpy -m pip install -q -U --use-pep517 easyutils
+    & $vpy -m pip install -q -U akshare easyquotation mootdx akquant
+    & $vpy -m pip uninstall -q -y pywencai 2>$null
+    & $vpy -m pip install -q -U "https://github.com/HeRiki/pywencai-enhanced/archive/883f968ea6e34fd0f68f2a32ad4c21cc2dd15945.zip"
     if ($LASTEXITCODE -ne 0) { Write-Host "Python 库安装失败，看上面的报错；网络不稳时重新运行即可" -ForegroundColor Red; return }
 
     # 3. stock-api（Node.js）
