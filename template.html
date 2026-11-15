@@ -407,6 +407,13 @@ tbody tr.greg:hover{background:var(--bg)}
 .labwc{margin:0 0 12px}
 .labwc h4{margin:0 0 6px;font-size:13px}
 .tscroll.tall{max-height:560px;overflow-y:auto}
+/* 行业龙头 */
+.indgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(460px,1fr));gap:16px;margin-top:16px}
+.indc{margin:0;min-width:0}
+.indc .phead{margin-bottom:8px}
+.indc td:first-child{width:22px;color:var(--muted)}
+.indq{border:1px solid var(--line);border-radius:4px;padding:5px 10px;min-height:30px;background:var(--surface);color:var(--ink);font-size:13px;min-width:220px}
+@media (max-width:540px){.indgrid{grid-template-columns:1fr}.indq{min-width:0;width:100%}}
 /* 资金监控 */
 .falerts{display:grid;gap:8px}
 .falerts:empty{display:none}
@@ -606,6 +613,7 @@ td.nwwhy{white-space:normal;min-width:200px;max-width:360px;font-size:12.5px;col
       <button role="tab" data-v="picks">精选名单</button>
       <button role="tab" data-v="screen">全市场筛选</button>
       <button role="tab" data-v="xg">选股</button>
+      <button role="tab" data-v="ind">行业龙头</button>
       <button role="tab" data-v="flow">资金监控</button>
       <button role="tab" data-v="hot">热点</button>
       <button role="tab" data-v="news">资讯</button>
@@ -1064,6 +1072,18 @@ td.nwwhy{white-space:normal;min-width:200px;max-width:360px;font-size:12.5px;col
   </section>
 
   <!-- TOOLS -->
+  <section class="view" id="v-ind" hidden>
+    <div class="panel">
+      <div class="phead"><h2>行业龙头</h2><span class="note" id="indMeta"></span></div>
+      <p class="note" style="margin:0">按本站的行业分类（申万二级），每个行业列出前 5 名。<b>行业龙头</b>默认按总市值排，也可以按营收或净利润排（财报用各公司最新一期，多数是前三季累计）；<b>情绪龙头</b>按连板天数、今日涨幅、近 5 日涨幅排，看短线资金最集中的票（上市初期不设涨跌幅的新股不算）。都只是按规模或强弱排名，不代表看好，<b class="dn">不构成投资建议</b>。全市场的空间龙头、题材龙头、人气龙头在「资讯」页。点股票看详情。</p>
+      <div class="cctl" style="margin-top:10px">
+        <span class="cg" id="indBy" role="group" aria-label="龙头按什么排"><span class="mut">龙头按</span><button class="chip2" data-by="mcap" aria-pressed="true">总市值</button><button class="chip2" data-by="rev" aria-pressed="false">营收</button><button class="chip2" data-by="np" aria-pressed="false">净利润</button><button class="chip2" data-by="emo" aria-pressed="false">情绪（连板、涨幅）</button></span>
+        <span class="cg" id="indOrd" role="group" aria-label="行业顺序"><span class="mut">行业顺序</span><button class="chip2" data-ord="cap" aria-pressed="true">行业总市值</button><button class="chip2" data-ord="chg" aria-pressed="false">今日涨幅</button><button class="chip2" data-ord="name" aria-pressed="false">名称</button></span>
+        <input class="indq" id="indQ" type="search" autocomplete="off" placeholder="搜行业或股票：半导体、茅台、gzmt">
+      </div>
+    </div>
+    <div class="indgrid" id="indGrid"></div>
+  </section>
   <section class="view" id="v-flow" hidden>
     <div class="panel">
       <div class="phead"><h2>资金监控</h2><span class="note" id="flMeta"></span></div>
@@ -1627,7 +1647,7 @@ function stockMinute(code){
 const idxMinute = code => (D.idxm?.[code] || []).map(x => ({d: x.d, prec: x.prec, p: x.p}));
 
 /* ---------- tabs ---------- */
-const VIEWS = ["market","global","research","picks","screen","xg","flow","hot","news","cp","lab","tools","zmz","watch","ai"];
+const VIEWS = ["market","global","research","picks","screen","xg","ind","flow","hot","news","cp","lab","tools","zmz","watch","ai"];
 function show(v){
   if (!VIEWS.includes(v)) v = "market";
   VIEWS.forEach(x => { document.getElementById("v-" + x).hidden = x !== v; });
@@ -1636,6 +1656,7 @@ function show(v){
   if (sel && nav.scrollWidth > nav.clientWidth) { const n = nav.getBoundingClientRect(), s = sel.getBoundingClientRect(); nav.scrollLeft += s.left - n.left - (n.width - s.width) / 2; }
   if (v === "watch") renderWatch();
   if (v === "xg") renderXg();
+  if (v === "ind") renderInd();
   if (v === "flow") { renderFlow(); FLV.liveAt = 0; }
   if (v === "hot") { renderHot(); HTV.liveAt = 0; }
   if (v === "cp") renderCp();
@@ -1685,7 +1706,8 @@ function renderMarket(){
   const bm = Math.max(...bins);
   $("#hist").innerHTML = bins.map((b, i) => `<div title="${b} 只"><small>${b}</small><span class="bar" style="height:${Math.max(2, b / bm * 82)}px;background:${i < 6 ? "var(--dn)" : "var(--up)"}"></span><small>${labels[i]}</small></div>`).join("");
   // industries
-  const agg = (keyFn) => { const m = new Map(); R.forEach(r => { if (!(r.mcap > 0)) return; [].concat(keyFn(r)).forEach(k => { if (!k) return; const x = m.get(k) || {w:0, m:0, n:0}; x.w += r.mcap * r.chg; x.m += r.mcap; x.n++; m.set(k, x); }); }); return [...m].map(([k, x]) => ({k, c: x.w / x.m, n: x.n})); };
+  /* 不设涨跌幅的上市初期新股（首日动辄涨几倍）不计入行业/题材涨跌 */
+  const agg = (keyFn) => { const m = new Map(); R.forEach(r => { if (!(r.mcap > 0) || r.lu == null) return; [].concat(keyFn(r)).forEach(k => { if (!k) return; const x = m.get(k) || {w:0, m:0, n:0}; x.w += r.mcap * r.chg; x.m += r.mcap; x.n++; m.set(k, x); }); }); return [...m].map(([k, x]) => ({k, c: x.w / x.m, n: x.n})); };
   const ind = agg(r => r.ind).filter(x => x.n >= 5).sort((a, b) => a.c - b.c);
   const bars = (arr, max) => arr.map(x => { const w = Math.abs(x.c) / max * 50; return `<div class="dbar"><span class="l" title="${esc(x.k)}">${esc(x.k)}</span><span class="t"><i style="${x.c >= 0 ? `left:50%` : `left:${50 - w}%`};width:${w}%;background:${x.c >= 0 ? "var(--up)" : "var(--dn)"}"></i></span><span class="r num ${cls(x.c)}">${pct(x.c, 2)}</span></div>`; }).join("");
   const imax = Math.max(...ind.map(x => Math.abs(x.c)));
@@ -3298,6 +3320,7 @@ function focusCodes(){
   if (openState?.type === "stock") s.add(openState.code);
   try { if (FL && !$("#v-flow").hidden) FL.pool.forEach(p => s.add(p.code)); } catch (e) {}
   try { if (!$("#v-news").hidden) nwFocus().forEach(c => s.add(c)); } catch (e) {}
+  try { if (!$("#v-ind").hidden) indTop().forEach(c => s.add(c)); } catch (e) {}
   return [...s].filter(c => BY.has(c));
 }
 let lastMin = 0;
@@ -3338,6 +3361,7 @@ function liveRender(stocks){
     if (!$("#v-watch").hidden && !document.activeElement?.closest?.("#watch")) renderWatch();
     if (!$("#v-xg").hidden && !document.activeElement?.closest?.(".xgset")) renderXg();
     if (!$("#v-flow").hidden) renderFlow();
+    if (!$("#v-ind").hidden && document.activeElement?.id !== "indQ") renderInd();
   }
   updateDrawer();
 }
@@ -4812,6 +4836,47 @@ function renderCp(){
   if (!st.hidden) st.textContent = `信号按 ${SC.techDate} 收盘计算，当前行情已是更新的交易日；下一个交易日收盘后自动重算。打开个股看到的是实时日K算出的操盘线和信号。`;
   renderCpIdx(); renderCpLists(); renderCpStat();
 }
+// ---- 行业龙头：按本站行业分类（申万二级），每个行业取前 5（总市值 / 营收 / 净利润）。直接用全市场行情计算，交易时段跟着实时行情刷新 ----
+const INDV = {by: "mcap", ord: "cap", q: ""};
+const yi2 = v => v == null || !isFinite(v) ? "—" : Math.abs(v) >= 10000 ? (v / 10000).toFixed(2) + "万亿" : Number(v).toFixed(2) + "亿";
+function indGroups(){
+  const m = new Map();
+  for (const r of R) {
+    if (!r.ind) continue;
+    let g = m.get(r.ind); if (!g) m.set(r.ind, g = {ind: r.ind, rows: [], cap: 0, w: 0});
+    g.rows.push(r); if (r.mcap > 0 && r.lu != null) { g.cap += r.mcap; g.w += r.mcap * (r.chg || 0); }   // 上市初期不设涨跌幅的新股（首日动辄涨几倍）不算进行业涨跌
+  }
+  const key = INDV.by === "rev" ? r => r.rev : INDV.by === "np" ? r => r.np : r => r.mcap, emo = INDV.by === "emo", r5 = r => xTech(r.code)?.r5 ?? -1e9;
+  const ok = emo ? r => r.price > 0 && r.chg != null && r.lu != null : r => key(r) != null && isFinite(key(r));
+  const cmp = emo ? (a, b) => (indLb(b) - indLb(a)) || (b.chg - a.chg) || (r5(b) - r5(a)) : (a, b) => key(b) - key(a);
+  return [...m.values()].map(g => ({...g, chg: g.cap ? g.w / g.cap : 0, top: g.rows.filter(ok).sort(cmp).slice(0, 5)}));
+}
+function indLb(r){                      // 当前连板数：收盘后用日K统计，交易时段今天封板的加 1（和选股页同一算法）
+  const t = xTech(r.code); if (!t || !luX(r)) return 0;
+  return fBehind() ? ((t.zt5 & 1) ? t.lb + 1 : 1) : t.lb;
+}
+function indTop(){ const out = []; indGroups().forEach(g => g.top.forEach(r => out.push(r.code))); return out; }
+function renderInd(){
+  let gs = indGroups();
+  const q = INDV.q.trim().toLowerCase();
+  if (q) gs = gs.filter(g => g.ind.toLowerCase().includes(q) || g.top.some(r => r.name.toLowerCase().includes(q) || r.code.includes(q) || (PY.a?.[r.code] || "").includes(q)));
+  gs.sort(INDV.ord === "chg" ? (a, b) => b.chg - a.chg : INDV.ord === "name" ? (a, b) => a.ind.localeCompare(b.ind, "zh") : (a, b) => b.cap - a.cap);
+  const label = {mcap: "总市值", rev: "营收", np: "净利润", emo: "情绪（连板、涨幅）"}[INDV.by], emo = INDV.by === "emo";
+  $("#indMeta").innerHTML = `${gs.length} 个行业 · 每个行业按${label}取前 5 · ${LIVE.on ? `<span class="live-dot" aria-hidden="true"></span>行情实时 ${esc(liveTime())}` : `行情 ${esc(ASOF)}`}`;
+  const hl = c => `class="num"${INDV.by === c ? ` style="font-weight:600"` : ""}`;
+  const head = emo ? ["#", "股票", "现价", "涨跌", "连板", "5日涨幅", "换手率", "成交额"] : ["#", "股票", "现价", "涨跌", "总市值", "营收", "净利润", "ROE年化"];
+  const cells = r => emo
+    ? (() => { const t = xTech(r.code), lb = indLb(r); return `<td class="num"${lb ? ` style="font-weight:600"` : ""}>${lb ? `<b class="up">${lb} 板</b>` : "—"}</td><td class="num ${cls(t?.r5)}">${t?.r5 == null ? "—" : pct(t.r5, 2)}</td><td class="num">${r.tr == null ? "—" : f(r.tr, 2) + "%"}</td><td class="num">${amtYi(r.amt)}</td>`; })()
+    : `<td ${hl("mcap")}>${yi2(r.mcap)}</td><td ${hl("rev")}>${yi2(r.rev)}</td><td ${hl("np")}><span class="${r.np < 0 ? "dn" : ""}">${yi2(r.np)}</span></td><td class="num">${r.roeA == null ? "—" : f(r.roeA, 1) + "%"}</td>`;
+  $("#indGrid").innerHTML = gs.map(g => `<div class="panel indc"><div class="phead"><h3>${esc(g.ind)}</h3><span class="note">${g.rows.length} 只 · 行业市值 ${yi2(g.cap)} · 今日 <b class="${cls(g.chg)}">${pct(g.chg, 2)}</b></span></div>
+    <div class="tscroll"><table class="fltop"><thead><tr>${head.map((h, i) => `<th class="${i < 2 ? "l" : ""}" style="cursor:default">${h}</th>`).join("")}</tr></thead><tbody>`
+    + g.top.map((r, i) => `<tr data-code="${r.code}"><td class="l num">${i + 1}</td><td class="l">${labStock(r.code, r.name)}</td><td class="num">${f(r.price)}</td><td class="num ${cls(r.chg)}">${pct(r.chg, 2)}</td>${cells(r)}</tr>`).join("")
+    + `</tbody></table></div></div>`).join("") || `<p class="note">没有匹配的行业或股票。</p>`;
+}
+$("#indBy").addEventListener("click", e => { const b = e.target.closest("[data-by]"); if (!b) return; INDV.by = b.dataset.by; document.querySelectorAll("#indBy [data-by]").forEach(x => x.setAttribute("aria-pressed", x === b)); renderInd(); });
+$("#indOrd").addEventListener("click", e => { const b = e.target.closest("[data-ord]"); if (!b) return; INDV.ord = b.dataset.ord; document.querySelectorAll("#indOrd [data-ord]").forEach(x => x.setAttribute("aria-pressed", x === b)); renderInd(); });
+let indT = 0; $("#indQ").addEventListener("input", e => { clearTimeout(indT); indT = setTimeout(() => { INDV.q = e.target.value; renderInd(); }, 200); });
+$("#indGrid").addEventListener("click", e => { const tr = e.target.closest("tr[data-code]"); if (tr) openStock(tr.dataset.code); });
 // ---- 量化：六个开源库（scripts/lab.py 每个交易日收盘后生成 D.lab）。回测和终端命令 gp bt 用同一份代码（tools/gp.py）----
 const LAB = D.lab || null;
 const LBV = {g: "etf", sort: null, sel: null, ak: "jgdy"};
