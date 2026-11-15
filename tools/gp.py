@@ -411,6 +411,15 @@ cookie 过期后重新复制一次即可。"""
 WC_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
 
 
+def wencai_enhanced():
+    """装的是 pywencai-enhanced（github.com/HeRiki/pywencai-enhanced，跟上了问财 2026 年 9 月的新接口）时返回版本号，原版返回 None。"""
+    from importlib.metadata import PackageNotFoundError, version
+    try:
+        return version("pywencai-enhanced")
+    except PackageNotFoundError:
+        return None
+
+
 def wencai_cookie():
     """环境变量 WENCAI_COOKIE；连着“cookie:”一起复制、带了换行也能用。"""
     c = re.sub(r"^\s*cookie\s*:\s*", "", os.environ.get("WENCAI_COOKIE", ""), flags=re.I)
@@ -463,10 +472,16 @@ def cmd_wc(a):
         raise GpError(WENCAI_HELP)
     import pandas as pd
     import pywencai
-    ok, why = wencai_prepare(cookie, a.query)
-    if not ok:
-        raise GpError(f"问财拒绝了请求（{why}）。cookie 可能过期或复制不完整；也可能问财又改了接口。\n" + WENCAI_HELP)
-    res = pywencai.get(query=a.query, cookie=cookie, loop=a.all, query_type=a.type, user_agent=WC_UA)
+    if wencai_enhanced():                                                 # 增强版自己处理新接口、请求头和 token 刷新
+        try:
+            res = pywencai.get(query=a.query, cookie=cookie, loop=a.all, query_type=a.type, strict=True, log=False)
+        except Exception as e:
+            raise GpError(f"问财没有返回结果（{type(e).__name__}: {str(e)[:160]}）。cookie 可能过期或复制不完整。\n" + WENCAI_HELP)
+    else:
+        ok, why = wencai_prepare(cookie, a.query)
+        if not ok:
+            raise GpError(f"问财拒绝了请求（{why}）。cookie 可能过期或复制不完整；也可能问财又改了接口（可以改装 pywencai-enhanced）。\n" + WENCAI_HELP)
+        res = pywencai.get(query=a.query, cookie=cookie, loop=a.all, query_type=a.type, user_agent=WC_UA)
     if res is None:
         raise GpError("问财没有返回结果：cookie 可能过期了，或者这句问法没有匹配。\n" + WENCAI_HELP)
     if isinstance(res, pd.DataFrame):
@@ -700,7 +715,7 @@ def cmd_doctor(a):
     for pkg, use in (("akshare", "日K、涨停池、龙虎榜等上千个接口"), ("easyquotation", "新浪 / 腾讯实时行情"), ("mootdx", "通达信行情"),
                      ("pywencai", "问财选股"), ("akquant", "回测引擎")):
         try:
-            add(pkg, True, f"{version(pkg)} · {use}")
+            add(pkg, True, (f"pywencai-enhanced {wencai_enhanced()}" if pkg == "pywencai" and wencai_enhanced() else version(pkg)) + f" · {use}")
         except PackageNotFoundError:
             add(pkg, False, f"没装 · pip install {pkg}")
     node = shutil.which("node")

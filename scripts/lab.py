@@ -41,6 +41,8 @@ def lab_due():
 
 
 def _ver(pkg):
+    if pkg == "pywencai" and gp.wencai_enhanced():
+        return f"enhanced {gp.wencai_enhanced()}"
     try:
         return version(pkg)
     except PackageNotFoundError:
@@ -322,14 +324,17 @@ def wencai():
         return {"on": 0}
     import pandas as pd
     import pywencai
-    ok, why = gp.wencai_prepare(cookie, WC_QUERIES[0])                     # 问财升级后要带 Referer/Origin，先挑能用的请求头
-    log("wencai: 请求头检查", why)
-    if not ok:
-        return {"on": 1, "res": [{"q": q, "err": "问财拒绝了请求"} for q in WC_QUERIES], "diag": why + "；" + _wc_probe(cookie).split("；", 1)[-1]}
-    out = []
+    enh = gp.wencai_enhanced()                                             # pywencai-enhanced 跟上了问财的新接口，自己处理请求头和 token
+    if not enh:
+        ok, why = gp.wencai_prepare(cookie, WC_QUERIES[0])                 # 原版：问财升级后要带 Referer/Origin，先挑能用的请求头
+        log("wencai: 请求头检查", why)
+        if not ok:
+            return {"on": 1, "res": [{"q": q, "err": "问财拒绝了请求"} for q in WC_QUERIES], "diag": why + "；" + _wc_probe(cookie).split("；", 1)[-1]}
+    out, errs = [], []
     for q in WC_QUERIES:
         try:
-            df = pywencai.get(query=q, cookie=cookie, loop=False, user_agent=WC_UA, retry=3, sleep=1, request_params={"timeout": 20})
+            df = (pywencai.get(query=q, cookie=cookie, loop=False, strict=True, log=False) if enh
+                  else pywencai.get(query=q, cookie=cookie, loop=False, user_agent=WC_UA, retry=3, sleep=1, request_params={"timeout": 20}))
             if isinstance(df, dict):
                 df = next((v for v in df.values() if isinstance(v, pd.DataFrame)), None)
             if not isinstance(df, pd.DataFrame) or not len(df):
@@ -338,12 +343,13 @@ def wencai():
             rows = [[("" if v is None else str(v))[:24] for v in r] for r in df[cols].head(20).values.tolist()]
             out.append({"q": q, "cols": [re.sub(r"\[\d{8}\]", "", str(c)) for c in cols], "rows": rows, "n": len(df)})
         except Exception as e:
-            out.append({"q": q, "err": "问财没有返回结果" if "NoneType" in str(e) else f"{type(e).__name__}: {str(e)[:80]}"})
+            msg = "问财没有返回结果" if "NoneType" in str(e) else f"{type(e).__name__}: {str(e)[:120]}"
+            out.append({"q": q, "err": msg}); errs.append(msg)
         time.sleep(2)
-    res = {"on": 1, "res": out}
+    res = {"on": 1, "res": out, "lib": f"pywencai-enhanced {enh}" if enh else "pywencai"}
     if not any("rows" in x for x in out):
-        res["diag"] = _wc_probe(cookie)
-        log("wencai: 问句都没有结果，问财返回：", res["diag"])
+        res["diag"] = (f"{errs[0]}；" + _wc_probe(cookie).split("；", 1)[-1]) if enh and errs else _wc_probe(cookie)
+        log("wencai: 问句都没有结果：", res["diag"])
     return res
 
 
