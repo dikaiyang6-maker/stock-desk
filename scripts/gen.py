@@ -38,9 +38,12 @@ def pinyin_initials(a, G):
 KALL = ROOT / "kall" / "kr.json"
 
 
-def kall_embed(a, pk, fl):
-    """网页（github.io）打开个股时按需加载完整的 kr.json；claude.ai 快照不能联网，嵌一份精简版：
-    指数、精选名单和资金监控池的完整预测，其余 A 股和全球个股只放第 10 天的预测涨跌（按 a.json 的行顺序排）。"""
+KR_ALPH = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"   # 第 10 天预测涨跌取整到 1%，-31%～+32% 各用一个字符，“.” 表示没有
+
+
+def kall_embed(a, G):
+    """网页（github.io）打开个股时按需加载完整的 kr.json；claude.ai 快照不能联网（大小也接近 16MB 上限），只嵌一份很小的精简版：
+    指数的完整预测；A 股和全球个股只放第 10 天的预测涨跌，每只一个字符（A 股按 a.json 的行顺序，全球个股按 global.json 的顺序）。"""
     try:
         ka = json.loads(KALL.read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -48,12 +51,12 @@ def kall_embed(a, pk, fl):
     if not ka.get("a"):
         return None
     I = {c: i for i, c in enumerate(a["cols"])}
-    keep = {it[0] for t in (pk.get("tiers") or []) for it in t.get("items", [])} | {p.get("code") for p in (fl.get("pool") or []) if isinstance(p, dict)}
-    p10 = lambda v: None if not v or not v[2] else round(v[2][-1], 1)
+    enc = lambda v: "." if not v or not v[2] else KR_ALPH[max(-31, min(32, round(v[2][-1]))) + 31]
     out = {k: ka.get(k) for k in ("built", "model", "pred", "maxL", "decode", "runs", "acc", "chk", "cnt")}
-    out["full"] = {"ai": ka.get("ai") or {}, "gi": ka.get("gi") or {}, "a": {c: v for c, v in ka["a"].items() if c in keep}}
-    out["a10"] = [p10(ka["a"].get(r[I["code"]])) for r in a["rows"]]
-    out["gs10"] = {y: p10(v) for y, v in (ka.get("gs") or {}).items()}
+    out["full"] = {"ai": ka.get("ai") or {}, "gi": ka.get("gi") or {}}
+    out["a10s"] = "".join(enc(ka["a"].get(r[I["code"]])) for r in a["rows"])
+    gs = ka.get("gs") or {}
+    out["gs10s"] = "".join(enc(gs.get(y)) for y in (G.get("st") or {}))
     ds = [v[0] for v in ka["a"].values()]
     out["aD"] = max(set(ds), key=ds.count) if ds else None
     return out
@@ -106,7 +109,7 @@ def build():
     kr = load("kronos.json", {})
     if kr.get("items"):
         data["kr"] = {k: v for k, v in kr.items() if k not in ("log", "try")}   # 量化：Kronos AI K 线预测（scripts/kronos_fc.py），逐日预测记录只留在 data/ 里
-    ka = kall_embed(a, pk, fl)
+    ka = kall_embed(a, G)
     if ka:
         data["kra"] = ka                                          # 全部个股和指数的 AI K 线预测（scripts/kronos_all.py）：精简版，完整的在 site/kr.json
     nw = load("news.json", {})

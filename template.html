@@ -2144,14 +2144,18 @@ let KRA = null, KRA_P = null, krRedraw = null;
 const kraLoad = () => KRA_URL ? (KRA_P ||= fetch(`${KRA_URL}?v=${encodeURIComponent(KRE?.built || "")}`).then(r => r.ok ? r.json() : null).catch(() => null).then(j => (KRA = j))) : Promise.resolve(null);
 const KR_MKT = {纽交所: "美股", 纳斯达克: "美股", 美股: "美股", 港交所: "港股", Tokyo: "日股", KSE: "韩股", NSE: "印度"};
 const krMkt = (sec, key) => sec === "a" ? "A股" : sec === "ai" ? "A股指数" : sec === "gi" ? "全球指数" : KR_MKT[G.st?.[key]?.ex] || "欧股";
+const KR_ALPH = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+const krDec = ch => !ch || ch === "." ? null : KR_ALPH.indexOf(ch) - 31;
+let GSIDX = null;
 function kraEntry(sec, key){
   const v = KRA?.[sec]?.[key] || KRE?.full?.[sec]?.[key];
   if (v) return {d: v[0], c: v[1], p: v[2], lo: v[3], hi: v[4], acc: v[5] || null, h: v[6] || null};
-  const p10 = sec === "a" ? KRE?.a10?.[AIDX.get(key)] : sec === "gs" ? KRE?.gs10?.[key] : null;   // 精简版只有第 10 天的预测涨跌
-  return p10 == null ? null : {d: sec === "a" ? KRE.aD : "", p10};
+  // 精简版：第 10 天的预测涨跌取整到 1%，每只一个字符（gen.py 的 KR_ALPH），A 股按 D.rows 的顺序，全球个股按 G.st 的顺序
+  const p10 = sec === "a" ? krDec(KRE?.a10s?.[AIDX.get(key)]) : sec === "gs" ? krDec(KRE?.gs10s?.[(GSIDX ||= new Map(Object.keys(G.st || {}).map((y, i) => [y, i]))).get(key)]) : null;
+  return p10 == null ? null : {d: sec === "a" ? KRE.aD : "", p10, approx: true};
 }
-const krP10 = (sec, key) => { const e = kraEntry(sec, key); return e ? (e.p ? e.p[e.p.length - 1] : e.p10) : null; };
-const krPill = (sec, key) => { const v = krP10(sec, key); return v == null ? "" : `<span class="pill ${v >= 0 ? "yes" : "no"}" title="Kronos 预测第 10 个交易日的涨跌（只看量价，准确率见个股页）">AI 10日 ${pct(v, 1)}</span>`; };
+const krP10 = (sec, key) => { const e = kraEntry(sec, key); return e ? {v: e.p ? e.p[e.p.length - 1] : e.p10, approx: !!e.approx} : null; };
+const krPill = (sec, key) => { const x = krP10(sec, key); return x?.v == null ? "" : `<span class="pill ${x.v >= 0 ? "yes" : "no"}" title="Kronos 预测第 10 个交易日的涨跌（只看量价，准确率见个股页）">AI 10日 ${x.approx ? "约 " + pct(x.v, 0) : pct(x.v, 1)}</span>`; };
 // s：[次数, 方向对%, 收盘价平均误差%, 直接假设“价格不变”的平均误差%, 实际上涨的占比%]
 function krStat(s, h){
   if (!s || !s[0]) return "";
@@ -2193,7 +2197,7 @@ function krRender(box, sec, key, o){
   if (!e) { box.innerHTML = `<p class="note" style="margin:0">${src ? "这只暂时没有 AI K 线预测（上市不足 64 个交易日、停牌，或者数据源没取到）。" : "AI K 线预测还没生成：每个交易日收盘后自动生成。"}</p>`; return; }
   const k = (t, v, sub, c = "") => `<div><small>${t}</small><b class="${c}">${v}</b><span class="mut">${sub}</span></div>`;
   if (!e.p) {
-    box.innerHTML = `<div class="kpis">${k("第 10 个交易日", pct(e.p10, 1), e.d ? `按 ${esc(e.d)} 收盘` : "Kronos 预测", cls(e.p10))}</div><p class="note" style="margin:6px 0 0">完整的预测路径、预测区间和这一只的准确率在实时版（github.io）里显示。</p>` + krAccHtml(mkt, A, C);
+    box.innerHTML = `<div class="kpis">${k("第 10 个交易日（取整到 1%）", "约 " + pct(e.p10, 0), e.d ? `按 ${esc(e.d)} 收盘` : "Kronos 预测", cls(e.p10))}</div><p class="note" style="margin:6px 0 0">完整的预测路径、预测区间和这一只的准确率在实时版（github.io）里显示。</p>` + krAccHtml(mkt, A, C);
     return;
   }
   const at = h => fmt(e.c * (1 + e.p[h - 1] / 100)), s = e.acc && (e.acc[1] || e.acc[0]), sh = e.acc?.[1] ? 10 : 5;
@@ -2261,7 +2265,7 @@ function krLab(code){                                    // 量化页的 akshare
 function krKronos(sec, key){
   const e = kraEntry(sec, key), mkt = krMkt(sec, key), src = KRA || KRE, F = "[次数, 方向对%, 收盘价平均误差%, 直接假设价格不变的平均误差%, 实际上涨占比%]";
   if (!e) return "没有预测";
-  return {模型: "Kronos-small（只看历史日K的开高低收和成交量）", 基准日: e.d, 基准收盘: e.c, 预测涨跌pct_第1到第10个交易日: e.p || null, 第10天预测涨跌pct: e.p ? e.p[9] : e.p10, 预测区间pct: e.p ? [e.lo, e.hi] : null,
+  return {模型: "Kronos-small（只看历史日K的开高低收和成交量）", 基准日: e.d, 基准收盘: e.c, 预测涨跌pct_第1到第10个交易日: e.p || null, 第10天预测涨跌pct: e.p ? e.p[9] : e.p10, ...(e.approx ? {说明: "快照里只有取整到 1% 的第 10 天预测"} : {}), 预测区间pct: e.p ? [e.lo, e.hi] : null,
     这一只的预测记录: e.acc ? {"5日": e.acc[0], "10日": e.acc[1], 格式: F} : "积累中", [`模型在${mkt}的回看检验`]: src?.chk?.[mkt] ? {...src.chk[mkt], 格式: F} : null, [`模型在${mkt}的预测记录核对`]: src?.acc?.[mkt] ? {...src.acc[mkt], 格式: F} : null};
 }
 async function krCtx(sec, key, o){
