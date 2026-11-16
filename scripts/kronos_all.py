@@ -111,13 +111,18 @@ def universe(groups):
 
 
 def plan(group, force):
+    """asia：北京时间工作日 16:00 以后、A 股当天有收盘行情（a.json 的日期是今天，节假日不跑）、今天还没跑过；
+    west：UTC 工作日 21:10 以后（美股已收盘）、今天还没跑过。只有在这些时间以后跑完的才记为“今天已完成”，手动提前跑的不算。"""
     st = jload(KALL / "state.json", {}) or {}
     bj, utc = dt.datetime.now(BJ), dt.datetime.now(dt.timezone.utc)
+    a_close = ((jload(DATA / "a.json", {}) or {}).get("asof") or "")[:10]
+    marks = {"asia": bj.strftime("%Y-%m-%d") if bj.weekday() < 5 and (bj.hour, bj.minute) >= (16, 0) else None,
+             "west": utc.strftime("%Y-%m-%d") if utc.weekday() < 5 and (utc.hour, utc.minute) >= (21, 10) else None}
     want = {"auto": ("asia", "west"), "all": ("asia", "west")}.get(group, (group,))
     groups = []
-    if "asia" in want and (force or (bj.weekday() < 5 and (bj.hour, bj.minute) >= (16, 0) and (st.get("asia") or {}).get("date") != bj.strftime("%Y-%m-%d"))):
+    if "asia" in want and (force or (marks["asia"] and a_close == marks["asia"] and (st.get("asia") or {}).get("mark") != marks["asia"])):
         groups.append("asia")
-    if "west" in want and (force or (utc.weekday() < 5 and (utc.hour, utc.minute) >= (21, 10) and (st.get("west") or {}).get("date") != utc.strftime("%Y-%m-%d"))):
+    if "west" in want and (force or (marks["west"] and (st.get("west") or {}).get("mark") != marks["west"])):
         groups.append("west")
     if not groups:
         log("plan: 现在没有要跑的批次", {"group": group, "state": st})
@@ -125,7 +130,7 @@ def plan(group, force):
         return
     items = universe(groups)
     n = max(1, min(20, math.ceil(len(items) / PER_SHARD)))
-    jsave(PLAN / "plan.json", {"groups": groups, "dates": {"asia": bj.strftime("%Y-%m-%d"), "west": utc.strftime("%Y-%m-%d")},
+    jsave(PLAN / "plan.json", {"groups": groups, "marks": marks,
                                 "made": utc.strftime("%Y-%m-%dT%H:%MZ"), "n": n, "items": items})
     log("plan:", groups, len(items), "个标的，分", n, "片", {m: sum(1 for x in items if x[5] == m) for m in sorted({x[5] for x in items})})
     gh_output(due="true", matrix=json.dumps(list(range(n))), n=str(n), groups=",".join(groups))
@@ -350,7 +355,8 @@ def merge():
     now_bj = dt.datetime.now(BJ).strftime("%Y-%m-%d %H:%M")
     gs = P.get("groups", [])
     for g in gs:
-        st[g] = {"date": P["dates"][g], "t": now_bj}
+        m = (P.get("marks") or {}).get(g)
+        st[g] = {**{k: v for k, v in (st.get(g) or {}).items() if k == "mark"}, "t": now_bj, **({"mark": m} if m else {})}
         kr.setdefault("runs", {})[g] = {"t": now_bj, "n": len(res), "fail": len(fail), "short": len(short), "with": gs}
     kr.update({"built": now_bj, "model": "Kronos-small", "pred": PRED, "maxL": MAXL, "decode": "greedy"})
     jsave(KALL / "kr.json", kr); jsave(KALL / "log.json", lg); jsave(KALL / "state.json", st)
