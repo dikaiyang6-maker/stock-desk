@@ -78,7 +78,10 @@ def build():
         data["qt"] = {k: qt.get(k) for k in ("extT", "extErr", "rates", "spread", "idx", "review", "reviewTry")}   # 市场页：外部变量（OpenBB）、AI 大盘复盘（daily_stock_analysis）
     lab = load("lab.json", {})
     if lab.get("date"):
-        data["lab"] = lab                                         # 量化：akquant 回测、akshare 数据、行情核对、问财（scripts/lab.py）
+        data["lab"] = lab                                         # 量化：akquant 回测、vectorbt 参数扫描、akshare 数据、行情核对、问财（scripts/lab.py）
+    kr = load("kronos.json", {})
+    if kr.get("items"):
+        data["kr"] = {k: v for k, v in kr.items() if k not in ("log", "try")}   # 量化：Kronos AI K 线预测（scripts/kronos_fc.py），逐日预测记录只留在 data/ 里
     nw = load("news.json", {})
     if nw.get("flash") or nw.get("earn"):
         data["nw"] = {k: nw.get(k) for k in ("t", "flash", "earn", "guba", "lead")}   # 资讯：7×24 快讯（国内/海外）、财报、股吧、龙头
@@ -106,6 +109,8 @@ def build():
     (SITE / "index.html").write_text(head + t + "</body></html>", encoding="utf-8")
     (SITE / ".nojekyll").write_text("", encoding="utf-8")
     for f in (ROOT / "static" / "pwa").glob("*"):                 # App（PWA）的清单、图标和离线缓存脚本
+        shutil.copy(f, SITE / f.name)
+    for f in (ROOT / "static" / "img").glob("*"):                 # 量化页的截图等图片（不嵌进网页，单独的文件）
         shutil.copy(f, SITE / f.name)
     if fl.get("pool") is not None:                                # 完整的监控状态，数据缓存丢了时 flow.py 从这里取回
         (SITE / "flow.json").write_text(json.dumps(fl, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")

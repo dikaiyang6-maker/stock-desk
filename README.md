@@ -19,6 +19,8 @@
 | A 股盘前分析（市场页指数条下面） | 每个 A 股交易日开盘前（北京 07:33 起多排了几轮，见 `update.yml`），休市日不生成 | DeepSeek，依据运行时现抓的同花顺、东方财富快讯（上一交易日 15:00 以来，周一含周末），全球指数（腾讯），A50、汇率、商品、VIX、费城半导体（新浪），美债收益率（美国财政部）和 A 股收盘数据 |
 | 外部变量（市场页）：2 / 10 / 30 年期美债收益率、10Y−2Y 利差，标普 500、纳指 100、费城半导体、VIX，各近 60 个交易日 | 每 4 小时（美国收盘后有新数据） | [OpenBB](https://github.com/OpenBB-finance/OpenBB)：美联储 H.15、雅虎财经 |
 | AI 大盘复盘（市场页） | 每个 A 股交易日收盘后一次；手动运行工作流时 `review` 填 1 可重新生成 | [daily_stock_analysis](https://github.com/ZhuLinsen/daily_stock_analysis) + DeepSeek（指数、行业板块排行；涨跌家数、涨跌停、成交额用本站同一天的全市场行情） |
+| AI K 线预测（量化页）：4 个指数和 4 只个股，之后 10 个交易日；每天核对以前的预测准不准 | 每个 A 股交易日收盘后一次；手动运行工作流时 `kronos` 填 1 可重新生成 | [Kronos](https://github.com/shiyu-coder/Kronos)（Kronos-small，CPU 运行），腾讯前复权日K |
+| 均线参数扫描（量化页）：8 只宽基 ETF × 9 组均线参数，样本内挑参数、样本外检验 | 每个 A 股交易日收盘后一次 | [vectorbt](https://github.com/polakowo/vectorbt)，腾讯前复权日K |
 | 成分股名单 | 每周 | 维基百科、Nasdaq、FinanceDataReader |
 | 选股（D 型）：研发投入、资产负债率、货币资金、商誉、TTM 营收、未来 90 天解禁、近 180 天大股东和高管减持 | 每天 | 东方财富数据中心 |
 | 选股（D 型）：科技赛道股票的主营产品构成 | 每周 | 东方财富数据中心 |
@@ -92,13 +94,17 @@ GitHub 的定时任务是“尽力而为”，高峰期可能晚几分钟到几�
 
 ## 量化页
 
-每个交易日收盘后由 `scripts/lab.py` 生成（GitHub Actions 里运行），把下面六个开源库接进网站：
+每个交易日收盘后由 `scripts/lab.py` 和 `scripts/kronos_fc.py` 生成（GitHub Actions 里运行），把下面这些开源项目接进网站：
 
+- **AI K 线预测（Kronos）**：开源金融 K 线大模型 [Kronos](https://github.com/shiyu-coder/Kronos)（MIT 许可证，模型 Kronos-small）。用最近 400 个交易日的日K，预测上证指数、沪深300、创业板指、科创50和茅台、宁德、中芯、平安之后 10 个交易日的走势；抽样 3 条路径取平均，图里画出预测的每日高低区间。每周做一次“回看检验”（只用 10 个交易日以前的数据预测最近 10 天，和真实走势比）；每天的预测都存下来，等真实收盘价出来后统计 5 日、10 日后的涨跌方向准确率和收盘价误差，直接显示在网页上。代码固定在提交 67b630e，模型权重（safetensors）固定在审查过的版本；PyTorch 只装 CPU 版，只在要预测的那一轮装，全部 8 个标的约 3–5 分钟。模型输出是概率性的推演，准确率不高，不构成投资建议。
+- **均线参数扫描（vectorbt）**：[vectorbt](https://github.com/polakowo/vectorbt)（Apache 2.0 + Commons Clause：可以免费用，不能拿来卖钱）在 8 只宽基 ETF 上一次回测 9 组均线参数（快线 5/10/20 日 × 慢线 30/60/120 日；快线在慢线上方持有、下方空仓，次日开盘成交，扣万三手续费和万五滑点），热力格显示近 500 个交易日的总收益。前 2/3 时间挑出最好的参数，再看它在后 1/3（样本外）的表现和排名，用来说明事后挑参数的过拟合。
 - **akquant 回测**：操盘线 B/S 策略（收盘上穿 13 日 EMA 且 DIF > DEA 次日开盘买入，下破且 DIF < DEA 次日开盘卖出）在宽基 ETF、当天出 B 点的个股（成交额前 30）和精选名单上的近 500 个交易日表现，对比同期买入持有；T+1、整手、佣金印花税过户费和滑点都算进去。点一行看收益曲线。回测代码和终端命令 `gp bt` 是同一份（`tools/gp.py`）。
 - **akshare**：机构调研（近 30 天按机构家数排）、大宗交易（最近交易日按成交额排，带折溢价）、龙虎榜（按净买额排）、限售解禁（未来 30 天按解禁市值排），来自东方财富数据中心。
 - **行情核对**：easyquotation 取新浪全市场行情、stock-api 取几只大盘股，和本站的腾讯行情逐只核对收盘价；mootdx 检查 GitHub 机房能否连上通达信行情服务器。
 - **问财（pywencai-enhanced）**：默认不跑。原版 pywencai 已被问财新接口拒绝，这里用增强版 [pywencai-enhanced](https://github.com/HeRiki/pywencai-enhanced)（固定在审查过的版本）。在仓库 Settings → Secrets and variables → Actions 添加 `WENCAI_COOKIE`（你自己登录 www.iwencai.com 后复制的 Cookie）后，每天收盘后显示三条预设问句的结果。
-- 页面最下面列出六个库最近一次的运行状态，以及终端命令的安装和用法。
+- **daily_stock_analysis**：生成「市场」页的 AI 大盘复盘（见上面的更新频率表），量化页的状态表里也列出它最近一次的结果。
+- **FinceptTerminal**：开源桌面金融终端（C++20 + Qt 6，AGPL-3.0），是要安装的桌面程序，不能放进网页运行。量化页放了介绍、在云端从源码编译运行的截图（`static/img/fincept.jpg`）和官方下载入口；它第一次打开会安装自带的 Python 环境，之后要登录 Fincept 账号（可免费注册，要本人注册）。
+- 页面下方列出各项目最近一次的运行状态，以及终端命令的安装和用法。
 
 ## 命令行工具 gp（电脑终端和 Claude 新会话都能用）
 
@@ -165,6 +171,8 @@ ONLY=premarket python scripts/build.py     # 立刻写一份盘前分析，不�
 
 - `scripts/build.py`：排程入口，按各任务周期决定刷新什么，任何一项失败都沿用缓存
 - `scripts/a_share.py`、`global_mkt.py`、`lists.py`、`news.py`、`flow.py`、`hot.py`、`lab.py`、`ai_commentary.py`、`premarket.py`、`gen.py`：各数据模块与网页生成
+- `scripts/kronos_fc.py`：Kronos AI K 线预测和准确率核对（工作流里单独一步，见 `update.yml`）；`scripts/quant.py`、`scripts/dsa_run.py`：外部变量和 AI 大盘复盘
+- `static/pwa/`、`static/img/`：App 清单、图标、离线缓存脚本和量化页截图，生成网页时复制到 `site/`
 - `scripts/scrape.py`：用 Scrapling 抓东方财富和同花顺（模拟浏览器的请求；需要运行 JS 的页面用真实浏览器）
 - `template.html`：网页模板（图表引擎、指标、分时、全球市场、AI 助手）
 - `tools/gp.py`、`tools/install.sh`、`tools/install.ps1`：命令行工具 gp 和一键安装脚本；`.claude/skills/a-share-gp/`：给 Claude 的使用说明
