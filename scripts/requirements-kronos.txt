@@ -1,0 +1,8 @@
+# 全部个股和指数的 AI K 线预测（.github/workflows/kronos.yml 的分片任务）只装这些；PyTorch 在工作流里单独装 CPU 版
+numpy
+pandas
+requests
+tqdm
+einops==0.8.2
+safetensors==0.8.0
+huggingface_hub==0.36.2

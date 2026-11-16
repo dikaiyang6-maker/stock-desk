@@ -420,6 +420,9 @@ tbody tr.greg:hover{background:var(--bg)}
 .vbc td{text-align:center;padding:6px 2px;border-radius:5px;font-family:var(--f-num);font-variant-numeric:tabular-nums}
 .vbc td.best{box-shadow:inset 0 0 0 2px var(--ink)}
 .vbc td.isb{box-shadow:inset 0 0 0 2px var(--accent)}
+.krbig svg{display:block;width:100%;height:auto;margin-top:8px}
+.krst{margin:0;padding-left:1.2em;display:grid;gap:4px;font-size:12.5px;color:var(--muted);line-height:1.6}
+.krst b{color:var(--ink)}
 .vbc td.best.isb{box-shadow:inset 0 0 0 2px var(--ink),inset 0 0 0 4px var(--accent)}
 .vbc .vbl{font-size:12px;color:var(--muted);margin:6px 0 0;line-height:1.6}
 .vbc .vbl b{font-family:var(--f-num);font-weight:600}
@@ -1267,7 +1270,7 @@ td.nwwhy{white-space:normal;min-width:200px;max-width:360px;font-size:12.5px;col
   <section class="view" id="v-lab" hidden>
     <div class="panel">
       <div class="phead"><h2>量化</h2><span class="note" id="labMeta"></span></div>
-      <p class="note" style="margin:0">接入的开源项目：<b>Kronos</b>（AI K 线预测）、<b>akquant</b>（回测引擎）、<b>vectorbt</b>（参数扫描）、<b>akshare</b>（东方财富数据中心）、<b>easyquotation</b>（新浪行情）、<b>stock-api</b>（Node.js 行情）、<b>mootdx</b>（通达信）、<b>pywencai</b>（问财）；<b>daily_stock_analysis</b> 生成「市场」页的 AI 大盘复盘；<b>FinceptTerminal</b> 是桌面程序，见本页下方的介绍。每个交易日收盘后在 GitHub 上跑一次；akshare 等工具在电脑终端也能用（命令 <code>gp</code>，见本页最下面）。<b class="dn">回测和 AI 预测都是用历史数据推演，不预示未来，也不构成投资建议。</b></p>
+      <p class="note" style="margin:0">接入的开源项目：<b>Kronos</b>（AI K 线预测：下面 8 个标的的详细检验，以及全部个股和指数的每日预测，打开任意个股、指数就能看到）、<b>akquant</b>（回测引擎）、<b>vectorbt</b>（参数扫描）、<b>akshare</b>（东方财富数据中心）、<b>easyquotation</b>（新浪行情）、<b>stock-api</b>（Node.js 行情）、<b>mootdx</b>（通达信）、<b>pywencai</b>（问财）；<b>daily_stock_analysis</b> 生成「市场」页的 AI 大盘复盘；<b>FinceptTerminal</b> 是桌面程序，见本页下方的介绍。每个交易日收盘后在 GitHub 上跑一次；akshare 等工具在电脑终端也能用（命令 <code>gp</code>，见本页最下面）。<b class="dn">回测和 AI 预测都是用历史数据推演，不预示未来，也不构成投资建议。</b></p>
       <p class="warn" id="labEmpty" hidden style="margin:10px 0 0">量化数据还没生成：下一个交易日收盘后自动生成。</p>
     </div>
     <div class="panel" id="krWrap" hidden>
@@ -1277,6 +1280,12 @@ td.nwwhy{white-space:normal;min-width:200px;max-width:360px;font-size:12.5px;col
       <div class="krgrid" id="krGrid"></div>
       <details class="archive" style="margin-top:10px"><summary>每个标的的准确率</summary><div class="tscroll"><table class="fltop" id="krAcc"></table></div></details>
       <p class="note" style="margin:10px 0 0" id="krRule"></p>
+    </div>
+    <div class="panel" id="kaWrap" hidden>
+      <div class="phead"><h3>全部个股和指数的 AI K 线预测：各市场成绩</h3><span class="note" id="kaMeta"></span></div>
+      <p class="note" style="margin:0 0 10px">每个交易日收盘后，同一个模型预测全部 A 股、A 股指数、全球指数和本站的全球个股之后 10 个交易日的走势（贪心解码：每一步取概率最大的结果，同样的数据得到同样的预测）。在「选股」页搜索或打开任意个股、指数，都能看到它的预测和 AI 综合预测。下表是这个模型在各市场的真实成绩，<b>请先看成绩再看预测</b>。</p>
+      <div class="tscroll"><table class="fltop" id="kaTbl"></table></div>
+      <p class="note" style="margin:8px 0 0">方向对：预测的涨跌方向和实际一致的比例；“一直猜涨或猜跌”能对的比例是最简单的对照。误差：预测收盘价和实际收盘价平均差多少；“价格不变”：直接拿今天的收盘价当作 10 天后的价格，平均差多少。模型误差比“价格不变”还大，就说明它在这个市场基本没有预测能力。</p>
     </div>
     <div class="panel" id="btWrap">
       <div class="phead"><h3>操盘线 B/S 策略回测（akquant）</h3><span class="note" id="btNote"></span></div>
@@ -1662,7 +1671,7 @@ const waitVisible = signal => new Promise(ok => { if (!document.hidden) return o
   document.addEventListener("visibilitychange", h); signal?.addEventListener?.("abort", h); });
 
 /* ---------- AI 分析历史：只保存在这台设备的浏览器里（最近 80 条） ---------- */
-const AH_KIND = {chat: "对话", xgD: "选股 · D 型", xgF: "选股 · F 型", stock: "个股分析", flow: "资金调查", index: "A 股指数", gindex: "全球指数", gstock: "全球个股"};
+const AH_KIND = {chat: "对话", xgD: "选股 · D 型", xgF: "选股 · F 型", stock: "个股分析", flow: "资金调查", index: "A 股指数", gindex: "全球指数", gstock: "全球个股", kr: "AI 综合预测"};
 const hid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const bjNow = () => new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 16).replace("T", " ");
 const AH = {
@@ -1997,12 +2006,12 @@ async function loadStockLive(code, panel, hasStatic){
   fetchFiveDay(sym).then(days => { if (days?.length && alive()) { lastMin = Date.now(); panel.setMinute(days); } });
   const full = await fetchDailyAll(sym, (rows, pg) => {
     if (pg || hasStatic || !alive()) return;
-    const r = BY.get(code); if (r) liveStockBar(r, rows); openState.rows = rows; panel.setDaily(rows); renderStockTech(rows, null);
+    const r = BY.get(code); if (r) liveStockBar(r, rows); openState.rows = rows; panel.setDaily(rows); renderStockTech(rows, null); krRedraw?.();
   });
   if (!alive()) return;
   if (!full.length) { if (!hasStatic) panel.setDaily([]); return; }
   const r = BY.get(code); if (r) liveStockBar(r, full);
-  openState.rows = full; panel.setDaily(full); renderStockTech(full, null);
+  openState.rows = full; panel.setDaily(full); renderStockTech(full, null); krRedraw?.();
 }
 function marketBrief(){
   return Object.values(D.idx).map(ix => { const k = ix.k, c = k[k.length - 1][1]; return `${ix.name} ${c.toFixed(2)}（今日 ${pct((c / k[k.length - 2][1] - 1) * 100, 2)}，距一年高点 ${pct((c / Math.max(...k.map(x => x[1])) - 1) * 100)}）`; }).join("；");
@@ -2054,6 +2063,7 @@ function openStock(code){
       <div><small>涨停价</small><b class="up">${f(r.lu)}</b></div><div><small>跌停价</small><b class="dn">${f(r.ld)}</b></div><div><small>昨收</small><b>${f(r.prev)}</b></div>
     </div>
     <div class="panel" id="dDeal" style="padding:12px 14px"></div>
+    ${krPanel()}
     ${chartable ? `<div id="dPanel"></div>` : `<p class="note">本页只缓存了 ${Object.keys(D.sk).length} 只题材股的 K 线和分时。在浏览器里直接打开独立版 HTML（实时行情），可以加载任意股票上市以来的 K 线和最近五个交易日的分时。</p>`}
     <div class="panel" id="dTech" style="padding:12px 14px" hidden></div>
     <div class="panel" id="dCp" style="padding:12px 14px" hidden></div>
@@ -2073,6 +2083,7 @@ function openStock(code){
   $("#drawer").hidden = false; $("#scrim").hidden = false; $("#drawer").scrollTop = 0;
   openState = {type: "stock", code, rows: srows};
   flowDrawer(code); hotDrawer(code); nwDrawer(code); renderDeal(code);
+  krOpen("a", code, {name: r.name, title: `${r.name}（${code}）`, rows: () => openState?.type === "stock" && openState.code === code ? openState.rows : null, fmt: f});
   if (chartable) {
     if (srows && LIVE.on) liveStockBar(r, srows);
     const panel = mountPanel($("#dPanel"), {daily: srows || [], monthly: smon, minute: stockMinute(code), name: r.name, isIndex: false,
@@ -2121,9 +2132,209 @@ ${JSON.stringify(stockBrief(r))}
     };
   });
 }
-function closeStock(){ aiCtl?.abort(); flCtl?.abort(); activeChart?.destroy(); activeChart = null; openState = null; $("#drawer").hidden = true; $("#scrim").hidden = true; $("#drawer").classList.remove("wide"); }
+function closeStock(){ krRedraw = null; aiCtl?.abort(); flCtl?.abort(); activeChart?.destroy(); activeChart = null; openState = null; $("#drawer").hidden = true; $("#scrim").hidden = true; $("#drawer").classList.remove("wide"); }
 $("#scrim").addEventListener("click", closeStock);
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#drawer").hidden) closeStock(); });
+
+/* ---------- AI 预测（个股、指数，国内外）：Kronos K 线预测（scripts/kronos_all.py 每天收盘后批量生成）+ AI 综合预测（走势、公司、行业、订单和消息、关联因素） ---------- */
+const KRE = D.kra || null;                                                   // 嵌入网页的精简版（claude.ai 快照只有这一份）
+const KRA_URL = /(\.github\.io|^localhost|^127\.0\.0\.1)$/.test(location.hostname) ? "kr.json" : null;   // 实时版：完整预测按需加载
+const AIDX = new Map(R.map((r, i) => [r.code, i]));
+let KRA = null, KRA_P = null, krRedraw = null;
+const kraLoad = () => KRA_URL ? (KRA_P ||= fetch(`${KRA_URL}?v=${encodeURIComponent(KRE?.built || "")}`).then(r => r.ok ? r.json() : null).catch(() => null).then(j => (KRA = j))) : Promise.resolve(null);
+const KR_MKT = {纽交所: "美股", 纳斯达克: "美股", 美股: "美股", 港交所: "港股", Tokyo: "日股", KSE: "韩股", NSE: "印度"};
+const krMkt = (sec, key) => sec === "a" ? "A股" : sec === "ai" ? "A股指数" : sec === "gi" ? "全球指数" : KR_MKT[G.st?.[key]?.ex] || "欧股";
+function kraEntry(sec, key){
+  const v = KRA?.[sec]?.[key] || KRE?.full?.[sec]?.[key];
+  if (v) return {d: v[0], c: v[1], p: v[2], lo: v[3], hi: v[4], acc: v[5] || null, h: v[6] || null};
+  const p10 = sec === "a" ? KRE?.a10?.[AIDX.get(key)] : sec === "gs" ? KRE?.gs10?.[key] : null;   // 精简版只有第 10 天的预测涨跌
+  return p10 == null ? null : {d: sec === "a" ? KRE.aD : "", p10};
+}
+const krP10 = (sec, key) => { const e = kraEntry(sec, key); return e ? (e.p ? e.p[e.p.length - 1] : e.p10) : null; };
+const krPill = (sec, key) => { const v = krP10(sec, key); return v == null ? "" : `<span class="pill ${v >= 0 ? "yes" : "no"}" title="Kronos 预测第 10 个交易日的涨跌（只看量价，准确率见个股页）">AI 10日 ${pct(v, 1)}</span>`; };
+// s：[次数, 方向对%, 收盘价平均误差%, 直接假设“价格不变”的平均误差%, 实际上涨的占比%]
+function krStat(s, h){
+  if (!s || !s[0]) return "";
+  const best = Math.max(s[4], 100 - s[4]);
+  return `${h} 个交易日后：${s[0].toLocaleString()} 次，方向对 <b>${s[1]}%</b>（同期上涨的占 ${s[4]}%，一直猜${s[4] >= 50 ? "涨" : "跌"}能对 ${best.toFixed(0)}%）；收盘价平均差 <b>${s[2]}%</b>，直接假设“价格不变”差 ${s[3]}%，${s[2] > s[3] ? "<b>不如“价格不变”</b>" : "好于“价格不变”"}`;
+}
+function krAccHtml(mkt, A, C){
+  const li = [];
+  if (A?.h10) li.push(`<li><b>回看检验</b>（每次抽 10% 的标的，只用 10 个交易日以前的数据预测最近 10 天）：${krStat(A.h10, 10)}</li>`);
+  li.push(C?.h10?.[0] ? `<li><b>预测记录核对</b>：${krStat(C.h10, 10)}</li>` : C?.h5?.[0] ? `<li><b>预测记录核对</b>：${krStat(C.h5, 5)}</li>` : `<li><b>预测记录核对</b>：积累中。每天的预测都会存下来，真实收盘价出来后自动核对，满 5 个交易日开始有结果。</li>`);
+  const bad = A?.h10 && A.h10[2] > A.h10[3];
+  return `<p class="note" style="margin:10px 0 4px">这个模型在${esc(mkt)}的成绩${bad ? "：<b>价格误差比“直接假设价格不变”还大，只能当参考，不要据此交易</b>" : ""}</p><ul class="krst">${li.join("")}</ul>`;
+}
+function krSvg(e, rows, fmt){
+  const base = rows?.length ? rows.filter(r => r.d <= e.d) : [], b0 = base.length ? base[base.length - 1].c : e.c;
+  let hist = base.length ? base.slice(-41).map(r => [r.d, (r.c / b0 - 1) * 100]) : e.h?.length ? [...e.h.map(v => [null, v]), [e.d, 0]] : [[e.d, 0]];
+  const after = rows?.length ? rows.filter(r => r.d > e.d).slice(0, e.p.length).map(r => [r.d, (r.c / b0 - 1) * 100]) : [];
+  const W = 560, H = 180, L = 4, Rr = 76, T = 10, B = 20, n = hist.length + e.p.length;
+  const vals = [...hist.map(x => x[1]), ...e.p, e.lo, e.hi, ...after.map(x => x[1]), 0];
+  const lo = Math.min(...vals), hi = Math.max(...vals), pad = (hi - lo) * 0.08 || 1;
+  const x = i => L + i / Math.max(1, n - 1) * (W - L - Rr), y = v => T + (1 - (v - lo + pad) / (hi - lo + 2 * pad)) * (H - T - B), P = (i, v) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`;
+  const i0 = hist.length - 1, last = e.p[e.p.length - 1], col = last >= 0 ? "var(--up)" : "var(--dn)";
+  const line = (pts, c, w, dash = "") => `<polyline points="${pts.join(" ")}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linejoin="round"${dash ? ` stroke-dasharray="${dash}"` : ""}/>`;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="最近走势和之后 ${e.p.length} 个交易日的 AI 预测">
+    <rect x="${x(i0 + 1).toFixed(1)}" width="${(x(n - 1) - x(i0 + 1)).toFixed(1)}" y="${y(e.hi).toFixed(1)}" height="${Math.max(1, y(e.lo) - y(e.hi)).toFixed(1)}" fill="${col}" opacity=".10"/>
+    <line x1="${L}" x2="${W - Rr}" y1="${y(0).toFixed(1)}" y2="${y(0).toFixed(1)}" stroke="var(--line)" stroke-dasharray="3 3"/>
+    <line x1="${x(i0).toFixed(1)}" x2="${x(i0).toFixed(1)}" y1="${T}" y2="${H - B}" stroke="var(--line)" stroke-dasharray="3 3"/>
+    ${hist.length > 1 ? line(hist.map((p, i) => P(i, p[1])), "var(--ink)", 1.4) : ""}
+    ${after.length ? line([P(i0, 0), ...after.map((p, j) => P(i0 + 1 + j, p[1]))], "var(--ink)", 1.4, "2 2") : ""}
+    ${line([P(i0, 0), ...e.p.map((v, j) => P(i0 + 1 + j, v))], col, 2)}
+    <text x="${W - Rr + 4}" y="${(y(last) + 4).toFixed(1)}" font-size="12" fill="${col}" font-family="var(--f-num)">${pct(last, 1)}</text>
+    <text x="${W - Rr + 4}" y="${(y(last) + 18).toFixed(1)}" font-size="11" fill="var(--muted)" font-family="var(--f-num)">${esc(fmt(e.c * (1 + last / 100)))}</text>
+    <text x="${L}" y="${H - 5}" font-size="11" fill="var(--muted)">${esc(hist[0][0] ? hist[0][0].slice(5) : "20 天前")}</text>
+    <text x="${(x(i0) - 3).toFixed(1)}" y="${H - 5}" font-size="11" fill="var(--muted)" text-anchor="end">${esc(e.d.slice(5))} 收盘</text>
+    <text x="${W - Rr + 4}" y="${H - 5}" font-size="11" fill="var(--muted)">第 ${e.p.length} 天</text></svg>`;
+}
+function krRender(box, sec, key, o){
+  const e = kraEntry(sec, key), mkt = krMkt(sec, key), src = KRA || KRE, A = src?.chk?.[mkt], C = src?.acc?.[mkt], fmt = o.fmt || f;
+  if (!e) { box.innerHTML = `<p class="note" style="margin:0">${src ? "这只暂时没有 AI K 线预测（上市不足 64 个交易日、停牌，或者数据源没取到）。" : "AI K 线预测还没生成：每个交易日收盘后自动生成。"}</p>`; return; }
+  const k = (t, v, sub, c = "") => `<div><small>${t}</small><b class="${c}">${v}</b><span class="mut">${sub}</span></div>`;
+  if (!e.p) {
+    box.innerHTML = `<div class="kpis">${k("第 10 个交易日", pct(e.p10, 1), e.d ? `按 ${esc(e.d)} 收盘` : "Kronos 预测", cls(e.p10))}</div><p class="note" style="margin:6px 0 0">完整的预测路径、预测区间和这一只的准确率在实时版（github.io）里显示。</p>` + krAccHtml(mkt, A, C);
+    return;
+  }
+  const at = h => fmt(e.c * (1 + e.p[h - 1] / 100)), s = e.acc && (e.acc[1] || e.acc[0]), sh = e.acc?.[1] ? 10 : 5;
+  box.innerHTML = `<div class="kpis">${k("第 5 个交易日", pct(e.p[4], 2), at(5), cls(e.p[4]))}${k("第 10 个交易日", pct(e.p[9], 2), at(10), cls(e.p[9]))}${k("预测区间（最低 ~ 最高）", `${fmt(e.c * (1 + e.lo / 100))} ~ ${fmt(e.c * (1 + e.hi / 100))}`, `${pct(e.lo, 1)} ~ ${pct(e.hi, 1)}`)}${s ? k("这一只的记录", `方向对 ${s[1]}%`, `${sh} 日 · ${s[0]} 次 · 误差 ${s[2]}%`) : k("这一只的记录", "积累中", "满 5 个交易日开始核对")}</div>
+    ${Math.abs(e.p[9]) >= 15 ? `<p class="warn" style="margin:8px 0 0">这次预测的幅度很大（10 个交易日 ${pct(e.p[9], 1)}）。这种极端预测通常误差最大，往往只是把最近的暴涨暴跌往后延伸，请格外谨慎。</p>` : ""}
+    <div class="krbig">${krSvg(e, o.rows?.(), fmt)}</div>
+    <div class="krlg"><span><i style="background:var(--ink)"></i>实际收盘</span><span><i style="background:${e.p[9] >= 0 ? "var(--up)" : "var(--dn)"}"></i>AI 预测（阴影是预测的最高、最低价区间）</span>${(o.rows?.() || []).some(r => r.d > e.d) ? `<span><i style="background:var(--ink);opacity:.5"></i>预测之后的实际走势（虚线）</span>` : ""}</div>` + krAccHtml(mkt, A, C);
+}
+const krPanel = () => `<div class="panel" id="krP" style="padding:12px 14px;display:grid;gap:10px">
+    <div class="phead" style="margin-bottom:0"><h3>AI 预测</h3><span class="note" id="krPN"></span></div>
+    <div id="krPB"><p class="note" style="margin:0">正在加载 AI K 线预测…</p></div>
+    <div class="phead" style="margin:4px 0 0"><h4 style="margin:0;font-size:14px">AI 综合预测：走势 + 公司 + 行业 + 订单和消息</h4><span style="display:flex;gap:8px"><button class="btn pri" id="krAi">让 ${AI_NAME} 综合预测</button><button class="btn" id="krStop" hidden>停止</button></span></div>
+    <div class="ai" id="krOut">${!IN_CLAUDE && !dsKey() ? aiNoKey() : `<span class="note">${AI_NAME} 会把这些放在一起，给出未来 2 周和 1–3 个月的情景预测：走势和技术面、上面的 K 线预测和它的准确率、财报和估值、最新公告和新闻（订单、合同、中标、产能、价格）、行业景气和同行对比、题材和资金、大盘和外部变量。${LIVE.on ? "会先联网搜一遍相关新闻和公告（东方财富、腾讯自选股），分析时还可以自己再搜。" : "这里不能联网，只用本页已有的数据。"}${AI_QUOTA}</span>`}</div>
+  </div>`;
+function krOpen(sec, key, o){
+  const box = $("#krPB"); if (!box) return;
+  const draw = () => { if ($("#krPB") !== box) return; krRender(box, sec, key, o); const e = kraEntry(sec, key), src = KRA || KRE;
+    $("#krPN").textContent = e ? `Kronos-small${e.d ? ` · 按 ${e.d} 收盘` : ""} · 每个交易日收盘后更新${src?.built ? `（${src.built}）` : ""}` : ""; };
+  draw(); krRedraw = draw;
+  if (KRA_URL && !KRA) kraLoad().then(draw);
+  krAiButton(sec, key, o);
+}
+// ---- AI 综合预测：先搜集资料（实时版联网搜新闻、公告、订单和行业消息），再让模型按固定结构写情景预测 ----
+async function emSearch(kw, n = 8, days = 150){        // 东方财富资讯搜索（JSONP，不发 Referer）
+  if (!LIVE.on || !kw) return null;
+  const param = {uid: "", keyword: kw, type: ["cmsArticleWebOld"], client: "web", clientType: "web", clientVersion: "curr",
+    param: {cmsArticleWebOld: {searchScope: "default", sort: "default", pageIndex: 1, pageSize: n * 2, preTag: "", postTag: ""}}};
+  const d = await jsonpCb("https://search-api-web.eastmoney.com/search/jsonp?param=" + encodeURIComponent(JSON.stringify(param)), "cb");
+  const xs = d?.result?.cmsArticleWebOld; if (!Array.isArray(xs)) return null;
+  const since = new Date(Date.now() - days * 864e5).toISOString().slice(0, 10), seen = new Set(), clean = s => String(s || "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+  return xs.filter(x => (x.date || "") >= since).map(x => ({时间: (x.date || "").slice(0, 16), 标题: clean(x.title), 来源: x.mediaName || "", 摘要: clean(x.content).slice(0, 150)}))
+    .filter(x => x.标题 && !seen.has(x.标题) && seen.add(x.标题)).slice(0, n);
+}
+async function txNews(sym, n = 10){                    // 腾讯自选股：按代码查个股新闻（A 股、美股 usXXX、港股 hkXXXXX）
+  if (!LIVE.on || !sym) return null;
+  const d = await getJson(`https://proxy.finance.qq.com/ifzqgtimg/appstock/news/info/search?page=1&symbol=${sym}&n=${n}&type=2`);
+  const xs = d?.data?.data; return Array.isArray(xs) ? xs.map(x => ({时间: (x.time || "").slice(0, 16), 标题: x.title || "", 来源: x.src || ""})) : null;
+}
+const KR_TOOL = {name: "search_news", description: "按关键词搜索东方财富最近半年的财经新闻，返回时间、标题、来源和摘要。用来补充查订单、合同、产品价格、产能、上下游公司、竞争对手、政策等。关键词要具体，比如“某公司 订单”“某产品 价格”。",
+  inputSchema: {type: "object", properties: {keyword: {type: "string", description: "关键词，中文"}}, required: ["keyword"]},
+  execute: async i => (await emSearch(String(i.keyword || "").slice(0, 40), 8, 180)) || {error: "没有搜到"}};
+function krExternal(){                                   // 外部变量（OpenBB）：美债收益率、美股指数、VIX，最新值和近 20 日变化
+  const out = {};
+  for (const s of [...(QD?.rates || []), ...(QD?.idx || [])]) {
+    const k = s.k || []; if (k.length < 2) continue;
+    const a = k[k.length - 1], b = k[Math.max(0, k.length - 21)];
+    out[s.n] = {日期: a[0], 最新: a[1], 近20日变化: +(a[1] - b[1]).toFixed(2), 近20日涨跌pct: b[1] ? +((a[1] / b[1] - 1) * 100).toFixed(2) : null};
+  }
+  return out;
+}
+function krIndustry(r){                                  // 同行业（申万行业）对比：今日涨跌、估值和增速的中位数、本公司排名、行业龙头
+  const peers = R.filter(x => x.ind === r.ind && x.lu != null), cap = peers.reduce((s, x) => s + (x.mcap || 0), 0) || 1;
+  const med = k => { const v = peers.map(x => x[k]).filter(v => v != null && isFinite(v)).sort((a, b) => a - b); return v.length ? v[v.length >> 1] : null; };
+  const rank = k => 1 + peers.filter(x => (x[k] ?? -1e18) > (r[k] ?? -1e18)).length;
+  return {行业: r.ind, 公司数: peers.length, 今日市值加权涨跌pct: +(peers.reduce((s, x) => s + (x.mcap || 0) * (x.chg || 0), 0) / cap).toFixed(2), 市盈率中位数: med("pe"), 营收同比中位数pct: med("revY"), 净利同比中位数pct: med("npY"), 毛利率中位数pct: med("gm"),
+    本公司排名: {市值: rank("mcap"), 营收: rank("rev"), 净利润: rank("np")},
+    市值前6: [...peers].sort((a, b) => (b.mcap || 0) - (a.mcap || 0)).slice(0, 6).map(x => ({名称: x.name, 代码: x.code, 今日涨跌pct: x.chg, 市值亿: x.mcap, 市盈率: x.pe, 营收同比pct: x.revY, 净利同比pct: x.npY}))};
+}
+const krThemes = r => r.tags.map(t => { const xs = R.filter(x => x.tags.includes(t)), m = xs.reduce((s, x) => s + (x.mcap || 0), 0) || 1;
+  return {题材: t, 只数: xs.length, 今日市值加权涨跌pct: +(xs.reduce((s, x) => s + (x.mcap || 0) * (x.chg || 0), 0) / m).toFixed(2)}; });
+function krLab(code){                                    // 量化页的 akshare 数据里有这只的：机构调研、大宗交易、龙虎榜、限售解禁
+  const ak = D.lab?.ak || {}, pick = (k, cols) => (ak[k]?.rows || []).filter(r => r[0] === code).slice(0, 5).map(r => Object.fromEntries(cols.map((c, i) => [c, r[i + 2]])));
+  return {机构调研: pick("jgdy", ["调研次数", "机构家数", "最近调研", "接待方式"]), 大宗交易: pick("dzjy", ["成交价", "收盘价", "折溢价pct", "成交额元"]), 龙虎榜: pick("lhb", ["收盘", "涨跌幅pct", "净买额元", "龙虎榜成交元", "解读", "上榜原因"]), 限售解禁: pick("jj", ["解禁日", "类型", "解禁市值元", "占流通市值pct"])};
+}
+function krKronos(sec, key){
+  const e = kraEntry(sec, key), mkt = krMkt(sec, key), src = KRA || KRE, F = "[次数, 方向对%, 收盘价平均误差%, 直接假设价格不变的平均误差%, 实际上涨占比%]";
+  if (!e) return "没有预测";
+  return {模型: "Kronos-small（只看历史日K的开高低收和成交量）", 基准日: e.d, 基准收盘: e.c, 预测涨跌pct_第1到第10个交易日: e.p || null, 第10天预测涨跌pct: e.p ? e.p[9] : e.p10, 预测区间pct: e.p ? [e.lo, e.hi] : null,
+    这一只的预测记录: e.acc ? {"5日": e.acc[0], "10日": e.acc[1], 格式: F} : "积累中", [`模型在${mkt}的回看检验`]: src?.chk?.[mkt] ? {...src.chk[mkt], 格式: F} : null, [`模型在${mkt}的预测记录核对`]: src?.acc?.[mkt] ? {...src.acc[mkt], 格式: F} : null};
+}
+async function krCtx(sec, key, o){
+  const net = LIVE.on ? "" : "（快照不能联网，没有搜索）", bag = {Kronos量价预测: krKronos(sec, key), 大盘: marketBrief(), 市场背景: BG, 外部变量: krExternal()};
+  if (sec === "a") {
+    const r = BY.get(key), E = nwEarn();
+    const [ann, news, s1, s2, s3, s4] = await Promise.all([LIVE.on ? flAnnLive(key) : null, txNews(txSym(key)), emSearch(`${r.name} 订单`), emSearch(`${r.name} 合同 中标`), emSearch(`${r.name} 业绩 经营`), emSearch(`${r.ind} 行业 景气 订单 价格`)]);
+    return {个股: stockBrief(r), ...bag, 同行业: krIndustry(r), 题材今日表现: krThemes(r),
+      财报和业绩预告: {最新财报: (E.res || []).filter(x => x[0] === key).map(x => ({公告日: x[2], 报告期: x[3], 营收亿: x[4], 营收同比pct: x[5], 归母净利亿: x[6], 净利同比pct: x[7]})), 业绩预告: (E.pre || []).filter(x => x[0] === key).slice(0, 3).map(x => ({公告日: x[2], 报告期: x[3], 类型: x[4], 净利同比下限pct: x[5], 净利同比上限pct: x[6], 原因: x[9]}))},
+      量化页数据: krLab(key), 最近公告: ann ? ann.slice(0, 15).map(x => ({日期: x[0], 标题: x[1], 标记: x[3]})) : "没有取到" + net,
+      个股新闻: news || "没有取到" + net, 搜索_公司订单: s1 || "没有取到" + net, 搜索_合同中标: s2 || "没有取到" + net, 搜索_经营和业绩: s3 || "没有取到" + net, 搜索_行业: s4 || "没有取到" + net,
+      本站快讯: nwRelated(key).slice(0, 8).map(x => ({时间: x[1], 标题: x[5]}))};
+  }
+  if (sec === "gs") {
+    const s = G.st[key], rows = o.rows?.(), nm = s.n || s.en, mks = GMK.filter(([m]) => (G.mk[m] || []).includes(key)).map(([, t]) => t);
+    const peers = Object.entries(G.st).filter(([y, x]) => y !== key && x.sec === s.sec && x.ex === s.ex).sort((a, b) => (b[1].mcap || 0) - (a[1].mcap || 0)).slice(0, 6)
+      .map(([, x]) => ({名称: x.n || x.en, 代码: x.t, 涨跌pct: x.pct, 市值: x.mcap, 市盈率: x.pe, 距52周高点pct: x.h52 ? +((x.p / x.h52 - 1) * 100).toFixed(1) : null}));
+    const [news, s1, s2, s3] = await Promise.all([txNews(s.tx), emSearch(`${nm} 订单`), emSearch(`${nm} 业绩`), emSearch(`${nm} ${s.sec || ""} 行业`)]);
+    return {个股: {名称: nm, 英文名: s.en, 代码: s.t, 所属指数: mks, 交易所: s.ex, 行业: s.sec, 货币: s.cur, 最新价: s.p, 涨跌幅pct: s.pct, 市值: s.mcap, 市盈率: s.pe, 周52最高: s.h52, 周52最低: s.l52,
+      多周期指标: rows?.length >= 30 ? techBrief(rows, null) : null}, ...bag, 同交易所同行业: peers, 各国指数: G.idx.map(ix => ({指数: ix.n, 涨跌pct: ix.q?.pct ?? null})),
+      个股新闻: news || (s.tx ? "没有取到" + net : "这个市场没有可用的新闻接口"), 搜索_订单: s1 || "没有取到" + net, 搜索_业绩: s2 || "没有取到" + net, 搜索_行业: s3 || "没有取到" + net};
+  }
+  const rows = o.rows?.() || [], nm = o.name;
+  const s1 = await emSearch(`${nm} 走势`), s2 = await emSearch(`${nm} 资金 政策`);
+  return {指数: nm, 多周期指标: rows.length >= 30 ? techBrief(rows, null) : null, 近期收盘: rows.slice(-30).map(r => [r.d, r.c]), ...bag,
+    ...(sec === "gi" ? {各国指数: G.idx.map(ix => ({指数: ix.n, 涨跌pct: ix.q?.pct ?? null}))} : {}), 搜索_走势: s1 || "没有取到" + net, 搜索_资金和政策: s2 || "没有取到" + net};
+}
+function krPrompt(sec, name, data){
+  const idx = sec === "ai" || sec === "gi";
+  return `你是严谨的证券研究员。请对【${name}】做综合预测，时间范围：未来 2 周和未来 1–3 个月。今天是 ${bjNow().slice(0, 10)}（北京时间）。
+数据（JSON；“搜索”“新闻”“公告”是刚从东方财富、腾讯自选股等公开网站取到的）：
+${JSON.stringify(data)}
+
+要求：
+1. 只用上面的数据和资讯，以及你用 search_news 工具搜到的内容（如果有这个工具），不要编造数字和事件；引用消息时写来源和日期；没找到的信息写“没有找到”，不要猜。
+2. Kronos 是只看历史量价的模型，数据里有它的准确率（方向准确率、收盘价误差，以及“直接假设价格不变”的误差）。如果它不如“价格不变”，要明说它的预测参考价值有限，只能当作一个弱信号。
+3. ${idx ? "重点分析宏观、政策、资金和主要板块（权重股）的情况，以及这些因素接下来可能怎么变。" : "重点分析经营层面的信息：订单、合同、中标、产能、产品价格、出货量、客户、业绩预告等，说明可能影响哪一期的收入和利润、影响大概多大；再看行业景气、供需、价格、政策和同行对比。"}
+4. 用概率表述，不给确定的买卖指令。
+按以下结构输出，总长度不超过 900 字：
+## 结论（未来 2 周、1–3 个月的倾向和把握程度）
+## 走势与量价（技术面，以及 Kronos 预测和它的可信度）
+## ${idx ? "宏观、政策和资金面" : "公司基本面与最新消息（订单、合同、业绩、公告）"}
+## ${idx ? "主要板块和权重股" : "行业现状（景气、订单和价格、政策、同行对比）"}
+## 关联因素（${idx ? "外围市场、汇率、利率、外部变量" : "题材、上下游、资金、大盘和外部变量"}）
+## 三种情景（乐观 / 中性 / 悲观：触发条件、大致价格区间、概率，三者合计 100%）
+## 接下来要盯的信号（3–5 个，尽量可量化）
+结尾原样写：以上内容仅为基于公开信息的分析参考，不构成投资建议，市场有风险，决策需独立判断`;
+}
+function krAiButton(sec, key, o){
+  const btn = $("#krAi"), stop = $("#krStop"), out = $("#krOut"); if (!btn) return;
+  const hk = sec + ":" + key;
+  aiLast(out, "kr", hk);
+  use("sample").then(sample => {
+    if (!sample) { btn.disabled = true; out.innerHTML = `<span class="note">在 claude.ai 里打开本页才能使用 AI 分析。</span>`; return; }
+    btn.onclick = async () => {
+      aiCtl?.abort(); aiCtl = new AbortController(); const my = aiCtl;
+      btn.disabled = true; stop.hidden = false; stop.onclick = () => my.abort();
+      out.innerHTML = `<span class="note">${LIVE.on ? "正在搜集公告、新闻、订单和行业资讯…" : "正在整理本页数据…"}</span>`;
+      try {
+        await kraLoad();
+        const data = await krCtx(sec, key, o);
+        if (my !== aiCtl || my.signal.aborted) return;
+        out.innerHTML = `<span class="note">资料齐了，${AI_NAME} 正在分析…</span>`;
+        const res = await sample(krPrompt(sec, o.title || o.name, data), {signal: my.signal, tools: LIVE.on && !IN_CLAUDE ? [KR_TOOL] : undefined, onText: ({text}) => { if (my === aiCtl) out.innerHTML = md(text); }});
+        AH.put({id: hid(), kind: "kr", key: hk, title: o.title || o.name, q: "AI 综合预测", a: res.text});
+      } catch (e) {
+        if (my !== aiCtl) return;
+        if (e.code === "cancelled") { if (!e.text) out.innerHTML = `<span class="note">已停止。</span>`; }
+        else { out.innerHTML = (e.text && e.code !== "refused" ? md(e.text) : "") + `<p class="note">${esc(errMsg(e))}</p>`; if (["not_granted", "sampling_disabled"].includes(e.code)) btn.hidden = true; }
+      } finally { if (my === aiCtl) { btn.disabled = false; stop.hidden = true; } }
+    };
+  });
+}
 
 /* ---------- K-line engine: periods, indicators, intraday ---------- */
 const MA_PERIODS = [5, 10, 20, 60];
@@ -2678,6 +2889,7 @@ function openIndex(code){
       <div><small>RSI14</small><b>${st.rsi.toFixed(1)}</b></div><div><small>MA20 / MA60</small><b>${fmt2(st.mas[20])} / ${fmt2(st.mas[60])}</b></div><div><small>量比（20 日）</small><b>${(st.amt / st.amt20).toFixed(2)}</b></div>
       <div><small>数据起点</small><b>${esc(at.first)}</b></div><div><small>历史最高</small><b>${fmt2(at.hi)} <span class="mut" style="font-size:12px">${esc(at.hiD)}</span></b></div><div><small>历史最低</small><b>${fmt2(at.lo)} <span class="mut" style="font-size:12px">${esc(at.loD)}</span></b></div>
     </div>
+    ${krPanel()}
     <div class="panel" style="padding:12px 14px"><h3 style="margin-bottom:6px">技术面</h3>${narr.map(([k, v]) => `<p class="tline"><b>${k}</b>${esc(v)}</p>`).join("")}</div>
     <div class="panel" style="padding:12px 14px"><h3 style="margin-bottom:8px">多周期指标：日线 · 周线 · 月线</h3>${tfTable(rows, null)}${tn.map(([k, v]) => `<p class="tline"><b>${k}</b>${esc(v)}</p>`).join("")}</div>
     <div class="panel" style="padding:12px 14px"><h3 style="margin-bottom:6px">这个指数的特点</h3><p class="tline">${esc(IDX_NOTE[code] || "")}</p>
@@ -2689,6 +2901,7 @@ function openIndex(code){
   drawer.hidden = false; $("#scrim").hidden = false; drawer.scrollTop = 0;
   const levels = [...st.sup.map(v => ({v, kind: "s", label: "支撑 " + fmt2(v)})), ...st.res.map(v => ({v, kind: "r", label: "压力 " + fmt2(v)}))];
   openState = {type: "index", code, rows};
+  krOpen("ai", code, {name: ix.name, title: ix.name, rows: () => rows, fmt: fmt2});
   const panel = mountPanel($("#ixPanel"), {daily: rows, minute: idxMinute(code), isIndex: true, name: ix.name, levels, minuteNote: LIVE.on ? "正在加载分时…" : "暂无分时数据。"});
   if (LIVE.on) fetchFiveDay(code).then(days => { if (days?.length && activeChart === panel) { lastMin = Date.now(); panel.setMinute(days); } });
   $("#dClose").onclick = closeStock; $("#dClose").focus();
@@ -2962,12 +3175,14 @@ function openGIndex(key){
     </div>
     <div class="panel" style="padding:12px 14px"><h3 style="margin-bottom:6px">技术面</h3>${idxNarrative(st, fmt2).map(([k, v]) => `<p class="tline"><b>${k}</b>${esc(v)}</p>`).join("")}</div>
     <div class="panel" style="padding:12px 14px"><h3 style="margin-bottom:8px">多周期指标：日线 · 周线 · 月线</h3>${tfTable(rows, gMonthly(ix))}${indNarrative(rows, gMonthly(ix), fmt2).map(([k, v]) => `<p class="tline"><b>${k}</b>${esc(v)}</p>`).join("")}</div>` : `<p class="note">这个指数的历史K线不足，暂时只能看报价${LIVE.on && ix.em ? "；正在尝试从东方财富加载" : ""}。</p>`}
+    ${krPanel()}
     <div class="panel" style="padding:12px 14px;display:grid;gap:10px">
       <div class="phead" style="margin-bottom:0"><h3>AI 技术面分析</h3><span style="display:flex;gap:8px"><button class="btn pri" id="gxAi">让 ${AI_NAME} 分析这个指数</button><button class="btn" id="gxStop" hidden>停止</button></span></div>
       <div class="ai" id="gxOut">${!IN_CLAUDE && !dsKey() ? aiNoKey() : `<span class="note">${AI_NAME} 会根据日、周、月线的趋势、MACD、RSI、KDJ、布林线和量能，给出多空逻辑和短中期情景。${AI_QUOTA}</span>`}</div>
     </div>`;
   drawer.hidden = false; $("#scrim").hidden = false; drawer.scrollTop = 0;
   openState = {type: "gindex", code: key, rows};
+  krOpen("gi", key, {name: ix.n, title: ix.n, rows: () => gRows(ix), fmt: fmt2});
   const levels = st ? [...st.sup.map(v => ({v, kind: "s", label: "支撑 " + fmt2(v)})), ...st.res.map(v => ({v, kind: "r", label: "压力 " + fmt2(v)}))] : [];
   const panel = mountPanel($("#gxPanel"), {...gPanelSrc(ix), levels});
   if (LIVE.on) gLoadIndexLive(ix, panel);
@@ -3018,6 +3233,7 @@ function openGStock(y){
     <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span class="big num" id="gsPrice">${s.p == null ? "—" : fmtP(s.p)}</span><span class="num ${cls(s.pct)}" id="gsChg" style="font-size:16px">${pct(s.pct, 2)}</span>
       <span class="note" id="gsTime">${LIVE.on && s.tx ? "实时 " : "快照 "}${bjTime(s.ts)}（北京时间） · ${esc(CUR[s.cur] || s.cur || "")}</span></div>
     <div class="facts" id="gsFacts"></div>
+    ${krPanel()}
     ${chartable ? `<div id="gsPanel"></div>` : `<p class="note">${s.tx ? "在浏览器里直接打开实时版 HTML，可以查看这只股票上市以来的 K 线、最近五个交易日的分时和技术指标。" : "这个市场没有浏览器可直接访问的免费行情接口，本页只提供快照报价；美股和港股可在实时版里看 K 线和分时。"}</p>`}
     <div class="panel" id="dTech" style="padding:12px 14px" hidden></div>
     <div class="panel" style="padding:12px 14px;display:grid;gap:10px">
@@ -3026,6 +3242,7 @@ function openGStock(y){
     </div>`;
   drawer.hidden = false; $("#scrim").hidden = false; drawer.scrollTop = 0;
   openState = {type: "gstock", key: y, rows: null};
+  krOpen("gs", y, {name: s.n || s.en, title: `${s.n || s.en}（${s.t}）`, rows: () => openState?.type === "gstock" && openState.key === y ? openState.rows : null, fmt: fmtP});
   gStockFacts(s);
   if (chartable) {
     const kind = s.tx.startsWith("hk") ? "hk" : "us";
@@ -3586,10 +3803,10 @@ async function gLoadStockLive(s, kind, panel){
   if (!s.txk) { if (alive()) { panel.setDaily([]); panel.setMinute([]); } return; }
   s.minAt = Date.now();
   fetchFiveDay(s.txk, kind).then(days => { if (alive()) panel.setMinute(days || []); });
-  const full = await fetchDailyAll(s.txk, (rows, pg) => { if (pg || !alive()) return; gStockBar(s, rows); openState.rows = rows; panel.setDaily(rows); renderGStockTech(rows); }, kind);
+  const full = await fetchDailyAll(s.txk, (rows, pg) => { if (pg || !alive()) return; gStockBar(s, rows); openState.rows = rows; panel.setDaily(rows); renderGStockTech(rows); krRedraw?.(); }, kind);
   if (!alive()) return;
   if (!full.length) { panel.setDaily([]); return; }
-  gStockBar(s, full); openState.rows = full; panel.setDaily(full); renderGStockTech(full);
+  gStockBar(s, full); openState.rows = full; panel.setDaily(full); renderGStockTech(full); krRedraw?.();
 }
 let gsBusy = false, gsN = 0;
 async function gStockTick(once){
@@ -3969,14 +4186,14 @@ function xgSearchInit(){
   const render = () => {
     const q = inp.value.trim(); if (!q) { res.hidden = true; return; }
     const {a, g} = find(q);
-    res.innerHTML = (a.length ? `<div class="xgrh">A 股</div>` + a.map(r => `<button type="button" data-a="${r.code}"><span><b>${esc(r.name)}</b> <span class="cd num">${r.code}</span> <span class="mut">${BOARD[r.board]} · ${esc(r.ind || "")}</span></span><span class="num">${f(r.price)} <span class="${cls(r.chg)}">${pct(r.chg, 2)}</span> ${badge(r.code)}</span></button>`).join("") : "")
+    res.innerHTML = (a.length ? `<div class="xgrh">A 股</div>` + a.map(r => `<button type="button" data-a="${r.code}"><span><b>${esc(r.name)}</b> <span class="cd num">${r.code}</span> <span class="mut">${BOARD[r.board]} · ${esc(r.ind || "")}</span></span><span class="num">${f(r.price)} <span class="${cls(r.chg)}">${pct(r.chg, 2)}</span> ${badge(r.code)}${krPill("a", r.code)}</span></button>`).join("") : "")
       + (g.length ? `<div class="xgrh">全球市场</div>` + g.map(([y, st]) => { const mk = GMK.filter(([m]) => (G.mk[m] || []).includes(y)).map(([, t]) => t).slice(0, 2).join("、");
-          return `<button type="button" data-g="${esc(y)}"><span><b>${esc(st.n || st.en)}</b> <span class="cd num">${esc(st.t)}</span> <span class="mut">${esc(mk)}</span></span><span class="num">${st.p == null ? "—" : fmtP(st.p)} <span class="${cls(st.pct)}">${pct(st.pct, 2)}</span></span></button>`; }).join("") : "")
+          return `<button type="button" data-g="${esc(y)}"><span><b>${esc(st.n || st.en)}</b> <span class="cd num">${esc(st.t)}</span> <span class="mut">${esc(mk)}</span></span><span class="num">${st.p == null ? "—" : fmtP(st.p)} <span class="${cls(st.pct)}">${pct(st.pct, 2)}</span>${krPill("gs", y)}</span></button>`; }).join("") : "")
       || `<p class="note" style="margin:8px 10px">没有找到。可以输入代码、名称或拼音首字母，比如 tpjt（拓普集团）、pg（苹果）。</p>`;
     res.hidden = false;
   };
   inp.addEventListener("input", render);
-  inp.addEventListener("focus", () => { dRank = null; if (inp.value.trim()) render(); });
+  inp.addEventListener("focus", () => { dRank = null; if (inp.value.trim()) render(); if (KRA_URL && !KRA) kraLoad().then(() => { if (!res.hidden) render(); }); });
   inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); res.querySelector("button")?.click(); } if (e.key === "Escape") { res.hidden = true; inp.blur(); } });
   res.addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; res.hidden = true; if (b.dataset.a) openStock(b.dataset.a); else openGStock(b.dataset.g); });
   document.addEventListener("click", e => { if (!e.target.closest(".xgsearch")) res.hidden = true; });
@@ -5098,6 +5315,18 @@ function renderKr(){
     + items.map(it => `<tr class="nohov"><td class="l">${labStock(it.sym, it.name)}</td>${[...per(a5, it.sym), ...per(a10, it.sym)].map(v => `<td class="num">${v}</td>`).join("")}<td>${it.check ? (it.check.dir ? `<span class="labst ok">方向对</span>` : `<span class="labst no">方向错</span>`) : "—"}</td><td class="num">${it.check ? it.check.mae + "%" : "—"}</td></tr>`).join("") + `</tbody>`;
   $("#krRule").innerHTML = `做法：模型 ${esc(KR.model)}（权重来自 Hugging Face 的 NeoQuasar，固定在审查过的版本），每个交易日收盘后在 GitHub 上用 CPU 跑一次（这次用时 ${KR.secs} 秒）。每个标的取最近 ${KR.lookback} 个交易日的腾讯前复权日 K，抽样 ${KR.samples} 条路径取平均。未来日期只跳过周末，没有排除节假日。<b>回看检验</b>每周做一次：只用 10 个交易日以前的数据预测最近 10 天，再和真实走势比。<b>预测记录核对</b>把每天的预测存下来，等真实收盘价出来后，统计 5 日、10 日后的涨跌方向对不对、收盘价差多少。方向准确率在 50% 左右，就和抛硬币差不多。<b class="dn">不构成投资建议。</b>`;
 }
+/* ---- 全部个股和指数的 AI K 线预测：各市场的成绩（scripts/kronos_all.py） ---- */
+function renderKa(){
+  const K = KRA || KRE; if (!K || (!K.chk && !K.acc)) return false;
+  const mk = ["A股", "A股指数", "港股", "日股", "韩股", "全球指数", "美股", "欧股", "印度"].filter(m => K.cnt?.[m] || K.chk?.[m] || K.acc?.[m]);
+  const cell = s => s ? [`${s[1]}%`, `${Math.max(s[4], 100 - s[4]).toFixed(0)}%`, `${s[2]}%`, `${s[3]}%`] : ["—", "—", "—", "—"];
+  $("#kaTbl").innerHTML = `<thead><tr>${["市场", "预测只数", "回看检验样本", "10 日方向对", "一直猜涨或猜跌", "10 日误差", "“价格不变”误差", "预测记录核对（10 日）"].map((x, i) => `<th class="${i && i < 7 ? "" : "l"}" style="cursor:default">${x}</th>`).join("")}</tr></thead><tbody>`
+    + mk.map(m => { const c = K.chk?.[m]?.h10, a = K.acc?.[m]?.h10, worse = c && c[2] > c[3];
+      return `<tr class="nohov"><td class="l"><b>${m}</b></td><td class="num">${K.cnt?.[m] != null ? K.cnt[m].toLocaleString() : "—"}</td><td class="num">${c ? c[0] : "—"}</td>${cell(c).map((v, i) => `<td class="num">${i === 2 && worse ? `<b>${v}</b>` : v}</td>`).join("")}<td class="l note">${a?.[0] ? `${a[0].toLocaleString()} 次：方向对 ${a[1]}%，误差 ${a[2]}%（价格不变 ${a[3]}%）` : "积累中"}</td></tr>`; }).join("") + `</tbody>`;
+  const r = K.runs || {};
+  $("#kaMeta").textContent = [r.asia ? `亚洲批 ${r.asia.t}` : "", r.west ? `欧美批 ${r.west.t}` : ""].filter(Boolean).join(" · ") + "（北京时间）";
+  return mk.length > 0;
+}
 /* ---- vectorbt：每只 ETF 一张 3×3 热力格（快线 × 慢线），下面是样本内挑参数、样本外检验 ---- */
 function renderVb(){
   const V = LAB.vbt, rows = V.rows || [], n = rows.length, r0 = rows[0], ng = V.fast.length * V.slow.length;
@@ -5127,6 +5356,7 @@ function renderLab(){
   if (!$("#krWrap").hidden) renderKr();
   $("#vbWrap").hidden = !(LAB && LAB.vbt && LAB.vbt.rows && LAB.vbt.rows.length);
   if (!$("#vbWrap").hidden) renderVb();
+  $("#kaWrap").hidden = !renderKa();
   ["#btWrap", "#akWrap"].forEach(s => { $(s).hidden = !LAB; });
   if (!LAB) { $("#chkBox").innerHTML = $("#wcBox").innerHTML = $("#libTbl").innerHTML = ""; return; }
   $("#labMeta").textContent = `按 ${LAB.date} 收盘的数据 · 生成于 ${LAB.t}`;
@@ -5695,7 +5925,9 @@ function autoTools(){
   if (names.length) { const ok = names.filter(k => L[k].ok === 1), bad = names.filter(k => L[k].ok !== 1);
     out.push({n: `akshare 等 ${names.length} 个库`, on: ok.length >= 4, s: `${ok.length}/${names.length} 正常`, d: `${names.join("、")}：回测、参数扫描、数据和行情核对，详见「量化」页${bad.length ? `；${bad.map(k => `${k} ${L[k].ok === 2 ? "部分正常" : L[k].ok == null ? "未启用" : "失败"}`).join("、")}` : ""}`}); }
   const kr = D.kr;
-  if (kr && kr.items) out.push({n: "Kronos", on: true, s: "已接入", d: `AI K 线预测（${kr.model}）：${kr.items.length} 个指数和个股，预测之后 ${kr.pred} 个交易日，并核对准确率，详见「量化」页；当前是 ${kr.date} 收盘的预测`});
+  const ka = D.kra, kaN = ka?.cnt ? Object.values(ka.cnt).reduce((s, x) => s + x, 0) : 0;
+  if (kaN) out.push({n: "Kronos", on: true, s: "已接入", d: `AI K 线预测（${ka.model}）：全部 A 股、A 股指数、全球指数和全球个股共 ${kaN.toLocaleString()} 只，每个交易日收盘后预测之后 10 个交易日，打开任意个股或指数都能看到，还可以让 AI 结合公司、行业、订单和新闻做综合预测；各市场的准确率见「量化」页`});
+  else if (kr && kr.items) out.push({n: "Kronos", on: true, s: "已接入", d: `AI K 线预测（${kr.model}）：${kr.items.length} 个指数和个股，预测之后 ${kr.pred} 个交易日，并核对准确率，详见「量化」页；当前是 ${kr.date} 收盘的预测`});
   if (!out.length) return null;
   out.push({n: "FinceptTerminal", on: false, s: "桌面程序", d: "要在电脑上安装、注册 Fincept 账号才能用，网页里放了介绍、截图和下载入口（「量化」页）"});
   out.push({n: "ai-hedge-fund", on: false, s: "待配置", d: "需要 Financial Datasets 和模型 API key，配置前没有数据"},
