@@ -13,6 +13,8 @@ mootdx
 # 问财：增强版 pywencai（原版自 2025 年 5 月没更新，问财 2026 年升级后会被拒），固定在审查过的版本
 pywencai-enhanced @ git+https://github.com/HeRiki/pywencai-enhanced.git@883f968ea6e34fd0f68f2a32ad4c21cc2dd15945
 akquant
+# 均线参数扫描（量化页）：vectorbt，固定版本
+vectorbt==1.2.1
 # 外部变量（OpenBB）：只装用到的模块；openbb 主包在工作流里用 --no-deps 装（它默认会拉几十个用不到的扩展）
 openbb-core>=2,<3
 openbb-fixedincome>=2,<3

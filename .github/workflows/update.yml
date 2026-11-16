@@ -22,6 +22,9 @@ on:
       review:
         description: "重新生成 AI 大盘复盘（1 = 是）"
         default: "0"
+      kronos:
+        description: "重新生成 AI K 线预测（1 = 是）"
+        default: "0"
 
 permissions:
   contents: write   # 每周提交一次 last-run.txt，避免公开仓库 60 天无活动后定时任务被 GitHub 停用
@@ -35,7 +38,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 80
     steps:
       - uses: actions/checkout@v4
 
@@ -107,6 +110,37 @@ jobs:
           rm -f reports/market_review_*.md
           timeout 900 .venv/bin/python ../scripts/dsa_run.py ../data/a.json --market-review --no-notify --force-run
           cd .. && python scripts/quant.py import "dsa/reports/market_review_*.md" && python scripts/gen.py
+
+      # AI K 线预测：开源金融 K 线大模型 Kronos（https://github.com/shiyu-coder/Kronos，MIT 许可证），每个交易日收盘后跑一次（CPU，约 3–5 分钟）。
+      # 代码固定在下面这个提交，模型权重（safetensors）固定在 scripts/kronos_fc.py 里写的版本；PyTorch 只装 CPU 版，只在要预测的那一轮装。
+      - name: AI K 线预测要不要生成
+        id: kronos
+        env:
+          FORCE_KRONOS: ${{ github.event.inputs.kronos || '0' }}
+        run: echo "due=$(python scripts/kronos_fc.py due)" >> "$GITHUB_OUTPUT"
+
+      - name: 恢复 Kronos 代码和模型
+        if: steps.kronos.outputs.due == 'true'
+        uses: actions/cache@v4
+        with:
+          path: kronos
+          key: kronos-67b630e67f6a18c9e9be918d9b4337c960db1e9a-901c26c-0e01173
+
+      - name: 生成 AI K 线预测
+        if: steps.kronos.outputs.due == 'true'
+        continue-on-error: true
+        env:
+          HF_HOME: ${{ github.workspace }}/kronos/hf
+          PYTHONPATH: ${{ github.workspace }}/kronos/repo
+        run: |
+          if [ ! -f kronos/repo/model/kronos.py ]; then
+            rm -rf kronos/repo && git init -q kronos/repo
+            git -C kronos/repo fetch -q --depth 1 https://github.com/shiyu-coder/Kronos.git 67b630e67f6a18c9e9be918d9b4337c960db1e9a
+            git -C kronos/repo checkout -q FETCH_HEAD
+          fi
+          pip install -q --index-url https://download.pytorch.org/whl/cpu "torch==2.15.0"
+          pip install -q "einops==0.8.2" "safetensors==0.8.0" "huggingface_hub==0.36.2"
+          timeout 1800 python scripts/kronos_fc.py run && python scripts/gen.py
 
       - name: 保存数据缓存
         if: always()

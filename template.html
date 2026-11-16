@@ -406,6 +406,28 @@ tbody tr.greg:hover{background:var(--bg)}
 .labcmd code{flex:1;min-width:0;overflow-x:auto;white-space:nowrap;font:12.5px/1.6 var(--f-num);background:var(--sunk);border:1px solid var(--line);border-radius:4px;padding:6px 10px}
 .labwc{margin:0 0 12px}
 .labwc h4{margin:0 0 6px;font-size:13px}
+/* 量化页：Kronos 预测小图、vectorbt 参数热力格、FinceptTerminal 介绍 */
+.krgrid,.vbgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-top:10px}
+.krc,.vbc{border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;background:var(--surface);min-width:0}
+.krc h4,.vbc h4{margin:0;font-size:13.5px;display:flex;gap:6px;align-items:baseline;flex-wrap:wrap}
+.krc h4 .cd,.vbc h4 .cd{font-family:var(--f-num);font-size:11.5px;color:var(--faint);font-weight:400}
+.krc .krv{font-size:12px;color:var(--muted);margin:3px 0 4px;line-height:1.5}
+.krc svg{display:block;width:100%;height:auto}
+.krlg{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted);margin:10px 0 0}
+.krlg i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:4px}
+.vbc table{width:100%;border-collapse:separate;border-spacing:3px;font-size:12px;margin-top:4px}
+.vbc th{font-weight:500;color:var(--muted);text-align:center;padding:2px;font-size:11.5px}
+.vbc td{text-align:center;padding:6px 2px;border-radius:5px;font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.vbc td.best{box-shadow:inset 0 0 0 2px var(--ink)}
+.vbc td.isb{box-shadow:inset 0 0 0 2px var(--accent)}
+.vbc td.best.isb{box-shadow:inset 0 0 0 2px var(--ink),inset 0 0 0 4px var(--accent)}
+.vbc .vbl{font-size:12px;color:var(--muted);margin:6px 0 0;line-height:1.6}
+.vbc .vbl b{font-family:var(--f-num);font-weight:600}
+.fcard{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:16px;align-items:start}
+.fcard figure{margin:0}
+.fcard img{display:block;width:100%;border-radius:var(--r);border:1px solid var(--line)}
+.fcard figcaption{margin-top:4px}
+@media (max-width:760px){.fcard{grid-template-columns:1fr}}
 .tscroll.tall{max-height:560px;overflow-y:auto}
 /* 行业龙头 */
 .indgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(460px,1fr));gap:16px;margin-top:16px}
@@ -1245,8 +1267,16 @@ td.nwwhy{white-space:normal;min-width:200px;max-width:360px;font-size:12.5px;col
   <section class="view" id="v-lab" hidden>
     <div class="panel">
       <div class="phead"><h2>量化</h2><span class="note" id="labMeta"></span></div>
-      <p class="note" style="margin:0">接入六个开源库：<b>akquant</b>（回测引擎）、<b>akshare</b>（东方财富数据中心）、<b>easyquotation</b>（新浪行情）、<b>stock-api</b>（Node.js 行情）、<b>mootdx</b>（通达信）、<b>pywencai</b>（问财）。每个交易日收盘后在 GitHub 上跑一次；同一套工具在电脑终端也能用（命令 <code>gp</code>，见本页最下面）。<b class="dn">回测是用历史数据模拟，不预示未来，也不构成投资建议。</b></p>
+      <p class="note" style="margin:0">接入的开源项目：<b>Kronos</b>（AI K 线预测）、<b>akquant</b>（回测引擎）、<b>vectorbt</b>（参数扫描）、<b>akshare</b>（东方财富数据中心）、<b>easyquotation</b>（新浪行情）、<b>stock-api</b>（Node.js 行情）、<b>mootdx</b>（通达信）、<b>pywencai</b>（问财）；<b>daily_stock_analysis</b> 生成「市场」页的 AI 大盘复盘；<b>FinceptTerminal</b> 是桌面程序，见本页下方的介绍。每个交易日收盘后在 GitHub 上跑一次；akshare 等工具在电脑终端也能用（命令 <code>gp</code>，见本页最下面）。<b class="dn">回测和 AI 预测都是用历史数据推演，不预示未来，也不构成投资建议。</b></p>
       <p class="warn" id="labEmpty" hidden style="margin:10px 0 0">量化数据还没生成：下一个交易日收盘后自动生成。</p>
+    </div>
+    <div class="panel" id="krWrap" hidden>
+      <div class="phead"><h3>AI K 线预测（Kronos）</h3><span class="note" id="krMeta"></span></div>
+      <p class="note" style="margin:0 0 10px">Kronos 是开源的金融 K 线大模型（在全球 45 家以上交易所的 K 线上预训练，AAAI 2026 论文）。每个交易日收盘后，用最近 400 个交易日的日 K（开高低收、成交量、成交额），预测之后 10 个交易日的走势。<b class="dn">模型输出是概率性的推演，误差可能很大；下面的准确率是真实记录，请先看准确率再看预测。</b></p>
+      <div class="kpis" id="krKpi"></div>
+      <div class="krgrid" id="krGrid"></div>
+      <details class="archive" style="margin-top:10px"><summary>每个标的的准确率</summary><div class="tscroll"><table class="fltop" id="krAcc"></table></div></details>
+      <p class="note" style="margin:10px 0 0" id="krRule"></p>
     </div>
     <div class="panel" id="btWrap">
       <div class="phead"><h3>操盘线 B/S 策略回测（akquant）</h3><span class="note" id="btNote"></span></div>
@@ -1255,6 +1285,13 @@ td.nwwhy{white-space:normal;min-width:200px;max-width:360px;font-size:12.5px;col
       <div class="tscroll tall" style="margin-top:10px"><table class="fltop" id="btTbl"></table></div>
       <div class="btchart" id="btChart" hidden></div>
       <p class="note" style="margin:10px 0 0" id="btRule"></p>
+    </div>
+    <div class="panel" id="vbWrap" hidden>
+      <div class="phead"><h3>均线参数扫描（vectorbt）</h3><span class="note" id="vbMeta"></span></div>
+      <p class="note" style="margin:0 0 10px">同一条均线规则换 9 组参数，在宽基 ETF 上一次回测完：快线在慢线上方就持有，跌到下方就空仓。格子里是近 500 个交易日的总收益，颜色越深越极端。<b>重点看最后两行：</b>前 2/3 时间里挑出的“最好参数”，到后 1/3 时间里还灵不灵——这就是过拟合检验。</p>
+      <div class="kpis" id="vbKpi"></div>
+      <div class="vbgrid" id="vbGrid"></div>
+      <p class="note" style="margin:10px 0 0" id="vbRule"></p>
     </div>
     <div class="panel" id="akWrap">
       <div class="phead"><h3>市场数据（akshare · 东方财富数据中心）</h3><span class="note" id="akNote"></span></div>
@@ -1266,8 +1303,20 @@ td.nwwhy{white-space:normal;min-width:200px;max-width:360px;font-size:12.5px;col
       <div class="panel"><div class="phead"><h3>问财选股（pywencai）</h3></div><div id="wcBox"></div></div>
     </div>
     <div class="panel">
-      <div class="phead"><h3>六个库的运行状态</h3><span class="note" id="libNote"></span></div>
+      <div class="phead"><h3>开源项目的运行状态</h3><span class="note" id="libNote"></span></div>
       <div class="tscroll"><table class="fltop" id="libTbl"></table></div>
+    </div>
+    <div class="panel">
+      <div class="phead"><h3>FinceptTerminal（桌面金融终端）</h3><span class="note">v4.5.2 · AGPL-3.0</span></div>
+      <div class="fcard">
+        <div>
+          <p class="note" style="margin:0 0 8px">开源的桌面金融终端（C++20 + Qt 6 原生程序），有行情、图表、新闻、AI 分析等模块。它是要安装的桌面软件，<b>不能放进网页里运行</b>，所以这里只放介绍和下载入口。</p>
+          <p class="note" style="margin:0 0 8px">我在云端服务器上从源码编译了 v4.5.2，在虚拟屏幕里运行成功（右图）。第一次打开时，它会安装自带的 Python 运行环境和 yfinance 等数据库，大约 100 MB；之后要登录 Fincept 账号才能进入终端，账号可以免费注册。</p>
+          <p class="note" style="margin:0 0 8px">想用的话：到官方发布页下载 Windows、macOS（Apple 芯片）或 Linux 安装包，自己注册、登录。账号要你本人注册，本站不会代你注册或登录。</p>
+          <p style="margin:0"><a class="btn" href="https://github.com/Fincept-Corporation/FinceptTerminal/releases" target="_blank" rel="noopener">官方下载页</a> <a class="btn" href="https://github.com/Fincept-Corporation/FinceptTerminal" target="_blank" rel="noopener">源码</a></p>
+        </div>
+        <figure><img src="fincept.jpg" alt="FinceptTerminal v4.5.2 在云端虚拟屏幕上运行：首次安装界面和登录界面" loading="lazy" onerror="this.parentNode.innerHTML='&lt;p class=&quot;note&quot;&gt;截图在 github.io 实时版里显示。&lt;/p&gt;'"><figcaption class="note">上：首次安装界面；下：登录界面</figcaption></figure>
+      </div>
     </div>
     <div class="panel">
       <div class="phead"><h3>在电脑终端和 Claude 新会话里用</h3><span class="note">命令 gp，源码在 stock-desk 仓库的 tools/gp.py</span></div>
@@ -4886,7 +4935,9 @@ const LAB_LIBS = [
   ["easyquotation", "https://github.com/shidenggui/easyquotation", "新浪全市场行情，和本站的腾讯行情逐只核对收盘价"],
   ["stock-api", "https://github.com/zhangxiangliang/stock-api", "Node.js 行情库：取几只大盘股的行情核对"],
   ["mootdx", "https://github.com/mootdx/mootdx", "通达信行情（要能直连 TCP 7709）"],
-  ["pywencai", "https://github.com/HeRiki/pywencai-enhanced", "问财自然语言选股（pywencai-enhanced 增强版，要你自己的问财 cookie）"]];
+  ["pywencai", "https://github.com/HeRiki/pywencai-enhanced", "问财自然语言选股（pywencai-enhanced 增强版，要你自己的问财 cookie）"],
+  ["vectorbt", "https://github.com/polakowo/vectorbt", "均线参数扫描：宽基 ETF × 9 组均线参数，前 2/3 时间挑参数、后 1/3 检验（许可证 Apache 2.0 + Commons Clause：可以免费用，不能拿来卖钱）"]];
+const KR = D.kr || null;                                                     // Kronos AI K 线预测（scripts/kronos_fc.py）
 const LAB_CMDS = [["gp q 600519 300750 sh000001 --book", "实时行情和五档（easyquotation）"], ["gp k 600519 -n 60", "日K，前复权（akshare；--src tdx 走通达信）"],
   ["gp zt / gp zt --kind zb", "涨停池 / 炸板 / 跌停 / 强势股（akshare）"], ["gp lhb", "龙虎榜，按净买额排序（akshare）"],
   ["gp bt 600519 --trades", "操盘线 B/S 回测，对比买入持有（akquant；--strategy ma 均线 5/20）"], ["gp js 宁德", "行情 / 搜索 / 日K（stock-api）"],
@@ -4982,16 +5033,100 @@ function renderWc(){
           : `<tr class="nohov">${r.map(v => `<td class="l">${esc(v)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>` : `<p class="note" style="margin:0">${esc(x.err || "没有结果")}</p>`) + `</div>`; }).join("")
       + (w.lib ? `<p class="note" style="margin:6px 0 0">由 ${esc(w.lib)} 用你自己的问财 cookie 在每个交易日收盘后查询；数据来自同花顺问财，口径以问财为准。</p>` : "");
 }
+/* 不在 lab.py 里跑的几个开源项目：状态取各自的数据（Kronos → D.kr，daily_stock_analysis → D.qt.review） */
+function extraLibs(){
+  const rv = QD?.review, tr = QD?.reviewTry, failed = rv && tr && tr.date > rv.date && tr.n >= 3;
+  return [
+    ["Kronos", "https://github.com/shiyu-coder/Kronos", "AI K 线预测：4 个指数和 4 只个股，预测之后 10 个交易日，并核对准确率（MIT 许可证）",
+      KR ? {v: KR.model, ok: KR.fail?.length ? 2 : 1, msg: `${KR.date} 收盘，预测 ${KR.items.length} 个标的${KR.fail?.length ? `，${KR.fail.length} 个取不到数据` : ""}`, ms: KR.secs}
+         : {st: "等待首次运行", c: "off", msg: "每个交易日收盘后在 GitHub 上运行"}],
+    ["daily_stock_analysis", "https://github.com/ZhuLinsen/daily_stock_analysis", "「市场」页的 AI 大盘复盘（模型 DeepSeek），每个交易日收盘后生成",
+      rv ? {v: "f044e95", ok: failed ? 0 : 1, msg: `当前是 ${rv.date} 收盘的复盘${failed ? `；${tr.date} 试了 ${tr.n} 次没生成成功` : ""}`} : {st: "等待首次运行", c: "off", msg: ""}],
+    ["FinceptTerminal", "https://github.com/Fincept-Corporation/FinceptTerminal", "桌面金融终端，不能在网页里运行；介绍和下载入口见下方",
+      {v: "4.5.2", st: "桌面程序", c: "off", msg: "已在云端从源码编译并运行通过；要自己下载安装、注册账号"}]];
+}
 function renderLibs(){
   const L = LAB.libs || {};
-  $("#libTbl").innerHTML = `<thead><tr><th class="l" style="cursor:default">库</th><th style="cursor:default">版本</th><th class="l" style="cursor:default">在网站上做什么</th><th style="cursor:default">最近一次</th><th class="l" style="cursor:default">说明</th></tr></thead><tbody>`
-    + LAB_LIBS.map(([k, url, what]) => { const x = L[k] || {}, st = x.ok === 1 ? `<span class="labst ok">正常</span>` : x.ok === 2 ? `<span class="labst part">部分正常</span>` : x.ok === 0 ? `<span class="labst no">失败</span>` : `<span class="labst off">未启用</span>`;
-      return `<tr class="nohov"><td class="l"><a href="${url}" target="_blank" rel="noopener"><b>${k}</b></a></td><td class="num">${esc(x.v || "—")}</td><td class="l">${what}</td><td>${st}</td><td class="l note">${esc(x.msg || "")}${x.ms != null ? ` · ${x.ms}s` : ""}</td></tr>`; }).join("") + `</tbody>`;
+  const stl = x => x.st ? `<span class="labst ${x.c || "off"}">${esc(x.st)}</span>` : x.ok === 1 ? `<span class="labst ok">正常</span>` : x.ok === 2 ? `<span class="labst part">部分正常</span>` : x.ok === 0 ? `<span class="labst no">失败</span>` : `<span class="labst off">未启用</span>`;
+  const row = (k, url, what, x) => `<tr class="nohov"><td class="l"><a href="${url}" target="_blank" rel="noopener"><b>${k}</b></a></td><td class="num">${esc(x.v || "—")}</td><td class="l">${what}</td><td>${stl(x)}</td><td class="l note">${esc(x.msg || "")}${x.ms != null ? ` · ${x.ms}s` : ""}</td></tr>`;
+  $("#libTbl").innerHTML = `<thead><tr><th class="l" style="cursor:default">项目</th><th style="cursor:default">版本</th><th class="l" style="cursor:default">在网站上做什么</th><th style="cursor:default">最近一次</th><th class="l" style="cursor:default">说明</th></tr></thead><tbody>`
+    + LAB_LIBS.map(([k, url, what]) => row(k, url, what, L[k] || (k === "vectorbt" ? {st: "等待首次运行", c: "off", msg: "下一个交易日收盘后运行"} : {}))).join("")
+    + extraLibs().map(a => row(...a)).join("") + `</tbody>`;
   $("#libNote").textContent = `GitHub Actions ${LAB.t || ""}（北京时间）`;
+}
+/* ---- Kronos：每个标的一张小图（最近 60 天收盘 + 未来 10 天预测和高低区间 + 回看检验的预测线）、准确率 ---- */
+function krChart(it){
+  const W = 300, H = 150, L = 4, R = 58, T = 8, B = 18, h = it.hist || [], fc = it.fc || [], ck = it.check, n = h.length + fc.length;
+  if (h.length < 2 || !fc.length) return "";
+  const s = ck && ck.pred ? h.findIndex(p => p[0] === ck.from) : -1;           // 回看检验那 10 天在图里的位置（按日期对齐）
+  const vals = [...h.map(p => p[1]), ...fc.flatMap(p => [p[2], p[3], p[1]]), ...(s > 0 ? ck.pred : [])].filter(v => v != null && isFinite(v));
+  const lo = Math.min(...vals), hi = Math.max(...vals), pad = (hi - lo) * 0.06 || 1;
+  const x = i => (L + i / (n - 1) * (W - L - R)).toFixed(1), y = v => (T + (1 - (v - lo + pad) / (hi - lo + 2 * pad)) * (H - T - B)).toFixed(1);
+  const i0 = h.length - 1, last = fc[fc.length - 1], col = last[1] >= h[i0][1] ? "var(--up)" : "var(--dn)";
+  const hl = h.map((p, i) => `${x(i)},${y(p[1])}`).join(" ");
+  const fl = [`${x(i0)},${y(h[i0][1])}`, ...fc.map((p, j) => `${x(i0 + 1 + j)},${y(p[1])}`)].join(" ");
+  const band = [...fc.map((p, j) => `${x(i0 + 1 + j)},${y(p[3])}`), ...fc.map((p, j) => `${x(i0 + 1 + j)},${y(p[2])}`).reverse()].join(" ");
+  const cl = s > 0 ? [`${x(s - 1)},${y(ck.start)}`, ...ck.pred.map((v, j) => s + j < h.length ? `${x(s + j)},${y(v)}` : null).filter(Boolean)].join(" ") : "";
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(it.name)} 最近 60 个交易日收盘价和之后 10 个交易日的预测">
+    <line x1="${x(i0)}" x2="${x(i0)}" y1="${T}" y2="${H - B}" stroke="var(--line)" stroke-dasharray="3 3"/>
+    <polygon points="${band}" fill="${col}" opacity=".13"/>
+    <polyline points="${hl}" fill="none" stroke="var(--ink)" stroke-width="1.3" stroke-linejoin="round"/>
+    ${cl ? `<polyline points="${cl}" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="4 3" stroke-linejoin="round"/>` : ""}
+    <polyline points="${fl}" fill="none" stroke="${col}" stroke-width="1.8" stroke-linejoin="round"/>
+    <text x="${W - R + 4}" y="${(+y(last[1]) + 4).toFixed(1)}" font-size="11" fill="${col}" font-family="var(--f-num)">${f(last[1])}</text>
+    <text x="${L}" y="${H - 4}" font-size="10.5" fill="var(--muted)">${esc(h[0][0].slice(5))}</text>
+    <text x="${(+x(i0) - 3).toFixed(1)}" y="${H - 4}" font-size="10.5" fill="var(--muted)" text-anchor="end">${esc(h[i0][0].slice(5))}</text>
+    <text x="${W - R + 3}" y="${H - 4}" font-size="10.5" fill="var(--muted)">→${esc(last[0].slice(5))}</text></svg>`;
+}
+function renderKr(){
+  const items = KR.items || [], A = KR.acc || {}, a5 = A.h5 || {}, a10 = A.h10 || {};
+  $("#krMeta").textContent = `按 ${KR.date} 收盘 · 生成于 ${KR.built}（北京时间）`;
+  const up = items.filter(it => it.chg > 0).length, cks = items.map(it => it.check).filter(Boolean), ckOk = cks.filter(c => c.dir).length;
+  const ckMae = cks.length ? cks.reduce((s, c) => s + c.mae, 0) / cks.length : null;
+  const k = (t, v, sub, c = "") => `<div><small>${t}</small><b class="${c}">${v}</b><span class="mut">${sub}</span></div>`;
+  const acc = (a, h) => a.n ? k(`预测记录核对 · ${h} 日后`, `方向对 ${a.dir}%`, `${a.n} 次，收盘价平均误差 ${a.mae}%`) : k(`预测记录核对 · ${h} 日后`, "—", `记录满 ${h} 个交易日后开始统计`);
+  $("#krKpi").innerHTML = k("预测标的", `${items.length} 个`, `之后 ${KR.pred} 个交易日`) + k("看涨 / 看跌", `${up} / ${items.length - up}`, "按第 10 天的预测收盘价")
+    + (cks.length ? k("回看检验 · 方向对", `${ckOk} / ${cks.length}`, `${cks[0].from.slice(5)}~${cks[0].to.slice(5)}，平均误差 ${ckMae.toFixed(2)}%`) : "") + acc(a5, 5) + acc(a10, 10);
+  $("#krGrid").innerHTML = items.map(it => { const last = it.fc[it.fc.length - 1], ck = it.check;
+    return `<div class="krc"><h4>${esc(it.name)}<span class="cd">${esc(it.sym)}</span></h4>
+      <div class="krv">收盘 <b class="num">${f(it.base)}</b>（${esc(it.baseD.slice(5))}）→ 第 10 天预测 <b class="num ${cls(it.chg)}">${f(last[1])}（${pct(it.chg, 2)}）</b><br>预测区间 ${f(Math.min(...it.fc.map(p => p[2])))} ~ ${f(Math.max(...it.fc.map(p => p[3])))}</div>
+      ${krChart(it)}
+      ${ck ? `<div class="krv">回看检验（${esc(ck.from.slice(5))}~${esc(ck.to.slice(5))}）：方向<b class="${ck.dir ? "dn" : "up"}">${ck.dir ? "对" : "错"}</b>，每天收盘价平均误差 <b class="num">${ck.mae}%</b></div>` : ""}</div>`; }).join("")
+    + `<div class="krlg" style="grid-column:1/-1;margin:0"><span><i style="background:var(--ink)"></i>实际收盘</span><span><i style="background:var(--up)"></i>预测（涨红跌绿，阴影是预测的每日最高、最低价）</span><span><i style="background:var(--accent)"></i>回看检验：只用之前的数据预测最近 10 天</span></div>`;
+  const per = (a, sym) => { const p = a.per && a.per[sym]; return p ? [p[0], p[1] + "%", p[2] + "%"] : ["—", "—", "—"]; };
+  $("#krAcc").innerHTML = `<thead><tr>${["标的", "5 日核对次数", "5 日方向对", "5 日平均误差", "10 日核对次数", "10 日方向对", "10 日平均误差", "回看检验", "回看平均误差"].map((t, i) => `<th class="${i ? "" : "l"}" style="cursor:default">${t}</th>`).join("")}</tr></thead><tbody>`
+    + items.map(it => `<tr class="nohov"><td class="l">${labStock(it.sym, it.name)}</td>${[...per(a5, it.sym), ...per(a10, it.sym)].map(v => `<td class="num">${v}</td>`).join("")}<td>${it.check ? (it.check.dir ? `<span class="labst ok">方向对</span>` : `<span class="labst no">方向错</span>`) : "—"}</td><td class="num">${it.check ? it.check.mae + "%" : "—"}</td></tr>`).join("") + `</tbody>`;
+  $("#krRule").innerHTML = `做法：模型 ${esc(KR.model)}（权重来自 Hugging Face 的 NeoQuasar，固定在审查过的版本），每个交易日收盘后在 GitHub 上用 CPU 跑一次（这次用时 ${KR.secs} 秒）。每个标的取最近 ${KR.lookback} 个交易日的腾讯前复权日 K，抽样 ${KR.samples} 条路径取平均。未来日期只跳过周末，没有排除节假日。<b>回看检验</b>每周做一次：只用 10 个交易日以前的数据预测最近 10 天，再和真实走势比。<b>预测记录核对</b>把每天的预测存下来，等真实收盘价出来后，统计 5 日、10 日后的涨跌方向对不对、收盘价差多少。方向准确率在 50% 左右，就和抛硬币差不多。<b class="dn">不构成投资建议。</b>`;
+}
+/* ---- vectorbt：每只 ETF 一张 3×3 热力格（快线 × 慢线），下面是样本内挑参数、样本外检验 ---- */
+function renderVb(){
+  const V = LAB.vbt, rows = V.rows || [], n = rows.length, r0 = rows[0], ng = V.fast.length * V.slow.length;
+  $("#vbMeta").textContent = `${r0.d0} ~ ${r0.d1} · 样本外从 ${r0.cut} 开始`;
+  const avg = g => rows.reduce((s, r) => s + (g(r) || 0), 0) / n;
+  const k = (t, v, sub, c = "") => `<div><small>${t}</small><b class="${c}">${v}</b><span class="mut">${sub}</span></div>`;
+  const beat = rows.filter(r => r.grid[V.fast.indexOf(r.best[0])][V.slow.indexOf(r.best[1])] > r.hold).length, ob = rows.filter(r => r.oos.ret > r.oos.hold).length;
+  $("#vbKpi").innerHTML = k("扫描", `${n} 只 × ${ng} 组`, "宽基 ETF × 均线参数") + k("全期最好参数跑赢持有", `${beat} / ${n}`, "事后挑的，最乐观")
+    + k("样本外：挑出的参数跑赢持有", `${ob} / ${n}`, `${r0.cut} 之后`) + k("样本外平均排名", `${avg(r => r.oos.rank).toFixed(1)} / ${ng}`, `1 = 最好；随便选平均约 ${((ng + 1) / 2).toFixed(0)}`)
+    + k("样本外平均收益", pct(avg(r => r.oos.ret), 2), `同期持有 ${pct(avg(r => r.oos.hold), 2)}`, cls(avg(r => r.oos.ret)));
+  const fx = v => v == null ? "—" : (v > 0 ? "+" : "") + v.toFixed(1);
+  $("#vbGrid").innerHTML = rows.map(r => { const all = r.grid.flat().filter(v => v != null), mx = Math.max(5, ...all.map(Math.abs));
+    const cell = (v, i, j) => { const a = V.fast[i], b = V.slow[j], al = v == null ? 0 : Math.round(8 + Math.min(1, Math.abs(v) / mx) * 42);
+      const c = [a === r.best[0] && b === r.best[1] ? "best" : "", a === r.is.best[0] && b === r.is.best[1] ? "isb" : ""].join(" ").trim();
+      return `<td class="${c} ${cls(v)}" style="background:color-mix(in srgb,var(${v >= 0 ? "--up" : "--dn"}) ${al}%,transparent)" title="MA${a}/MA${b}：${pct(v, 2)}">${fx(v)}</td>`; };
+    return `<div class="vbc"><h4>${esc(r.name)}<span class="cd">${esc(r.sym)}</span></h4>
+      <table><thead><tr><th>快＼慢</th>${V.slow.map(b => `<th>MA${b}</th>`).join("")}</tr></thead><tbody>${V.fast.map((a, i) => `<tr><th>MA${a}</th>${V.slow.map((b, j) => cell(r.grid[i][j], i, j)).join("")}</tr>`).join("")}</tbody></table>
+      <p class="vbl">买入持有 <b class="${cls(r.hold)}">${pct(r.hold, 2)}</b> · 全期最好 MA${r.best[0]}/${r.best[1]}（夏普 ${f(r.sharpe)}，最大回撤 -${f(r.mdd)}%，${r.n} 笔）<br>
+      样本内最好 MA${r.is.best[0]}/${r.is.best[1]} <b class="${cls(r.is.ret)}">${pct(r.is.ret, 2)}</b>（持有 ${pct(r.is.hold, 2)}）<br>
+      → 样本外 <b class="${cls(r.oos.ret)}">${pct(r.oos.ret, 2)}</b>，${ng} 组里排第 <b>${r.oos.rank}</b>（持有 ${pct(r.oos.hold, 2)}；样本外最好是 MA${r.oos.best[0]}/${r.oos.best[1]} ${pct(r.oos.bestRet, 2)}）</p></div>`; }).join("");
+  $("#vbRule").innerHTML = `黑框是全期收益最好的参数（事后才知道）；蓝框是只用前 2/3 时间挑出的参数，拿它去跑后 1/3（样本外）才是真实能拿到的效果。规则：快线（${V.fast.join("/")} 日均线）在慢线（${V.slow.join("/")} 日均线）上方就持有，跌到下方就空仓；收盘出信号，第二天开盘成交；扣万三手续费和万五滑点；初始 100 万，不加杠杆、不做空。数据是腾讯前复权日 K，近 500 个交易日，前面多取 130 根给均线预热。vectorbt ${esc(LAB.libs?.vectorbt?.v || "")} 计算。历史回测不代表未来，<b class="dn">不构成投资建议</b>。`;
 }
 function renderLab(){
   $("#labCmds").innerHTML = `<thead><tr><th class="l" style="cursor:default">命令</th><th class="l" style="cursor:default">做什么</th></tr></thead><tbody>` + LAB_CMDS.map(([c, t]) => `<tr class="nohov"><td class="l"><code>${esc(c)}</code></td><td class="l">${t}</td></tr>`).join("") + `</tbody>`;
   $("#labEmpty").hidden = !!LAB;
+  $("#krWrap").hidden = !(KR && KR.items && KR.items.length);
+  if (!$("#krWrap").hidden) renderKr();
+  $("#vbWrap").hidden = !(LAB && LAB.vbt && LAB.vbt.rows && LAB.vbt.rows.length);
+  if (!$("#vbWrap").hidden) renderVb();
   ["#btWrap", "#akWrap"].forEach(s => { $(s).hidden = !LAB; });
   if (!LAB) { $("#chkBox").innerHTML = $("#wcBox").innerHTML = $("#libTbl").innerHTML = ""; return; }
   $("#labMeta").textContent = `按 ${LAB.date} 收盘的数据 · 生成于 ${LAB.t}`;
@@ -5558,8 +5693,11 @@ function autoTools(){
   if (D.pm) out.push({n: "盘前分析", on: true, s: "已接入", d: `本站脚本，模型 ${D.pm.model}，每个交易日开盘前生成；当前是 ${D.pm.target} 开盘的分析`});
   const names = Object.keys(L);
   if (names.length) { const ok = names.filter(k => L[k].ok === 1), bad = names.filter(k => L[k].ok !== 1);
-    out.push({n: "akshare 等六个库", on: ok.length >= 4, s: `${ok.length}/${names.length} 正常`, d: `回测、数据和行情核对，详见「量化」页${bad.length ? `；${bad.map(k => `${k} ${L[k].ok === 2 ? "部分正常" : L[k].ok == null ? "未启用" : "失败"}`).join("、")}` : ""}`}); }
+    out.push({n: `akshare 等 ${names.length} 个库`, on: ok.length >= 4, s: `${ok.length}/${names.length} 正常`, d: `${names.join("、")}：回测、参数扫描、数据和行情核对，详见「量化」页${bad.length ? `；${bad.map(k => `${k} ${L[k].ok === 2 ? "部分正常" : L[k].ok == null ? "未启用" : "失败"}`).join("、")}` : ""}`}); }
+  const kr = D.kr;
+  if (kr && kr.items) out.push({n: "Kronos", on: true, s: "已接入", d: `AI K 线预测（${kr.model}）：${kr.items.length} 个指数和个股，预测之后 ${kr.pred} 个交易日，并核对准确率，详见「量化」页；当前是 ${kr.date} 收盘的预测`});
   if (!out.length) return null;
+  out.push({n: "FinceptTerminal", on: false, s: "桌面程序", d: "要在电脑上安装、注册 Fincept 账号才能用，网页里放了介绍、截图和下载入口（「量化」页）"});
   out.push({n: "ai-hedge-fund", on: false, s: "待配置", d: "需要 Financial Datasets 和模型 API key，配置前没有数据"},
            {n: "QuantDinger", on: false, s: "待配置", d: "需要在平台里签发 Agent token，配置前没有数据"});
   return out;

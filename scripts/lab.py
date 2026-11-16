@@ -2,6 +2,7 @@
 
   akquant        操盘线 B/S 策略回测：宽基 ETF、当天出 B 点的个股（成交额前 30）、精选名单，对比同期买入持有。
                  回测代码和命令行 gp bt 是同一份（tools/gp.py），网站上的数和终端里跑出来的一致。
+  vectorbt       宽基 ETF 的均线参数扫描（3 × 3 组），样本内挑参数、样本外检验过拟合。
   akshare        机构调研（近 30 天）、大宗交易、龙虎榜（最近交易日）、限售解禁（未来 30 天），东方财富数据中心。
   easyquotation  新浪全市场行情，和本站的腾讯行情逐只核对收盘价。
   stock-api      几只大盘股的行情（Node），和腾讯行情核对。
@@ -128,6 +129,58 @@ def run_backtests():
         out[g] = rows
     n = sum(len(v) for v in out.values())
     return {"cols": BT_COLS, **out, "bsDate": sc.get("techDate"), "n": n, "fail": fails}, n > 0
+
+
+# ---------- vectorbt：均线参数扫描 ----------
+VBT_FAST, VBT_SLOW = (5, 10, 20), (30, 60, 120)
+
+
+def run_vbt():
+    """宽基 ETF 的均线多空：快线在慢线上方持有、下方空仓，3 × 3 组参数一次扫完（vectorbt）。
+    收盘出信号、第二天开盘成交，扣万三手续费和万五滑点。近 500 个交易日分两段：前 2/3 挑参数（样本内），后 1/3 检验（样本外），看事后挑出的最好参数换个时间段还灵不灵。"""
+    import pandas as pd
+    import vectorbt as vbt
+    grid = [(a, b) for a in VBT_FAST for b in VBT_SLOW]
+    syms = [s for s, _ in ETFS]
+    with ThreadPoolExecutor(4) as ex:
+        bars = dict(zip(syms, ex.map(lambda s: _bars(s, BT_DAYS + max(VBT_SLOW) + 10), syms)))
+    rows, fails = [], []
+    for sym, name in ETFS:
+        df = bars.get(sym)
+        if df is None or len(df) < BT_DAYS + max(VBT_SLOW):
+            fails.append(sym); continue
+        ix = pd.to_datetime(df["date"])
+        close, opn = pd.Series(df["close"].values, index=ix), pd.Series(df["open"].values, index=ix)
+        fma = vbt.MA.run(close, [a for a, _ in grid], short_name="fast")
+        sma = vbt.MA.run(close, [b for _, b in grid], short_name="slow")
+        ent = fma.ma_above(sma).shift(1, fill_value=False)                  # 收盘出信号，第二天开盘成交
+        ext = fma.ma_below(sma).shift(1, fill_value=False)
+        n0 = len(df) - BT_DAYS
+        cut = n0 + BT_DAYS * 2 // 3
+
+        def seg(a, b):
+            pf = vbt.Portfolio.from_signals(close.iloc[a:b], ent.iloc[a:b], ext.iloc[a:b], price=opn.iloc[a:b],
+                                            fees=0.0003, slippage=0.0005, init_cash=1e6, freq="1D")
+            tr = pf.total_return() * 100
+            ret = {(int(k[0]), int(k[1])): float(v) for k, v in tr.items()}
+            hold = (float(close.iloc[b - 1]) / float(close.iloc[a - 1]) - 1) * 100
+            return pf, ret, hold
+
+        pf, full, hold = seg(n0, len(df))
+        _, ins, ihold = seg(n0, cut)
+        _, oos, ohold = seg(cut, len(df))
+        best = max(full, key=full.get)
+        st = pf[(best[0], best[1])].stats()
+        ib = max(ins, key=ins.get)
+        orank = sorted(oos.values(), reverse=True).index(oos[ib]) + 1
+        ob = max(oos, key=oos.get)
+        r = lambda v: round(float(v), 2) if v == v else None          # NaN → None
+        rows.append({"sym": sym, "name": name, "d0": df["date"].iloc[n0], "d1": df["date"].iloc[-1], "cut": df["date"].iloc[cut],
+                     "grid": [[r(full[(a, b)]) for b in VBT_SLOW] for a in VBT_FAST], "hold": r(hold),
+                     "best": list(best), "sharpe": r(st["Sharpe Ratio"]), "mdd": r(st["Max Drawdown [%]"]), "n": int(st["Total Trades"]),
+                     "is": {"best": list(ib), "ret": r(ins[ib]), "hold": r(ihold)},
+                     "oos": {"ret": r(oos[ib]), "hold": r(ohold), "rank": orank, "best": list(ob), "bestRet": r(oos[ob])}})
+    return {"fast": VBT_FAST, "slow": VBT_SLOW, "rows": rows, "fail": fails}, bool(rows)
 
 
 # ---------- akshare：东方财富数据中心 ----------
@@ -403,6 +456,14 @@ def refresh_lab():
         stat("akquant", 1 if ok else 0, f"回测 {bt['n']} 个标的" + (f"，{len(bt['fail'])} 个取不到数据" if bt["fail"] else ""), round(time.time() - t0, 1))
     except Exception as e:
         traceback.print_exc(); lab["bt"] = old.get("bt"); stat("akquant", 0, f"{type(e).__name__}: {str(e)[:80]}（沿用上一次）")
+    t0 = time.time()
+    try:
+        vb, ok = run_vbt()
+        lab["vbt"] = vb if ok else old.get("vbt")
+        stat("vectorbt", 1 if ok and not vb["fail"] else 2 if ok else 0,
+             f"{len(vb['rows'])} 只 ETF × {len(VBT_FAST) * len(VBT_SLOW)} 组均线参数" + (f"，{len(vb['fail'])} 只取不到数据" if vb["fail"] else "") + ("" if ok else "（沿用上一次）"), round(time.time() - t0, 1))
+    except Exception as e:
+        traceback.print_exc(); lab["vbt"] = old.get("vbt"); stat("vectorbt", 0, f"{type(e).__name__}: {str(e)[:80]}（沿用上一次）")
     t0 = time.time()
     try:
         ak, errs = ak_data(d)
