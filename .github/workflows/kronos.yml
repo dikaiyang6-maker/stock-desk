@@ -1,0 +1,152 @@
+name: AI K 线预测（全部个股和指数）
+
+# 开源金融 K 线大模型 Kronos（https://github.com/shiyu-coder/Kronos，MIT 许可证）每天预测全部 A 股、A 股指数、全球指数和本站的全球个股之后 10 个交易日的走势。
+# 分两批：asia（A 股、港股、日韩股和亚太指数，北京时间 16:00 以后）、west（美股、欧股、印度和欧美指数，美股收盘后）。
+# 计划 → 并行分片预测（每片约 380 个标的，CPU 约 10 分钟）→ 合并、核对以前的预测准不准 → 存进缓存 kall-，再触发 update.yml 重新生成网页。
+# 结果只用于网页展示和研究，模型输出是概率性的推演，不构成投资建议。
+on:
+  schedule:
+    # asia：北京时间周一至周五 16:07–18:37 排 6 轮；当天跑过的不会重跑（GitHub 高峰期会跳过一部分定时任务，所以多排几轮）
+    - cron: "7,37 8-10 * * 1-5"
+    # west：美股收盘后，UTC 21:17–23:47（北京时间次日 05:17–07:47）
+    - cron: "17,47 21-23 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      group:
+        description: "批次：all / asia / west（auto = 按时间判断）"
+        default: "all"
+      force:
+        description: "今天已经跑过也重跑（1 = 是）"
+        default: "1"
+
+permissions:
+  contents: read
+  actions: write     # 合并完成后触发 update.yml，网页马上用上新预测
+
+concurrency:
+  group: kronos-all
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      due: ${{ steps.p.outputs.due }}
+      matrix: ${{ steps.p.outputs.matrix }}
+      n: ${{ steps.p.outputs.n }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q requests
+      - name: 恢复网站数据（只读，取股票列表）
+        uses: actions/cache/restore@v4
+        with:
+          path: data
+          key: data-none
+          restore-keys: data-
+      - name: 恢复上一次的预测
+        uses: actions/cache/restore@v4
+        with:
+          path: kall
+          key: kall-none
+          restore-keys: kall-
+      - id: p
+        env:
+          FORCE_KALL: ${{ github.event.inputs.force || '0' }}
+        run: python scripts/kronos_all.py plan --group "${{ github.event.inputs.group || 'auto' }}"
+      - if: steps.p.outputs.due == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: kall-plan
+          path: kall_plan/
+          retention-days: 1
+
+  shard:
+    needs: plan
+    if: needs.plan.outputs.due == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        i: ${{ fromJson(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: scripts/requirements-kronos.txt
+      - name: 安装 PyTorch（CPU 版）和 Kronos 依赖
+        run: |
+          pip install -q --index-url https://download.pytorch.org/whl/cpu "torch==2.15.0"
+          pip install -q -r scripts/requirements-kronos.txt
+      - name: 恢复 Kronos 代码和模型（update.yml 存的同一份缓存）
+        uses: actions/cache/restore@v4
+        with:
+          path: kronos
+          key: kronos-67b630e67f6a18c9e9be918d9b4337c960db1e9a-901c26c-0e01173
+      - name: 缓存里没有时下载 Kronos 代码（固定在审查过的提交）
+        run: |
+          if [ ! -f kronos/repo/model/kronos.py ]; then
+            rm -rf kronos/repo && git init -q kronos/repo
+            git -C kronos/repo fetch -q --depth 1 https://github.com/shiyu-coder/Kronos.git 67b630e67f6a18c9e9be918d9b4337c960db1e9a
+            git -C kronos/repo checkout -q FETCH_HEAD
+          fi
+      - uses: actions/download-artifact@v4
+        with:
+          name: kall-plan
+          path: kall_plan
+      - name: 预测第 ${{ matrix.i }} 片
+        env:
+          HF_HOME: ${{ github.workspace }}/kronos/hf
+          PYTHONPATH: ${{ github.workspace }}/kronos/repo
+        run: timeout 2700 python scripts/kronos_all.py shard --i ${{ matrix.i }} --n ${{ needs.plan.outputs.n }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kall-part-${{ matrix.i }}
+          path: kall_part/
+          retention-days: 1
+
+  merge:
+    needs: [plan, shard]
+    if: always() && needs.plan.outputs.due == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q requests
+      - name: 恢复上一次的预测和预测记录
+        uses: actions/cache/restore@v4
+        with:
+          path: kall
+          key: kall-none
+          restore-keys: kall-
+      - uses: actions/download-artifact@v4
+        with:
+          name: kall-plan
+          path: kall_plan
+      - name: 下载各片结果（失败的片会缺，沿用上一次）
+        uses: actions/download-artifact@v4
+        with:
+          pattern: kall-part-*
+          path: kall_part
+          merge-multiple: true
+      - name: 合并、核对准确率
+        run: python scripts/kronos_all.py merge
+      - name: 存缓存
+        uses: actions/cache/save@v4
+        with:
+          path: kall
+          key: kall-${{ github.run_id }}
+      - name: 重新生成网页
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run update.yml --ref main -R "${{ github.repository }}"

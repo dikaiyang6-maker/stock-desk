@@ -3,3 +3,7 @@ site/
 __pycache__/
 *.pyc
 dsa/
+kall/
+kall_plan/
+kall_part/
+kronos/

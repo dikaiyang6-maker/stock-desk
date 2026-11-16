@@ -62,6 +62,13 @@ jobs:
           key: data-${{ github.run_id }}
           restore-keys: data-
 
+      - name: 恢复全部个股和指数的 AI K 线预测（kronos.yml 生成，只读）
+        uses: actions/cache/restore@v4
+        with:
+          path: kall
+          key: kall-none
+          restore-keys: kall-
+
       - name: 抓取数据并生成网页
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
