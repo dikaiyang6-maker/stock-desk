@@ -105,6 +105,9 @@ def run():
             items.append(it)
         except Exception as e:
             log("kronos:", sym, type(e).__name__, str(e)[:120]); fails.append(sym)
+    if not items:                                                            # 全部失败：保留上一次的预测，不覆盖
+        log("kronos: 这次没有一个标的预测成功，沿用上一次的结果", fails)
+        return False
     # 预测记录：每天每个标的一条，真实行情出来后核对 5 日、10 日
     book = [x for x in old.get("log", []) if x["d"] != d] + [{"d": d, "sym": it["sym"], "base": it["base"], "fc": [f[1] for f in it["fc"]]} for it in items]
     book = book[-KEEP_LOG * len(TARGETS):]
