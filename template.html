@@ -5317,7 +5317,7 @@ function renderKr(){
   const per = (a, sym) => { const p = a.per && a.per[sym]; return p ? [p[0], p[1] + "%", p[2] + "%"] : ["—", "—", "—"]; };
   $("#krAcc").innerHTML = `<thead><tr>${["标的", "5 日核对次数", "5 日方向对", "5 日平均误差", "10 日核对次数", "10 日方向对", "10 日平均误差", "回看检验", "回看平均误差"].map((t, i) => `<th class="${i ? "" : "l"}" style="cursor:default">${t}</th>`).join("")}</tr></thead><tbody>`
     + items.map(it => `<tr class="nohov"><td class="l">${labStock(it.sym, it.name)}</td>${[...per(a5, it.sym), ...per(a10, it.sym)].map(v => `<td class="num">${v}</td>`).join("")}<td>${it.check ? (it.check.dir ? `<span class="labst ok">方向对</span>` : `<span class="labst no">方向错</span>`) : "—"}</td><td class="num">${it.check ? it.check.mae + "%" : "—"}</td></tr>`).join("") + `</tbody>`;
-  $("#krRule").innerHTML = `做法：模型 ${esc(KR.model)}（权重来自 Hugging Face 的 NeoQuasar，固定在审查过的版本），每个交易日收盘后在 GitHub 上用 CPU 跑一次（这次用时 ${KR.secs} 秒）。每个标的取最近 ${KR.lookback} 个交易日的腾讯前复权日 K，抽样 ${KR.samples} 条路径取平均。未来日期只跳过周末，没有排除节假日。<b>回看检验</b>每周做一次：只用 10 个交易日以前的数据预测最近 10 天，再和真实走势比。<b>预测记录核对</b>把每天的预测存下来，等真实收盘价出来后，统计 5 日、10 日后的涨跌方向对不对、收盘价差多少。方向准确率在 50% 左右，就和抛硬币差不多。<b class="dn">不构成投资建议。</b>`;
+  $("#krRule").innerHTML = `做法：模型 ${esc(KR.model)}（权重来自 Hugging Face 的 NeoQuasar，固定在审查过的版本），每个交易日收盘后在 GitHub 上用 CPU 跑一次（这次用时 ${KR.secs} 秒）。每个标的取最近 ${KR.lookback} 个交易日的腾讯前复权日 K，抽样 ${KR.samples} 条路径取平均。未来日期只跳过周末，没有排除节假日。<b>回看检验</b>每周做一次：只用 10 个交易日以前的数据预测最近 10 天，再和真实走势比。<b>预测记录核对</b>把每天的预测存下来，等真实收盘价出来后，统计 5 日、10 日后的涨跌方向对不对、收盘价差多少。方向准确率在 50% 左右，就和抛硬币差不多。注意：个股和指数详情页里的「AI 预测」是全部标的统一跑的（最多 256 个交易日、每步取概率最大的结果），和这里的设置（400 个交易日、抽样 ${KR.samples} 次取平均）不同，同一个指数的两个预测可能差很多——这本身就说明模型的输出很不稳定。<b class="dn">不构成投资建议。</b>`;
 }
 /* ---- 全部个股和指数的 AI K 线预测：各市场的成绩（scripts/kronos_all.py） ---- */
 function renderKa(){
