@@ -10,7 +10,8 @@
   2. 回看检验：每次抽 10% 的标的，只用 10 个交易日以前的数据预测最近 10 天，当天就能看到这个模型大概准不准。
 模型输出只是概率性的推演，准确率照实显示在网页上，不构成投资建议。
 
-用法（工作流里依次运行）：
+用法（工作流里依次运行；update.yml 每小时用 due 检查一次，到时间还没跑就触发 kronos.yml）：
+  python scripts/kronos_all.py due                                            → 打印 true / false
   python scripts/kronos_all.py plan [--group auto|asia|west|all] [--force]   → kall_plan/plan.json；写 GITHUB_OUTPUT：due、matrix
   python scripts/kronos_all.py shard --i K --n N                              → kall_part/part_K.json（需要 torch 和 Kronos 代码）
   python scripts/kronos_all.py merge                                          → kall/kr.json（网页用）、kall/log.json、kall/state.json
@@ -118,7 +119,7 @@ def universe(groups):
     return items
 
 
-def plan(group, force):
+def due_groups(group, force):
     """asia：北京时间工作日 16:00 以后、A 股当天有收盘行情（a.json 的日期是今天，节假日不跑）、今天还没跑过；
     west：UTC 工作日 21:10 以后（美股已收盘）、今天还没跑过。只有在这些时间以后跑完的才记为“今天已完成”，手动提前跑的不算。"""
     st = jload(KALL / "state.json", {}) or {}
@@ -132,6 +133,12 @@ def plan(group, force):
         groups.append("asia")
     if "west" in want and (force or (marks["west"] and (st.get("west") or {}).get("mark") != marks["west"])):
         groups.append("west")
+    return groups, marks, st
+
+
+def plan(group, force):
+    groups, marks, st = due_groups(group, force)
+    utc = dt.datetime.now(dt.timezone.utc)
     if not groups:
         log("plan: 现在没有要跑的批次", {"group": group, "state": st})
         gh_output(due="false", matrix="[]", n="0", groups="")
@@ -394,13 +401,15 @@ def merge():
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("cmd", choices=["plan", "shard", "merge"])
+    ap.add_argument("cmd", choices=["plan", "shard", "merge", "due"])
     ap.add_argument("--group", default="auto")
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--i", type=int, default=0)
     ap.add_argument("--n", type=int, default=1)
     a = ap.parse_args()
-    if a.cmd == "plan":
+    if a.cmd == "due":                                                         # update.yml 每小时问一次：要不要触发 kronos.yml（GitHub 定时任务常被跳过）
+        print("true" if due_groups("auto", False)[0] else "false")
+    elif a.cmd == "plan":
         plan(a.group, a.force or os.environ.get("FORCE_KALL") == "1")
     elif a.cmd == "shard":
         shard(a.i, a.n)
