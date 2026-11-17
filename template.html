@@ -638,6 +638,7 @@ td.nwwhy{white-space:normal;min-width:200px;max-width:360px;font-size:12.5px;col
       <button role="tab" data-v="picks">精选名单</button>
       <button role="tab" data-v="screen">全市场筛选</button>
       <button role="tab" data-v="xg">选股</button>
+      <button role="tab" data-v="pred">AI 预测</button>
       <button role="tab" data-v="ind">行业龙头</button>
       <button role="tab" data-v="flow">资金监控</button>
       <button role="tab" data-v="hot">热点</button>
@@ -1014,6 +1015,19 @@ td.nwwhy{white-space:normal;min-width:200px;max-width:360px;font-size:12.5px;col
       <div class="tscroll"><table id="tbl"><thead></thead><tbody></tbody></table></div>
       <div class="more"><span class="note" id="cnt"></span><span style="display:flex;gap:8px"><button class="btn" id="moreBtn">再显示 60 只</button><button class="btn" id="csvBtn" hidden>导出 CSV</button></span></div>
       <p class="note">评分 = 净利增速 35% + 年化 ROE 25% + 营收增速 15% + 估值 25%（PE 15 倍以内满分，越高越低，亏损为 0）。盈利但经营现金流为负的扣 15 分。ROE 按报告期年化：半年报 ×2，三季报 ×4/3。增速为累计同比。</p>
+    </div>
+  </section>
+
+  <!-- AI 预测：全部个股和指数的 Kronos 预测列表（scripts/kronos_all.py），点一行打开详情 -->
+  <section class="view" id="v-pred" hidden>
+    <div class="panel">
+      <div class="phead"><h2>AI 预测</h2><span class="note" id="pdMeta"></span></div>
+      <p class="note" style="margin:0 0 10px">开源模型 Kronos 每个交易日收盘后，预测全部 A 股、A 股指数、全球指数和全球个股之后 10 个交易日的走势。<b>点任意一行打开详情</b>：有预测走势图、预测区间、这一只的准确率，还可以让 AI 结合公司、行业、订单和新闻做综合预测。<b class="dn">这个模型目前的准确率不高（见下面的提示和「量化」页的各市场成绩），只能当参考，不构成投资建议。</b></p>
+      <div class="cctl" style="margin-bottom:8px"><span class="cg" id="pdMk" role="group" aria-label="市场"></span></div>
+      <div class="cctl" style="margin-bottom:10px"><span class="cg" id="pdSort" role="group" aria-label="排序"></span><input class="indq" id="pdQ" type="search" placeholder="搜索名称、代码或拼音首字母" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+      <p class="warn" id="pdAcc" style="margin:0 0 10px" hidden></p>
+      <div class="tscroll tall"><table class="fltop" id="pdTbl"></table></div>
+      <div class="more"><span class="note" id="pdN"></span><button class="btn" id="pdMore" hidden>再显示 100 只</button></div>
     </div>
   </section>
 
@@ -1705,7 +1719,7 @@ function stockMinute(code){
 const idxMinute = code => (D.idxm?.[code] || []).map(x => ({d: x.d, prec: x.prec, p: x.p}));
 
 /* ---------- tabs ---------- */
-const VIEWS = ["market","global","research","picks","screen","xg","ind","flow","hot","news","cp","lab","tools","zmz","watch","ai"];
+const VIEWS = ["market","global","research","picks","screen","xg","pred","ind","flow","hot","news","cp","lab","tools","zmz","watch","ai"];
 function show(v){
   if (!VIEWS.includes(v)) v = "market";
   VIEWS.forEach(x => { document.getElementById("v-" + x).hidden = x !== v; });
@@ -1714,6 +1728,7 @@ function show(v){
   if (sel && nav.scrollWidth > nav.clientWidth) { const n = nav.getBoundingClientRect(), s = sel.getBoundingClientRect(); nav.scrollLeft += s.left - n.left - (n.width - s.width) / 2; }
   if (v === "watch") renderWatch();
   if (v === "xg") renderXg();
+  if (v === "pred") renderPred();
   if (v === "ind") renderInd();
   if (v === "flow") { renderFlow(); FLV.liveAt = 0; }
   if (v === "hot") { renderHot(); HTV.liveAt = 0; }
@@ -2054,6 +2069,7 @@ function openStock(code){
       <button class="close" id="dClose" aria-label="关闭">×</button></div>
     <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span class="big num" id="dPrice">${f(r.price)}</span><span class="num ${cls(r.chg)}" id="dChg" style="font-size:16px">${pct(r.chg, 2)}</span><span class="note" id="dTime">${LIVE.on ? "实时 " + liveTime() : esc(ASOF) + " 数据"}</span>
       <span style="margin-left:auto;display:flex;gap:8px"><button class="btn" id="dWl">${inWl ? "移出自选" : "加入自选"}</button></span></div>
+    ${krPanel()}
     <div class="facts">
       <div><small>市盈率 TTM</small><b>${f(r.pe, 1)}</b></div><div><small>市净率</small><b>${f(r.pb, 2)}</b></div><div><small>总市值</small><b>${yi(r.mcap)}</b></div>
       <div><small>${RPT_NAME[r.rpt] || ""}营收</small><b>${f(r.rev, 1)}亿 <span class="${cls(r.revY)}">${pct(r.revY, 0)}</span></b></div>
@@ -2063,7 +2079,6 @@ function openStock(code){
       <div><small>涨停价</small><b class="up">${f(r.lu)}</b></div><div><small>跌停价</small><b class="dn">${f(r.ld)}</b></div><div><small>昨收</small><b>${f(r.prev)}</b></div>
     </div>
     <div class="panel" id="dDeal" style="padding:12px 14px"></div>
-    ${krPanel()}
     ${chartable ? `<div id="dPanel"></div>` : `<p class="note">本页只缓存了 ${Object.keys(D.sk).length} 只题材股的 K 线和分时。在浏览器里直接打开独立版 HTML（实时行情），可以加载任意股票上市以来的 K 线和最近五个交易日的分时。</p>`}
     <div class="panel" id="dTech" style="padding:12px 14px" hidden></div>
     <div class="panel" id="dCp" style="padding:12px 14px" hidden></div>
@@ -2138,10 +2153,10 @@ document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#drawe
 
 /* ---------- AI 预测（个股、指数，国内外）：Kronos K 线预测（scripts/kronos_all.py 每天收盘后批量生成）+ AI 综合预测（走势、公司、行业、订单和消息、关联因素） ---------- */
 const KRE = D.kra || null;                                                   // 嵌入网页的精简版（claude.ai 快照只有这一份）
-const KRA_URL = /(\.github\.io|^localhost|^127\.0\.0\.1)$/.test(location.hostname) ? "kr.json" : null;   // 实时版：完整预测按需加载
+const KRA_URL = /(\.github\.io|^localhost|^127\.0\.0\.1)$/.test(location.hostname) || IN_CLAUDE ? "kr.json" : null;   // 完整预测按需加载（claude.ai 快照里 kr.json 是和网页一起发布的附带文件）
 const AIDX = new Map(R.map((r, i) => [r.code, i]));
-let KRA = null, KRA_P = null, krRedraw = null;
-const kraLoad = () => KRA_URL ? (KRA_P ||= fetch(`${KRA_URL}?v=${encodeURIComponent(KRE?.built || "")}`).then(r => r.ok ? r.json() : null).catch(() => null).then(j => (KRA = j))) : Promise.resolve(null);
+let KRA = null, KRA_P = null, KRA_DONE = false, krRedraw = null;
+const kraLoad = () => KRA_URL ? (KRA_P ||= fetch(`${KRA_URL}?v=${encodeURIComponent(KRE?.built || "")}`).then(r => r.ok ? r.json() : null).catch(() => null).then(j => { KRA = j; KRA_DONE = true; return j; })) : Promise.resolve(null);
 const KR_MKT = {纽交所: "美股", 纳斯达克: "美股", 美股: "美股", 港交所: "港股", Tokyo: "日股", KSE: "韩股", NSE: "印度"};
 const krMkt = (sec, key) => sec === "a" ? "A股" : sec === "ai" ? "A股指数" : sec === "gi" ? "全球指数" : KR_MKT[G.st?.[key]?.ex] || "欧股";
 const KR_ALPH = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -2197,7 +2212,7 @@ function krRender(box, sec, key, o){
   if (!e) { box.innerHTML = `<p class="note" style="margin:0">${src ? "这只暂时没有 AI K 线预测（上市不足 64 个交易日、停牌，或者数据源没取到）。" : "AI K 线预测还没生成：每个交易日收盘后自动生成。"}</p>`; return; }
   const k = (t, v, sub, c = "") => `<div><small>${t}</small><b class="${c}">${v}</b><span class="mut">${sub}</span></div>`;
   if (!e.p) {
-    box.innerHTML = `<div class="kpis">${k("第 10 个交易日（取整到 1%）", "约 " + pct(e.p10, 0), e.d ? `按 ${esc(e.d)} 收盘` : "Kronos 预测", cls(e.p10))}</div><p class="note" style="margin:6px 0 0">完整的预测路径、预测区间和这一只的准确率在实时版（github.io）里显示。</p>` + krAccHtml(mkt, A, C);
+    box.innerHTML = `<div class="kpis">${k("第 10 个交易日（取整到 1%）", "约 " + pct(e.p10, 0), e.d ? `按 ${esc(e.d)} 收盘` : "Kronos 预测", cls(e.p10))}</div><p class="note" style="margin:6px 0 0">${KRA_URL && !KRA_DONE ? "正在加载完整的预测路径、预测区间和这一只的准确率…" : "完整的预测路径、预测区间和这一只的准确率在实时版（github.io）里显示。"}</p>` + krAccHtml(mkt, A, C);
     return;
   }
   const at = h => fmt(e.c * (1 + e.p[h - 1] / 100)), s = e.acc && (e.acc[1] || e.acc[0]), sh = e.acc?.[1] ? 10 : 5;
@@ -2339,6 +2354,71 @@ function krAiButton(sec, key, o){
     };
   });
 }
+
+// ---- 只有预测、没有 K 线数据的指数（中证500 等）：打开一个只放 AI 预测的抽屉 ----
+const A_IDX_NAME = {sh000001: "上证指数", sz399001: "深证成指", sz399006: "创业板指", sh000688: "科创50", bj899050: "北证50", sh000300: "沪深300", sh000905: "中证500", sh000852: "中证1000", sh000016: "上证50"};
+function openKrOnly(sec, key, name){
+  const drawer = $("#drawer"); drawer.classList.add("wide");
+  drawer.innerHTML = `<div class="dh"><div><span class="eyebrow">AI 预测</span><h2>${esc(name)}</h2></div><button class="close" id="dClose" aria-label="关闭">×</button></div>${krPanel()}`;
+  drawer.hidden = false; $("#scrim").hidden = false; drawer.scrollTop = 0;
+  openState = {type: "kr", key};
+  krOpen(sec, key, {name, title: name, rows: () => null, fmt: fmt2});
+  $("#dClose").onclick = closeStock; $("#dClose").focus();
+}
+/* ---- AI 预测页：全部个股和指数的预测列表，可以按市场筛选、排序、搜索，点一行打开详情 ---- */
+const PDV = {mk: "A股", sort: "cap", q: "", limit: 100};
+const PD_MK = ["全部", "A股", "A股指数", "港股", "日股", "韩股", "全球指数", "美股", "欧股", "印度"];
+const PD_SORT = [["cap", "市值从大到小"], ["up", "预测涨得最多"], ["dn", "预测跌得最多"]];
+let pdCache = null, pdShown = [];
+function pdAll(){                                         // 所有有预测的标的：[类别, 代码, 名称, 显示代码, 市场, 现价, 今日涨跌, 排序用市值, 打开详情]
+  if (pdCache && pdCache.full === !!KRA) return pdCache.rows;
+  const out = [], has = (sec, key) => kraEntry(sec, key);
+  for (const c of Object.keys(KRA?.ai || KRE?.full?.ai || {})) out.push({sec: "ai", key: c, name: D.idxk?.[c]?.name || A_IDX_NAME[c] || c, code: c, mkt: "A股指数", cap: 2e18,
+    open: () => D.idxk?.[c] ? openIndex(c) : openKrOnly("ai", c, A_IDX_NAME[c] || c)});
+  for (const c of Object.keys(KRA?.gi || KRE?.full?.gi || {})) { const ix = GIX.get(c); out.push({sec: "gi", key: c, name: ix?.n || c, code: c, mkt: "全球指数", cap: 1e18, px: ix?.q?.p, chg: ix?.q?.pct, open: () => ix ? openGIndex(c) : openKrOnly("gi", c, c)}); }
+  for (const r of R) if (has("a", r.code)) out.push({sec: "a", key: r.code, name: r.name, code: r.code, mkt: "A股", cap: (r.mcap || 0) * 1e8, open: () => openStock(r.code)});
+  for (const [y, s] of Object.entries(G.st || {})) if (has("gs", y)) out.push({sec: "gs", key: y, name: s.n || s.en || y, code: s.t || y, mkt: krMkt("gs", y), cap: s.mcap || 0, open: () => openGStock(y)});
+  pdCache = {full: !!KRA, rows: out}; return out;
+}
+function pdLive(x){                                       // 现价、今日涨跌取最新的（实时版里 A 股和美港股会跟着行情刷新）
+  if (x.sec === "a") { const r = BY.get(x.key); return [r?.price, r?.chg]; }
+  if (x.sec === "gs") { const s = G.st[x.key]; return [s?.p, s?.pct]; }
+  if (x.sec === "gi") { const s = gSummary(x.key); return [s?.p, s?.pct]; }
+  const ix = D.idx?.[x.key] || null, k = ix?.k; return k?.length > 1 ? [k[k.length - 1][1], (k[k.length - 1][1] / k[k.length - 2][1] - 1) * 100] : [null, null];
+}
+function renderPred(){
+  if (KRA_URL && !KRA_DONE) kraLoad().then(() => { if (!$("#v-pred").hidden) renderPred(); });
+  const all = pdAll(), src = KRA || KRE;
+  $("#pdMeta").textContent = src ? `Kronos-small · ${KRA ? "完整预测" : KRA_URL ? "正在加载完整预测…" : "快照里是取整到 1% 的第 10 天预测"} · 生成于 ${src.built || "—"}（北京时间）` : "";
+  if (!all.length) { $("#pdTbl").innerHTML = ""; $("#pdN").textContent = src ? "" : "AI 预测还没生成：每个交易日收盘后自动生成。"; $("#pdMore").hidden = true; return; }
+  const cnt = {}; all.forEach(x => cnt[x.mkt] = (cnt[x.mkt] || 0) + 1);
+  $("#pdMk").innerHTML = PD_MK.filter(m => m === "全部" || cnt[m]).map(m => `<button class="chip2" data-mk="${m}" aria-pressed="${m === PDV.mk}">${m} · ${(m === "全部" ? all.length : cnt[m]).toLocaleString()}</button>`).join("");
+  $("#pdSort").innerHTML = PD_SORT.map(([k, n]) => `<button class="chip2" data-sort="${k}" aria-pressed="${k === PDV.sort}">${n}</button>`).join("");
+  const q = PDV.q.trim().toLowerCase(), py = isPyQ(PDV.q.trim());
+  const p10 = x => { const e = kraEntry(x.sec, x.key); return e ? (e.p ? e.p[e.p.length - 1] : e.p10) : null; };
+  let rows = all.filter(x => (PDV.mk === "全部" || x.mkt === PDV.mk) && (!q || x.code.toLowerCase().includes(q) || x.name.toLowerCase().includes(q) || x.key.toLowerCase().includes(q)
+    || (py && pyHit((x.sec === "a" ? PY.a[x.key] : x.sec === "gs" ? PY.g[x.key] : "") || "", q))));
+  const order = m => PD_MK.indexOf(m);
+  rows.sort(PDV.sort === "cap" ? (a, b) => (PDV.mk === "全部" ? order(a.mkt) - order(b.mkt) : 0) || b.cap - a.cap : PDV.sort === "up" ? (a, b) => (p10(b) ?? -1e9) - (p10(a) ?? -1e9) : (a, b) => (p10(a) ?? 1e9) - (p10(b) ?? 1e9));
+  pdShown = rows.slice(0, PDV.limit);
+  const mk = PDV.mk === "全部" ? "A股" : PDV.mk, A = src?.chk?.[mk]?.h10;
+  $("#pdAcc").hidden = !A;
+  if (A) $("#pdAcc").innerHTML = `这个模型在${esc(mk)}的回看检验（${A[0]} 个样本，用 10 个交易日以前的数据预测最近 10 天）：方向对 ${A[1]}%，一直猜${A[4] >= 50 ? "涨" : "跌"}能对 ${Math.max(A[4], 100 - A[4]).toFixed(0)}%；收盘价平均差 ${A[2]}%，直接假设“价格不变”差 ${A[3]}%。${A[2] > A[3] ? "<b>不如“价格不变”，预测只能当参考，不要据此交易。</b>" : "略好于“价格不变”，但误差仍然很大。"}`;
+  const fmtPx = x => x.sec === "a" ? f : x.sec === "gs" ? fmtP : fmt2;
+  $("#pdTbl").innerHTML = `<thead><tr>${["名称", "市场", "现价", "今日", "第 5 天", "第 10 天", "预测区间", "这一只的记录", "按哪天收盘"].map((h, i) => `<th class="${i === 0 || i === 1 || i === 7 ? "l" : ""}" style="cursor:default">${h}</th>`).join("")}</tr></thead><tbody>`
+    + pdShown.map((x, i) => { const e = kraEntry(x.sec, x.key), [px, chg] = pdLive(x), fm = fmtPx(x), s = e?.acc && (e.acc[1] || e.acc[0]);
+      const v10 = e ? (e.p ? e.p[9] : e.p10) : null;
+      return `<tr data-i="${i}"><td class="l"><span class="nm">${esc(x.name)}</span><span class="cd">${esc(x.code)}</span></td><td class="l mut">${esc(x.mkt)}</td><td class="num">${px == null ? "—" : fm(px)}</td><td class="num ${cls(chg)}">${chg == null ? "—" : pct(chg, 2)}</td>
+        <td class="num ${e?.p ? cls(e.p[4]) : ""}">${e?.p ? pct(e.p[4], 2) : "—"}</td><td class="num ${cls(v10)}"><b>${v10 == null ? "—" : e.p ? pct(v10, 2) : "约 " + pct(v10, 0)}</b>${v10 != null && Math.abs(v10) >= 15 ? ` <span class="kd kd-hot" title="10 个交易日预测涨跌超过 15%：这种极端预测往往只是把最近的暴涨暴跌往后延伸，误差通常最大">极端</span>` : ""}</td>
+        <td class="num">${e?.p ? `${pct(e.lo, 1)} ~ ${pct(e.hi, 1)}` : "—"}</td><td class="l note">${s ? `方向对 ${s[1]}% · ${s[0]} 次` : e?.p ? "积累中" : "—"}</td><td class="num mut">${esc((e?.d || "").slice(5))}</td></tr>`; }).join("") + `</tbody>`;
+  $("#pdN").textContent = `共 ${rows.length.toLocaleString()} 只，显示前 ${pdShown.length.toLocaleString()} 只 · 点一行打开详情`;
+  $("#pdMore").hidden = rows.length <= PDV.limit;
+}
+$("#pdMk").addEventListener("click", e => { const b = e.target.closest("[data-mk]"); if (!b) return; PDV.mk = b.dataset.mk; PDV.limit = 100; renderPred(); });
+$("#pdSort").addEventListener("click", e => { const b = e.target.closest("[data-sort]"); if (!b) return; PDV.sort = b.dataset.sort; PDV.limit = 100; renderPred(); });
+let pdT = 0; $("#pdQ").addEventListener("input", e => { clearTimeout(pdT); pdT = setTimeout(() => { PDV.q = e.target.value; PDV.limit = 100; renderPred(); }, 200); });
+$("#pdMore").addEventListener("click", () => { PDV.limit += 100; renderPred(); });
+$("#pdTbl").addEventListener("click", e => { const tr = e.target.closest("tr[data-i]"); if (tr) pdShown[+tr.dataset.i]?.open(); });
 
 /* ---------- K-line engine: periods, indicators, intraday ---------- */
 const MA_PERIODS = [5, 10, 20, 60];
@@ -2887,13 +2967,13 @@ function openIndex(code){
     <div class="dh"><div><span class="eyebrow">指数 · ${LIVE.on ? "实时 " + esc(liveTime()) : esc(st.date) + " 收盘"}</span><h2>${esc(ix.name)}</h2></div><button class="close" id="dClose" aria-label="关闭">×</button></div>
     <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span class="big num" id="ixPrice">${fmt2(st.last)}</span><span class="num ${cls(st.chg)}" id="ixChg" style="font-size:16px">${pct(st.chg, 2)}</span>
       <span class="note">一年高点 ${fmt2(st.hi250)} · 回撤 ${st.dd.toFixed(1)}% · 成交额 ${fmtAmt(st.amt)}</span></div>
+    ${krPanel()}
     <div id="ixPanel"></div>
     <div class="facts">
       <div><small>近 5 日</small><b class="${cls(st.r5)}">${pct(st.r5)}</b></div><div><small>近 20 日</small><b class="${cls(st.r20)}">${pct(st.r20)}</b></div><div><small>近 60 日</small><b class="${cls(st.r60)}">${pct(st.r60)}</b></div>
       <div><small>RSI14</small><b>${st.rsi.toFixed(1)}</b></div><div><small>MA20 / MA60</small><b>${fmt2(st.mas[20])} / ${fmt2(st.mas[60])}</b></div><div><small>量比（20 日）</small><b>${(st.amt / st.amt20).toFixed(2)}</b></div>
       <div><small>数据起点</small><b>${esc(at.first)}</b></div><div><small>历史最高</small><b>${fmt2(at.hi)} <span class="mut" style="font-size:12px">${esc(at.hiD)}</span></b></div><div><small>历史最低</small><b>${fmt2(at.lo)} <span class="mut" style="font-size:12px">${esc(at.loD)}</span></b></div>
     </div>
-    ${krPanel()}
     <div class="panel" style="padding:12px 14px"><h3 style="margin-bottom:6px">技术面</h3>${narr.map(([k, v]) => `<p class="tline"><b>${k}</b>${esc(v)}</p>`).join("")}</div>
     <div class="panel" style="padding:12px 14px"><h3 style="margin-bottom:8px">多周期指标：日线 · 周线 · 月线</h3>${tfTable(rows, null)}${tn.map(([k, v]) => `<p class="tline"><b>${k}</b>${esc(v)}</p>`).join("")}</div>
     <div class="panel" style="padding:12px 14px"><h3 style="margin-bottom:6px">这个指数的特点</h3><p class="tline">${esc(IDX_NOTE[code] || "")}</p>
@@ -3171,6 +3251,7 @@ function openGIndex(key){
     <div class="dh"><div><span class="eyebrow">${esc(ix.r)} · ${esc(TZ_CITY[ix.tz] || ix.tz)} · <span id="gxTime">${(LIVE.on ? s.st.t : "快照") + " " + (s.tstr || bjTime(s.ts))}</span></span><h2>${esc(ix.n)}</h2></div><button class="close" id="dClose" aria-label="关闭">×</button></div>
     <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span class="big num" id="gxPrice">${s.p == null ? "—" : fmt2(s.p)}</span><span class="num ${cls(s.pct)}" id="gxChg" style="font-size:16px">${pct(s.pct, 2)}</span>
       <span class="note">${st ? `一年高点 ${fmt2(st.hi250)} · 回撤 ${st.dd.toFixed(1)}% · ` : ""}年初至今 ${pct(s.ytd, 1)} · 计价 ${esc(s.cur || "—")}</span></div>
+    ${krPanel()}
     <div id="gxPanel"></div>
     ${st ? `<div class="facts">
       <div><small>近 5 日</small><b class="${cls(st.r5)}">${pct(st.r5)}</b></div><div><small>近 20 日</small><b class="${cls(st.r20)}">${pct(st.r20)}</b></div><div><small>近 60 日</small><b class="${cls(st.r60)}">${pct(st.r60)}</b></div>
@@ -3179,7 +3260,6 @@ function openGIndex(key){
     </div>
     <div class="panel" style="padding:12px 14px"><h3 style="margin-bottom:6px">技术面</h3>${idxNarrative(st, fmt2).map(([k, v]) => `<p class="tline"><b>${k}</b>${esc(v)}</p>`).join("")}</div>
     <div class="panel" style="padding:12px 14px"><h3 style="margin-bottom:8px">多周期指标：日线 · 周线 · 月线</h3>${tfTable(rows, gMonthly(ix))}${indNarrative(rows, gMonthly(ix), fmt2).map(([k, v]) => `<p class="tline"><b>${k}</b>${esc(v)}</p>`).join("")}</div>` : `<p class="note">这个指数的历史K线不足，暂时只能看报价${LIVE.on && ix.em ? "；正在尝试从东方财富加载" : ""}。</p>`}
-    ${krPanel()}
     <div class="panel" style="padding:12px 14px;display:grid;gap:10px">
       <div class="phead" style="margin-bottom:0"><h3>AI 技术面分析</h3><span style="display:flex;gap:8px"><button class="btn pri" id="gxAi">让 ${AI_NAME} 分析这个指数</button><button class="btn" id="gxStop" hidden>停止</button></span></div>
       <div class="ai" id="gxOut">${!IN_CLAUDE && !dsKey() ? aiNoKey() : `<span class="note">${AI_NAME} 会根据日、周、月线的趋势、MACD、RSI、KDJ、布林线和量能，给出多空逻辑和短中期情景。${AI_QUOTA}</span>`}</div>
@@ -3236,8 +3316,8 @@ function openGStock(y){
       ${s.en && s.en !== s.n ? `<div class="note">${esc(s.en)}</div>` : ""}</div><button class="close" id="dClose" aria-label="关闭">×</button></div>
     <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span class="big num" id="gsPrice">${s.p == null ? "—" : fmtP(s.p)}</span><span class="num ${cls(s.pct)}" id="gsChg" style="font-size:16px">${pct(s.pct, 2)}</span>
       <span class="note" id="gsTime">${LIVE.on && s.tx ? "实时 " : "快照 "}${bjTime(s.ts)}（北京时间） · ${esc(CUR[s.cur] || s.cur || "")}</span></div>
-    <div class="facts" id="gsFacts"></div>
     ${krPanel()}
+    <div class="facts" id="gsFacts"></div>
     ${chartable ? `<div id="gsPanel"></div>` : `<p class="note">${s.tx ? "在浏览器里直接打开实时版 HTML，可以查看这只股票上市以来的 K 线、最近五个交易日的分时和技术指标。" : "这个市场没有浏览器可直接访问的免费行情接口，本页只提供快照报价；美股和港股可在实时版里看 K 线和分时。"}</p>`}
     <div class="panel" id="dTech" style="padding:12px 14px" hidden></div>
     <div class="panel" style="padding:12px 14px;display:grid;gap:10px">
@@ -5317,7 +5397,7 @@ function renderKr(){
   const per = (a, sym) => { const p = a.per && a.per[sym]; return p ? [p[0], p[1] + "%", p[2] + "%"] : ["—", "—", "—"]; };
   $("#krAcc").innerHTML = `<thead><tr>${["标的", "5 日核对次数", "5 日方向对", "5 日平均误差", "10 日核对次数", "10 日方向对", "10 日平均误差", "回看检验", "回看平均误差"].map((t, i) => `<th class="${i ? "" : "l"}" style="cursor:default">${t}</th>`).join("")}</tr></thead><tbody>`
     + items.map(it => `<tr class="nohov"><td class="l">${labStock(it.sym, it.name)}</td>${[...per(a5, it.sym), ...per(a10, it.sym)].map(v => `<td class="num">${v}</td>`).join("")}<td>${it.check ? (it.check.dir ? `<span class="labst ok">方向对</span>` : `<span class="labst no">方向错</span>`) : "—"}</td><td class="num">${it.check ? it.check.mae + "%" : "—"}</td></tr>`).join("") + `</tbody>`;
-  $("#krRule").innerHTML = `做法：模型 ${esc(KR.model)}（权重来自 Hugging Face 的 NeoQuasar，固定在审查过的版本），每个交易日收盘后在 GitHub 上用 CPU 跑一次（这次用时 ${KR.secs} 秒）。每个标的取最近 ${KR.lookback} 个交易日的腾讯前复权日 K，抽样 ${KR.samples} 条路径取平均。未来日期只跳过周末，没有排除节假日。<b>回看检验</b>每周做一次：只用 10 个交易日以前的数据预测最近 10 天，再和真实走势比。<b>预测记录核对</b>把每天的预测存下来，等真实收盘价出来后，统计 5 日、10 日后的涨跌方向对不对、收盘价差多少。方向准确率在 50% 左右，就和抛硬币差不多。注意：个股和指数详情页里的「AI 预测」是全部标的统一跑的（最多 256 个交易日、每步取概率最大的结果），和这里的设置（400 个交易日、抽样 ${KR.samples} 次取平均）不同，同一个指数的两个预测可能差很多——这本身就说明模型的输出很不稳定。<b class="dn">不构成投资建议。</b>`;
+  $("#krRule").innerHTML = `做法：模型 ${esc(KR.model)}（权重来自 Hugging Face 的 NeoQuasar，固定在审查过的版本），每个交易日收盘后在 GitHub 上用 CPU 跑一次（这次用时 ${KR.secs} 秒）。每个标的取最近 ${KR.lookback} 个交易日的腾讯前复权日 K，抽样 ${KR.samples} 条路径取平均。未来日期只跳过周末，没有排除节假日。<b>回看检验</b>每周做一次：只用 10 个交易日以前的数据预测最近 10 天，再和真实走势比。<b>预测记录核对</b>把每天的预测存下来，等真实收盘价出来后，统计 5 日、10 日后的涨跌方向对不对、收盘价差多少。方向准确率在 50% 左右，就和抛硬币差不多。注意：个股和指数详情页、「AI 预测」页的预测是全部标的统一跑的（同样最多 400 个交易日，但每步取概率最大的结果，不抽样），和这里抽样 ${KR.samples} 次取平均的设置不同，同一个指数的两个预测可能差很多——这本身就说明模型的输出很不稳定。<b class="dn">不构成投资建议。</b>`;
 }
 /* ---- 全部个股和指数的 AI K 线预测：各市场的成绩（scripts/kronos_all.py） ---- */
 function renderKa(){

@@ -2,7 +2,7 @@
 
 覆盖：沪深京全部 A 股、A 股主要指数、全球指数、本站的全球个股（美股、港股、日股、韩股、欧股、印度）。
 两批：asia（A 股、港日韩和亚太指数，北京时间 16:00 以后）和 west（美股、欧股、印度和欧美指数，美股收盘后）。
-每只预测之后 10 个交易日：最近最多 256 个交易日的日K（开高低收、成交量、成交额），贪心解码（每次取概率最大的结果，
+每只预测之后 10 个交易日：最近最多 400 个交易日的日K（开高低收、成交量、成交额；上市不满 400 天的用 256/128/64 天），贪心解码（每次取概率最大的结果，
 同样的数据得到同样的预测，算力只要抽样平均的几分之一）。
 
 准确率：
@@ -25,19 +25,25 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+from zoneinfo import ZoneInfo
+
 import requests
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA, KALL, PLAN, PART = ROOT / "data", ROOT / "kall", ROOT / "kall_plan", ROOT / "kall_part"
 BJ = dt.timezone(dt.timedelta(hours=8))
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
-PRED, MAXL, BUCKETS, CHECK_EVERY, KEEP_LOG, PER_SHARD = 10, 256, (256, 128, 64), 10, 30, 380
+# 400 天比 256 天的回看误差小、极端预测少（64 只 A 股对比：方向对 48% 对 42%，误差 7.3% 对 7.8%）；抽样 3 次取平均反而更差（误差 10.5%）
+PRED, MAXL, BUCKETS, CHECK_EVERY, KEEP_LOG, PER_SHARD = 10, 400, (400, 256, 128, 64), 10, 30, 345
 sys.path.insert(0, os.path.dirname(__file__))
 from kronos_fc import MODEL, MODEL_REV, TOKENIZER, TOKENIZER_REV   # noqa: E402  模型和权重版本和量化页那 8 个标的一致
 
 # 全球个股按交易所分市场；asia 批在北京时间下午跑，west 批在美股收盘后跑
 MKT = {"纽交所": "美股", "纳斯达克": "美股", "美股": "美股", "港交所": "港股", "Tokyo": "日股", "KSE": "韩股", "NSE": "印度"}
 ASIA_MKT = {"A股", "A股指数", "港股", "日股", "韩股"}
+# 各市场的时区和“当天 K 线已定稿”的时间：早于这个时间运行时，丢掉当天还没收盘的那根 K 线（手动提前跑也不会用到盘中数据）
+CLOSE = {"A股": ("Asia/Shanghai", "15:30"), "A股指数": ("Asia/Shanghai", "15:30"), "港股": ("Asia/Hong_Kong", "16:30"), "日股": ("Asia/Tokyo", "15:45"),
+         "韩股": ("Asia/Seoul", "15:45"), "印度": ("Asia/Kolkata", "15:45"), "美股": ("America/New_York", "16:15"), "欧股": ("Europe/Paris", "17:45")}
 # A 股指数：腾讯代码 → 名称（和网页里能打开的指数一致，再加中证500、中证1000、上证50）
 A_IDX = {"sh000001": "上证指数", "sz399001": "深证成指", "sz399006": "创业板指", "sh000688": "科创50", "bj899050": "北证50",
          "sh000300": "沪深300", "sh000905": "中证500", "sh000852": "中证1000", "sh000016": "上证50"}
@@ -88,15 +94,16 @@ def universe(groups):
             items.append(["a", c, "tx", a_sym(c), r[I["name"]], "A股"])
         items += [["ai", c, "tx", c, n, "A股指数"] for c, n in A_IDX.items()]
     G = jload(DATA / "global.json", {}) or {}
+    tzs = {x.get("c"): x.get("tz") for x in G.get("idx") or []}
     from global_mkt import INDICES                                            # 指数代码表（只用常量）
     for code, name, region, src, live, ysym, _em in INDICES:
         west = region != "亚太" or code == "emSENSEX"                           # 印度收盘晚，放在 west 批
         if ("west" if west else "asia") not in groups:
             continue
         if ysym:
-            items.append(["gi", code, "yh", ysym, name, "全球指数"])
+            items.append(["gi", code, "yh", ysym, name, "全球指数", tzs.get(code)])
         elif src == "hk":
-            items.append(["gi", code, "txhk", live, name, "全球指数"])
+            items.append(["gi", code, "txhk", live, name, "全球指数", "Asia/Hong_Kong"])
     for y, s in (G.get("st") or {}).items():
         mkt = MKT.get(s.get("ex"), "欧股")
         if ("asia" if mkt in ASIA_MKT else "west") not in groups:
@@ -203,6 +210,16 @@ def bars_yh(sym):
     return rows[-(MAXL + 30):]
 
 
+def drop_partial(b, item):
+    """当天还没收盘（或收盘后数据还没定稿）时，去掉最后那根当天的 K 线。"""
+    tz, cut = CLOSE.get(item[5]) or ((item[6] if len(item) > 6 and item[6] else "Europe/Paris"), "17:45")
+    try:
+        now = dt.datetime.now(ZoneInfo(tz))
+    except Exception:
+        return b
+    return b[:-1] if b and b[-1][0] == now.strftime("%Y-%m-%d") and now.strftime("%H:%M") < cut else b
+
+
 def fetch(item):
     kind, key, src, fsym = item[:4]
     try:
@@ -233,6 +250,7 @@ def shard(i, n):
         got = dict(zip([gi for gi, _ in fast], ex.map(lambda x: fetch(x[1]), fast)))
     with ThreadPoolExecutor(2) as ex:
         got.update(zip([gi for gi, _ in slow], ex.map(lambda x: fetch(x[1]), slow)))
+    got = {gi: drop_partial(b, P["items"][gi]) if b else b for gi, b in got.items()}
     log(f"shard {i}/{n}: {len(items)} 个标的，取到 {sum(1 for v in got.values() if v)} 个日K，用时 {time.time() - t0:.0f}s")
     tok = KronosTokenizer.from_pretrained(TOKENIZER, revision=TOKENIZER_REV)
     model = Kronos.from_pretrained(MODEL, revision=MODEL_REV)
