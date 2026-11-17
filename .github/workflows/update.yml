@@ -28,6 +28,7 @@ on:
 
 permissions:
   contents: write   # 每周提交一次 last-run.txt，避免公开仓库 60 天无活动后定时任务被 GitHub 停用
+  actions: write    # 全部个股的 AI 预测到时间还没跑时，触发 kronos.yml
   pages: write
   id-token: write
 
@@ -148,6 +149,17 @@ jobs:
           pip install -q --index-url https://download.pytorch.org/whl/cpu "torch==2.15.0"
           pip install -q "einops==0.8.2" "safetensors==0.8.0" "huggingface_hub==0.36.2"
           timeout 1800 python scripts/kronos_fc.py run && python scripts/gen.py
+
+      # kronos.yml 自己的定时任务经常被 GitHub 跳过；这里每小时检查一次，收盘后到时间还没跑就触发它（它自己会再判断一遍，跑过的不会重跑）
+      - name: 全部个股的 AI 预测到时间没跑就补跑
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          due=$(python scripts/kronos_all.py due)
+          echo "kronos_all due: $due"
+          if [ "$due" = "true" ]; then gh workflow run kronos.yml --ref main -R "${{ github.repository }}" -f group=auto -f force=0; fi
 
       - name: 保存数据缓存
         if: always()
