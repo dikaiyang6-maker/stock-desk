@@ -35,6 +35,7 @@ BJ = dt.timezone(dt.timedelta(hours=8))
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
 # 400 天比 256 天的回看误差小、极端预测少（64 只 A 股对比：方向对 48% 对 42%，误差 7.3% 对 7.8%）；抽样 3 次取平均反而更差（误差 10.5%）
 PRED, MAXL, BUCKETS, CHECK_EVERY, KEEP_LOG, PER_SHARD = 10, 400, (400, 256, 128, 64), 10, 30, 345
+STALE = 12                                                                    # 最后一根 K 线比今天早这么多天（停牌、退市整理）就不预测，旧预测也删掉
 sys.path.insert(0, os.path.dirname(__file__))
 from kronos_fc import MODEL, MODEL_REV, TOKENIZER, TOKENIZER_REV   # noqa: E402  模型和权重版本和量化页那 8 个标的一致
 
@@ -264,10 +265,13 @@ def shard(i, n):
         return df[cols].astype(float).reset_index(drop=True), ts.reset_index(drop=True), fut
 
     jobs, res, fail, short = [], {}, [], []                                   # jobs：(桶长度, 标的序号, 用途, 日K)
+    old = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=STALE)).strftime("%Y-%m-%d")
     for gi, it in items:
         b = got.get(gi)
         if not b:
             fail.append(it[1]); continue
+        if b[-1][0] < old:                                                     # 停牌、退市整理：最后一根 K 线太旧，预测没有意义
+            short.append(it[1]); continue
         L = next((x for x in BUCKETS if len(b) >= x), None)
         if not L:
             short.append(it[1]); continue
@@ -363,6 +367,12 @@ def merge():
         m["5"] += rows5; m["10"] += rows10
         if r.get("chk"):
             m["c5"].append((r["chk"][0], r["chk"][1])); m["c10"].append((r["chk"][2], r["chk"][3]))
+    for s in SEC.values():                                                     # 停牌、退市的旧预测：比这一类最新的基准日早 12 天以上就删掉
+        if kr[s]:
+            top = max(v[0] for v in kr[s].values())
+            cut = (dt.date.fromisoformat(top) - dt.timedelta(days=STALE)).isoformat()
+            for k in [k for k, v in kr[s].items() if v[0] < cut]:
+                del kr[s][k]
     acc = kr.setdefault("acc", {}); chk = kr.setdefault("chk", {}); cnt = kr.setdefault("cnt", {})
     for mkt in by_m:
         cnt[mkt] = sum(1 for r in res.values() if r["m"] == mkt)            # 这次每个市场预测了多少只

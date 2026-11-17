@@ -2162,8 +2162,12 @@ const krMkt = (sec, key) => sec === "a" ? "A股" : sec === "ai" ? "A股指数" :
 const KR_ALPH = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 const krDec = ch => !ch || ch === "." ? null : KR_ALPH.indexOf(ch) - 31;
 let GSIDX = null;
+const KR_MAXD = {};                                       // 每一类最新的基准日；比它早 12 天以上的（停牌、退市整理）不显示预测
+const krMaxD = sec => KR_MAXD[sec + (KRA ? "+" : "")] ||= Object.values((KRA || KRE?.full || {})[sec] || {}).reduce((m, v) => v[0] > m ? v[0] : m, "");
+const krStale = (sec, d) => { const m = krMaxD(sec); return !!(m && d && (new Date(m) - new Date(d)) / 864e5 > 12); };
 function kraEntry(sec, key){
   const v = KRA?.[sec]?.[key] || KRE?.full?.[sec]?.[key];
+  if (v && krStale(sec, v[0])) return null;
   if (v) return {d: v[0], c: v[1], p: v[2], lo: v[3], hi: v[4], acc: v[5] || null, h: v[6] || null};
   // 精简版：第 10 天的预测涨跌取整到 1%，每只一个字符（gen.py 的 KR_ALPH），A 股按 D.rows 的顺序，全球个股按 G.st 的顺序
   const p10 = sec === "a" ? krDec(KRE?.a10s?.[AIDX.get(key)]) : sec === "gs" ? krDec(KRE?.gs10s?.[(GSIDX ||= new Map(Object.keys(G.st || {}).map((y, i) => [y, i]))).get(key)]) : null;
